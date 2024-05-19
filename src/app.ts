@@ -1,0 +1,59 @@
+import express, { Request, Response } from "express";
+const app = express();
+
+import cors from "cors";
+
+import { errorMiddleware } from "./middleware/error.middleware.js";
+import userRoute from "./routes/user.routes.js";
+import orderRoute from "./routes/order.routes.js";
+import productRoute from "./routes/product.routes.js";
+import paymentRoute from "./routes/payment.routes.js";
+import dashboardRoute from "./routes/dashboard.routes.js";
+import NodeCache from "node-cache";
+
+import brandRoute from "./routes/brand.routes.js";
+import morgan from "morgan";
+
+import categoryRoute from "./routes/category.route.js";
+import offerRoute from "./routes/offer.routes.js";
+import verifyAdmin from "./routes/admin.routes.js";
+import cookieParser from "cookie-parser";
+
+//Handle cors
+app.use(
+  cors({
+    origin: true,
+    credentials: true,
+  })
+);
+
+//Required Middlewares
+app.use(express.json({ limit: "100kb" }));
+app.use(express.urlencoded({ extended: true, limit: "16kb" }));
+app.use(express.static("public"));
+// app.use(cookieParser())
+app.use(morgan("dev"));
+//Routes
+app.get("/", (req, res) => {
+  res.send("Server is working properly");
+});
+
+app.use(cookieParser());
+
+app.use("/api/v1/user", userRoute);
+app.use("/api/v1/product", productRoute);
+app.use("/api/v1/order", orderRoute);
+app.use("/api/v1/payment", paymentRoute);
+app.use("/api/v1/dashboard", dashboardRoute);
+app.use("/api/v1/category", categoryRoute);
+app.use("/api/v1/brand", brandRoute);
+app.use("/api/v1/offer", offerRoute);
+app.use("/api/v1/admin", verifyAdmin);
+
+//Error middleware to be used below route
+//to cache err from routes
+app.use(errorMiddleware);
+
+
+export const myCache = new NodeCache();
+export default app;
