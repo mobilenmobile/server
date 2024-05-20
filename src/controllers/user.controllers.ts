@@ -15,7 +15,9 @@ export const newUser = asyncErrorHandler(
     const userExist = await User.findOne({ email });
 
     if (userExist) {
-      return next(new ErrorHandler("User already exist", 400));
+      return res
+        .status(200)
+        .json({ success: true, message: `welcome back ${name}` });
     }
 
     const userData = {
