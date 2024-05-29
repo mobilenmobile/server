@@ -44,8 +44,10 @@ const uploadMultipleCloudinary = async (localFiles: any) => {
   try {
     const uploadedImages = [];
     for (const file of localFiles) {
-      const response = await cloudinary.uploader.upload(file.path);
-
+      const response = await cloudinary.uploader.upload(file.path, {
+        timeout: 60000,
+      });
+      console.log(response);
       fs.unlinkSync(file.path);
       uploadedImages.push(response.secure_url);
       console.log("response=> " + response.public_id);

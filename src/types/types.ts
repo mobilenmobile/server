@@ -15,13 +15,26 @@ export interface LoginRequestBody {
   password: string;
 }
 
+//variance data type
+export type varianceType = {
+  id?: string,
+  color?: string,
+  ram?: string,
+  boxPrice?: string,
+  sellingPrice?: string,
+  quantity?: string,
+  thumbnail?: string,
+  productImages?: string[],
+
+}
+
 export interface NewProductRequestBody {
-  productTitle: string;
-  productModel: string;
   category: string;
+  brand: string;
+  productModel: string;
+  productTitle:string;
   boxPrice: string;
   stockAvailability: string;
-  brand: string;
   discountedPercentage: string;
   color: string;
   review?: string;
@@ -36,6 +49,7 @@ export interface NewProductRequestBody {
   productBadge: string;
   offers: string;
   uniqueId: string;
+  variance:string
   // productType: string;
 }
 
@@ -65,6 +79,7 @@ export interface UpdateProductRequestBody {
   pattern: string;
   headsetType: string;
   productType: string;
+  variance:string
 }
 
 export interface updateId {

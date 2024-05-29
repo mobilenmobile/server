@@ -21,159 +21,57 @@ import {
 import { FilterQuery } from "mongoose";
 export const newProduct = asyncErrorHandler(
   async (req: Request<{}, {}, NewProductRequestBody>, res, next) => {
+    console.log("----------------", req.body, "----------------");
     const {
-      productTitle,
-      brand,
       category,
-      discountedPercentage,
-      stockAvailability,
-      color,
+      brand,
+      productModel,
+      productTitle,
+      offers,
       description,
-      RAM,
-      storage,
       pattern,
       headsetType,
-      imgUrls,
-      thumbnail,
-      uniqueId,
-      productModel,
-      boxPrice,
-      sellingPrice,
-      productBadge,
-      offers,
+      variance,
     } = req.body;
 
-    console.log("new product req body=>", headsetType);
-    const imageUrls = JSON.parse(req.body.imgUrls);
+    console.log("new product req body=>", JSON.parse(variance));
 
-    console.log("req body image urls =>", JSON.parse(req.body.imgUrls));
-
-    // const photos = req.files;
-    // if (!photos) {
-    //   return next(new ErrorHandler("please choose product image", 400));
-    // }
-    console.log(imgUrls);
-    if (
-      // !productTitle ||
-      // !boxPrice ||
-      // !stockAvailability ||
-      !brand ||
-      !category
-      // !uniqueId
-    ) {
-      // removeFile(photos.path, () => {
-      //   console.log("Deleted");
-      // });
-
+    if (!brand || !category || !productModel) {
       return next(new ErrorHandler("provide all product fields", 400));
     }
-
-    // const ImageUrl = await uploadMultipleCloudinary(photos);
-    // console.log(ImageUrl);
     console.log(brand);
     const refBrand = await Brand.findOne({ brandName: brand });
-    console.log("refBrand id" + refBrand._id);
+
     if (!refBrand) {
       return next(new ErrorHandler("Please provide the brand ", 400));
     }
-
+    console.log("refBrand id" + refBrand._id);
+    console.log("refbrand", refBrand);
     const refCategory = await Category.findOne({ categoryName: category });
+    console.log("id", refCategory._id);
     if (!refCategory) {
       return next(new ErrorHandler("Please provide the category", 400));
     }
-    console.log("id", refCategory._id);
-    console.log(thumbnail);
 
-    const checkedImgUrls = imageUrls.map((item: String) => {
-      if (item.includes("[")) {
-        item = item.replace("[", "").replace("]", "");
-        return item;
-      } else {
-        return item;
-      }
-    });
+    // const title = `${brand !== "generic" ? brand : ""}- ${
+    //   productModel !== "generic" ? productModel : ""
+    // } ${pattern.length > 0 ? pattern : ""} ${
+    //   headsetType.length > 0 ? headsetType : ""
+    // }`;
 
-    console.log("checkedimgurls==>", checkedImgUrls);
-
-    const basicData = {
-      productTitle: productTitle,
-      productModel: productModel,
-      productSellingPrice: sellingPrice,
-      productBoxPrice: boxPrice,
-      productDescription: description,
+    const newProduct = await Product.create({
       productCategory: refCategory._id,
       productBrand: refBrand._id,
-      productStock: stockAvailability,
-      productColor: color,
-      productImages: checkedImgUrls,
-      productDiscountPercentage: discountedPercentage,
-      productThumbnail: thumbnail,
-      productBadge: productBadge,
-      productOfferProvided: offers,
-      productUniqueId: uniqueId,
-    };
-    console.log("req body==> ", basicData);
-    switch (category.toLowerCase()) {
-      case "smartphone":
-        const phoneProduct = await Product.create({
-          ...basicData,
-          productRAM: RAM,
-          productStorage: storage,
-        });
-
-        await ClearCache({ product: true, admin: true });
-
-        return res.status(200).json({
-          success: true,
-          data: phoneProduct,
-        });
-
-      case "accessories":
-        const accessoryProduct = await Product.create({
-          ...basicData,
-        });
-        await ClearCache({ product: true, admin: true });
-
-        return res.status(200).json({
-          success: true,
-          data: accessoryProduct,
-        });
-
-      case "headsets":
-        const headsetProduct = await Product.create({
-          ...basicData,
-          productHeadsetType: headsetType,
-        });
-        await ClearCache({ product: true, admin: true });
-
-        return res.status(200).json({
-          success: true,
-          data: headsetProduct,
-        });
-
-      case "skins":
-        const skinProduct = await Product.create({
-          ...basicData,
-          productSkinPattern: pattern,
-        });
-        await ClearCache({ product: true, admin: true });
-
-        return res.status(200).json({
-          success: true,
-          data: skinProduct,
-        });
-
-      case "smartwatch":
-        const smartwatch = await Product.create({
-          ...basicData,
-        });
-        await ClearCache({ product: true, admin: true });
-
-        return res.status(200).json({
-          success: true,
-          data: smartwatch,
-        });
-    }
+      productModel: productModel,
+      productTitle: productTitle,
+      productOffer: offers,
+      productDescription: description,
+      productSkinPattern: pattern,
+      productHeadsetType: headsetType,
+      productVariance: JSON.parse(variance),
+    
+    });
+    return res.status(200).json({ success: true, newProduct });
   }
 );
 
@@ -228,24 +126,14 @@ export const updateProduct = asyncErrorHandler(
     const id = (req.params as { id: string }).id;
 
     const {
-      productTitle,
-      productModel,
-      boxPrice,
-      sellingPrice,
-      productBadge,
-      offers,
       brand,
-      stockAvailability,
-      color,
+      productModel,
+      productTitle,
+      offers,
       description,
-      RAM,
-      storage,
-      review,
       pattern,
       headsetType,
-      imgUrls,
-      thumbnail,
-      discountedPercentage,
+      variance,
     } = req.body;
 
     console.log("req-body-", req.body);
@@ -254,31 +142,6 @@ export const updateProduct = asyncErrorHandler(
     if (!product) {
       return next(new ErrorHandler("Product not found  ", 404));
     }
-    console.log("-------imgurl-----", imgUrls);
-    if (imgUrls) {
-      const checkedImgUrls = imgUrls?.map((item: String) => {
-        if (item.includes("[")) {
-          item = item.replace("[", "").replace("]", "");
-          return item;
-        } else {
-          return item;
-        }
-      });
-      console.log(
-        "--------------------------updating images-----------------------"
-      );
-      product.productImages = checkedImgUrls;
-    }
-    console.log("color --->", color);
-    if (thumbnail) {
-      console.log("---------updating thumbnail----------");
-      product.productThumbnail = thumbnail;
-      console.log(thumbnail, product.productThumbnail);
-    }
-
-    if (description) product.productDescription = description;
-
-    if (review) product.productReview = review;
     if (brand) {
       const refBrand = await Brand.findOne({ brandName: brand });
       console.log("refBrand " + refBrand);
@@ -287,19 +150,13 @@ export const updateProduct = asyncErrorHandler(
       }
       product.productBrand = refBrand._id;
     }
-    if (productTitle) product.productTitle = productTitle;
     if (productModel) product.productModel = productModel;
-    if (stockAvailability) product.productStock = stockAvailability;
-    if (color) product.productColor = color;
-    if (discountedPercentage) product.productDiscount = discountedPercentage;
-    if (RAM) product.productRAM = RAM;
-    if (storage) product.productStorage = storage;
-    if (headsetType) product.productHeadsetType = headsetType;
-    if (pattern) product.productSkinPattern = pattern;
-    if (boxPrice) product.productPrice = boxPrice;
-    if (sellingPrice) product.productSellingPrice = sellingPrice;
-    if (productBadge) product.productBadge = productBadge;
+    if (productTitle) product.productTitle = productTitle;
     if (offers) product.productOfferProvided = offers;
+    if (description) product.productDescription = description;
+    if (pattern) product.productSkinPattern = pattern;
+    if (headsetType) product.productHeadsetType = headsetType;
+    if (variance) product.productVariance = JSON.parse(variance);
 
     const prod = await product.save();
 
@@ -319,8 +176,11 @@ export const deleteProduct = asyncErrorHandler(async (req, res, next) => {
     return next(new ErrorHandler("Product not found", 404));
   }
 
-  product.productImages.map(async (imgUrl: string) => {
-    const response = await deleteImgInCloudinary(imgUrl);
+  product.productVariance.map(async (item: any) => {
+    const response = await deleteImgInCloudinary(item.thumbnail);
+    item.productImages.map(async (imgUrl: any) => {
+      const response2 = await deleteImgInCloudinary(imgUrl);
+    });
   });
 
   await Product.findByIdAndDelete(product._id);
@@ -354,37 +214,15 @@ export const getAllProducts = asyncErrorHandler(
   async (req: Request<{}, {}, {}, SearchRequestQuery>, res, next) => {
     const { search, sort, category, price } = req.query;
     const page = Number(req.query.page);
-    const limit = Number(process.env.PRODUCT_PER_PAGE) || 8;
+    const limit = Number(process.env.PRODUCT_PER_PAGE) || 50;
     const skip = (page - 1) * limit;
     const baseQuery: FilterQuery<BaseQuery> = {};
-    // let searchQuery = {};
-    // if (search) {
-    //   searchQuery = {
-    //     $or: [
-    //       { productTitle: { $regex: search, $options: "i" } },
-    //       { productModel: { $regex: search, $options: "i" } },
-    //     ],
-    //   };
-    // }
-
-    // if (search) {
-    //   baseQuery.search {
-    //     $or: [
-    //       { productTitle: { $regex: search, $options: "i" } },
-    //       { productModel: { $regex: search, $options: "i" } },
-    //     ],
-    //   };
-    // }
 
     if (search) {
       baseQuery.productTitle = {
         $regex: search,
         $options: "i",
       };
-      //   baseQuery.productModel = {
-      //     $regex: search,
-      //     $options: "i",
-      //   };
     }
     if (price) {
       baseQuery.price = {
@@ -394,11 +232,7 @@ export const getAllProducts = asyncErrorHandler(
     if (category) {
       baseQuery.category = category;
     }
-    // if(sort){
-    //   if(sort==="latest"){
-    //     sort=
-    //   }
-    // }
+
     const sortBy: any = {};
 
     if (sort) {

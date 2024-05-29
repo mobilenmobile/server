@@ -9,6 +9,7 @@ import {
 
 export const addNewOffer = asyncErrorHandler(
   async (req: Request<{}, {}, NewOfferRequestbody>, res, next) => {
+
     const { offerCouponCode,  offerCouponDiscount, offerExpiry } = req.body;
 
     if (!offerCouponCode || !offerCouponDiscount || !offerExpiry) {
@@ -26,12 +27,14 @@ export const addNewOffer = asyncErrorHandler(
       offer,
     });
   }
+
 );
+
 
 export const searchAllOffer = asyncErrorHandler(
   async (req: Request<{}, {}, SearchOfferQuery>, res, next) => {
-    const { offercode, offerdescription } = req.query;
 
+    const { offercode, offerdescription } = req.query;
     const baseQuery: offerBaseQuery = {};
 
     if (offercode) {
@@ -58,7 +61,9 @@ export const searchAllOffer = asyncErrorHandler(
     if (!offer) {
       return res.status(404).json("no offer found.");
     }
-
+    
     return res.status(200).json({ success: true, offer });
   }
 );
+
+
