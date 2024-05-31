@@ -22,9 +22,6 @@ const productSchema = new Schema(
       type: String,
       required: [true, "product model is required"],
     },
-    productOffer: {
-      type: Object,
-    },
     productDescription: {
       type: String,
     },

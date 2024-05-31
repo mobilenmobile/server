@@ -27,7 +27,6 @@ export const newProduct = asyncErrorHandler(
       brand,
       productModel,
       productTitle,
-      offers,
       description,
       pattern,
       headsetType,
@@ -53,23 +52,22 @@ export const newProduct = asyncErrorHandler(
       return next(new ErrorHandler("Please provide the category", 400));
     }
 
-    // const title = `${brand !== "generic" ? brand : ""}- ${
-    //   productModel !== "generic" ? productModel : ""
-    // } ${pattern.length > 0 ? pattern : ""} ${
-    //   headsetType.length > 0 ? headsetType : ""
-    // }`;
+    // // const title = `${brand !== "generic" ? brand : ""}- ${
+    // //   productModel !== "generic" ? productModel : ""
+    // // } ${pattern.length > 0 ? pattern : ""} ${
+    // //   headsetType.length > 0 ? headsetType : ""
+    // // }`;
 
     const newProduct = await Product.create({
       productCategory: refCategory._id,
       productBrand: refBrand._id,
       productModel: productModel,
       productTitle: productTitle,
-      productOffer: offers,
       productDescription: description,
       productSkinPattern: pattern,
       productHeadsetType: headsetType,
       productVariance: JSON.parse(variance),
-    
+      // productTitle: title,
     });
     return res.status(200).json({ success: true, newProduct });
   }
@@ -129,7 +127,6 @@ export const updateProduct = asyncErrorHandler(
       brand,
       productModel,
       productTitle,
-      offers,
       description,
       pattern,
       headsetType,
@@ -152,14 +149,12 @@ export const updateProduct = asyncErrorHandler(
     }
     if (productModel) product.productModel = productModel;
     if (productTitle) product.productTitle = productTitle;
-    if (offers) product.productOfferProvided = offers;
     if (description) product.productDescription = description;
     if (pattern) product.productSkinPattern = pattern;
     if (headsetType) product.productHeadsetType = headsetType;
     if (variance) product.productVariance = JSON.parse(variance);
 
     const prod = await product.save();
-
     console.log("prod", prod);
     return res.status(200).json({
       success: true,
@@ -213,8 +208,8 @@ export const deletePreviewCloudinary = asyncErrorHandler(
 export const getAllProducts = asyncErrorHandler(
   async (req: Request<{}, {}, {}, SearchRequestQuery>, res, next) => {
     const { search, sort, category, price } = req.query;
-    const page = Number(req.query.page);
-    const limit = Number(process.env.PRODUCT_PER_PAGE) || 50;
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 20;
     const skip = (page - 1) * limit;
     const baseQuery: FilterQuery<BaseQuery> = {};
 
@@ -230,7 +225,10 @@ export const getAllProducts = asyncErrorHandler(
       };
     }
     if (category) {
-      baseQuery.category = category;
+      const findCategory = await Category.findOne({ categoryName: category });
+      console.log(findCategory);
+
+      baseQuery.productCategory = findCategory._id;
     }
 
     const sortBy: any = {};
@@ -251,20 +249,23 @@ export const getAllProducts = asyncErrorHandler(
       .populate("productCategory")
       .populate("productBrand")
       .sort(sort ? sortBy : { createdAt: -1 })
-      .limit(limit)
-      .skip(skip);
+      .skip(skip)
+      .limit(limit);
 
     const [products, filteredProductwithoutlimit] = await Promise.all([
       productPromise,
       Product.find({ baseQuery }),
     ]);
 
-    const totalPage = Math.ceil(products.length / limit);
+    const totalProducts = (await Product.find(baseQuery)).length;
+
+    const totalPage = Math.ceil(totalProducts / limit);
 
     return res.status(200).json({
       success: true,
       products,
       totalPage,
+      totalProducts,
     });
   }
 );
