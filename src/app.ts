@@ -36,7 +36,7 @@ app.use(express.static("public"));
 app.use(morgan("dev"));
 //Routes
 app.get("/", (req, res) => {
-  res.send("Server is working properly");
+  res.send("Server is up to date");
 });
 
 app.use(cookieParser());
