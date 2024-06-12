@@ -29,8 +29,8 @@ app.use(
 
 //Required Middlewares
 
-app.use(express.json({ limit: "10Mb" }));
-app.use(express.urlencoded({ extended: true, limit: "10Mb" }));
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(express.static("public"));
 // app.use(cookieParser())
 app.use(morgan("dev"));
