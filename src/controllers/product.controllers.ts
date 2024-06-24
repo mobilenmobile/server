@@ -133,8 +133,6 @@ export const updateProduct = asyncErrorHandler(
       variance,
     } = req.body;
 
-    console.log("req-body-", req.body);
-
     const product = await Product.findById(id);
     if (!product) {
       return next(new ErrorHandler("Product not found  ", 404));

@@ -9,6 +9,7 @@ import orderRoute from "./routes/order.routes.js";
 import productRoute from "./routes/product.routes.js";
 import paymentRoute from "./routes/payment.routes.js";
 import dashboardRoute from "./routes/dashboard.routes.js";
+import chatbotRoute from "./routes/chatbot.routes.js";
 import NodeCache from "node-cache";
 
 import brandRoute from "./routes/brand.routes.js";
@@ -50,11 +51,11 @@ app.use("/api/v1/category", categoryRoute);
 app.use("/api/v1/brand", brandRoute);
 app.use("/api/v1/offer", offerRoute);
 app.use("/api/v1/admin", verifyAdmin);
+app.use("/api/v1/chatbot", chatbotRoute);
 
 //Error middleware to be used below route
 //to cache err from routes
 app.use(errorMiddleware);
-
 
 export const myCache = new NodeCache();
 export default app;
