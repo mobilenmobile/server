@@ -10,6 +10,7 @@ import productRoute from "./routes/product.routes.js";
 import paymentRoute from "./routes/payment.routes.js";
 import dashboardRoute from "./routes/dashboard.routes.js";
 import chatbotRoute from "./routes/chatbot.routes.js";
+import addressRoute from "./routes/address.routes.js";
 import NodeCache from "node-cache";
 
 import brandRoute from "./routes/brand.routes.js";
@@ -45,6 +46,7 @@ app.use(cookieParser());
 app.use("/api/v1/user", userRoute);
 app.use("/api/v1/product", productRoute);
 app.use("/api/v1/order", orderRoute);
+app.use("/api/v1/address", addressRoute);
 app.use("/api/v1/payment", paymentRoute);
 app.use("/api/v1/dashboard", dashboardRoute);
 app.use("/api/v1/category", categoryRoute);

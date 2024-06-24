@@ -1,28 +1,86 @@
 import mongoose, { Schema } from "mongoose";
 
-const OrderSchema = new Schema(
-  {
-    // user: {
-    //   type: mongoose.Schema.Types.ObjectId,
-    //   ref: "user",
-    // },
-    product: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "product",
-    },
-    status: {
-      type: String,
-      enum: ["delivered", "pending", "canceled", "exchanged", "processing"],
-    },
-    amount: {
-      type: Number,
-      requried: [true, "amount is required"],
-    },
-  },
-  {
-    timestamps: true,
-  }
-);
+// Define the Address schema
+// const ramAndStorageSchema = new Schema({
+//   id: { type: String },
+//   ram: { type: String },
+//   storage: { type: String },
+// })
 
-const Order = mongoose.models.order || mongoose.model("order", OrderSchema);
+// const varianceTypeSchema = new Schema({
+//   id: { type: String, required: true },
+//   color: { type: String, required: true },
+//   ramAndStorage: { type: ramAndStorageSchema },
+//   boxPrice: { type: String, required: true },
+//   sellingPrice: { type: String, required: true },
+//   quantity: { type: String, required: true },
+//   thumbnail: { type: String, required: true },
+//   productImages: { type: [String], required: true },
+// })
+
+// const orderItemSchema = new Schema({
+//   id: { type: String, required: true },
+//   productTitle: { type: String, required: true },
+//   product: { type: String, required: true },
+//   selectedVariance: { type: varianceTypeSchema, required: true },
+// })
+
+
+const AddressSchema = new Schema({
+  fullname: { type: String, required: true },
+  houseno: { type: String, required: true },
+  pincode: { type: String, required: true },
+  state: { type: String, required: true },
+  mobilenumber: { type: String, required: true },
+  area: { type: String, required: true },
+  place: {
+    type: String,
+    enum: ['home', 'office'],
+    required: true
+  }
+});
+// orderItems,
+// orderStatuses,
+// total,
+// couponcode,
+// paymentMethod,
+// paymentStatus,
+// deliveryAddress,
+// discount,
+const orderSchema = new Schema({
+  user: {
+    type: Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  orderItems: {
+    type:[ Object],
+    required: true
+  },
+  deliveryAddress: { type: AddressSchema, required: true },
+  orderStatuses: {
+    type: [Object],
+  },
+  total: {
+    type: Number,
+    required: true
+  },
+  couponcode: {
+    type: String,
+  },
+  discount: {
+    type: Number
+  },
+  paymentMethod: {
+    type: Object,
+  },
+  paymentStatus: {
+    type: Boolean,
+    default: false
+  }
+
+});
+
+const Order = mongoose.models.order || mongoose.model("order", orderSchema);
 export { Order };
+

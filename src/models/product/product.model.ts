@@ -34,13 +34,18 @@ const productSchema = new Schema(
     productVariance: {
       type: Object,
     },
+    productColors: {
+      type: [String]
+    },
+    productRamAndStorage: {
+      type: [Object]
+    }
   },
   {
     timestamps: true,
   }
 );
 
-const Product =
-  mongoose.models.product || mongoose.model("product", productSchema);
+const Product = mongoose.models.product || mongoose.model("product", productSchema);
 
 export { Product };

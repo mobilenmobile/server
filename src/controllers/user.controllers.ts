@@ -47,3 +47,20 @@ export const getUser = asyncErrorHandler(async (req: Request, res, next) => {
 
   return res.status(200).json({ success: true, user });
 });
+
+
+export const updateProfile = asyncErrorHandler(async (req, res, next) => {
+  const { profile } = req.body
+  const user = await User.findById(req.user._id);
+  if (!user) {
+    return next(new ErrorHandler("No user found by this id", 404));
+  }
+  console.log(JSON.parse(profile))
+  user.profile = JSON.parse(profile),
+    await user.save();
+
+  return res.status(200).json({
+    success: true,
+    message: "Successfully changed user previlege",
+  });
+});

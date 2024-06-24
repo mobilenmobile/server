@@ -5,12 +5,23 @@ import validator from "validator";
 
 interface IUser extends Document {
   name: string;
-  photo: string;
+  profile: string;
   email: string;
   role: "admin" | "user";
   createdAt: Date;
   updatedAt: Date;
 }
+
+// Define the Address schema
+const ProfileSchema = new Schema({
+  profileName: { type: String, required: true },
+  profileEmailId: { type: String, required: true },
+  profilePhoneNo: { type: String, required: true },
+  profileGender: { type: String, required: true },
+  profileLocation: { type: String, required: true },
+  profileAlternateMobileNo: { type: String, required: true }
+});
+
 
 const userSchema = new Schema(
   {
@@ -28,10 +39,7 @@ const userSchema = new Schema(
       required: [true, "Please enter email"],
       validate: validator.default.isEmail,
     },
-    // photo: {
-    //     type: String,
-    //     required: [true, "Please enter photo"]
-    // },
+    profile: { type: ProfileSchema },
     role: {
       type: String,
       enum: ["admin", "user"],
@@ -66,3 +74,4 @@ const userSchema = new Schema(
 );
 
 export const User = mongoose.model<IUser>("User", userSchema);
+

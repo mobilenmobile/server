@@ -1,50 +1,43 @@
 import { rm as removeFile } from "fs";
 import { asyncErrorHandler } from "../middleware/error.middleware.js";
 import { Order } from "../models/order/order.model.js";
-import {
-  BaseQuery,
-  NewOrderRequestBody,
-  NewProductRequestBody,
-  SearchRequestQuery,
-} from "../types/types.js";
+import { NewOrderRequestBody, } from "../types/types.js";
 import ErrorHandler from "../utils/errorHandler.js";
 import { Request } from "express";
 import { myCache } from "../app.js";
 import { ClearCache, reduceStock } from "../utils/features.js";
-import exp from "constants";
+import mongoose from "mongoose";
 
 export const newOrder = asyncErrorHandler(
-  async (req: Request<{}, {}, NewOrderRequestBody>, res, next) => {
+  async (req: Request, res, next) => {
+    console.log(req.body)
     const {
-      shippingInfo,
       orderItems,
-      user,
-      subtotal,
-      tax,
-      shippingCharges,
-      discount,
+      orderStatuses,
       total,
+      couponcode,
+      paymentMethod,
+      paymentStatus,
+      deliveryAddress,
+      discount,
     } = req.body;
-    if (!shippingInfo || !orderItems || !user || !subtotal || !tax || !total) {
+
+    if (!deliveryAddress || !orderItems || !total) {
       return next(new ErrorHandler("Please Enter all Fields", 400));
     }
+    if (!req.user._id) {
+      return next(new ErrorHandler("unauthenticated user", 400));
+    }
     const order = await Order.create({
-      shippingInfo,
-      orderItems,
-      user,
-      subtotal,
-      tax,
-      shippingCharges,
-      discount,
+      user: req.user._id,
+      orderItems: JSON.parse(orderItems),
+      orderStatuses: JSON.parse(orderStatuses),
       total,
-    });
-    await reduceStock(orderItems);
-    await ClearCache({
-      product: true,
-      order: true,
-      admin: true,
-      userId: user,
-      productId: order.orderItems.map((prod: any) => String(prod.productId)),
+      couponcode,
+      paymentMethod: JSON.parse(paymentMethod),
+      paymentStatus,
+      deliveryAddress: JSON.parse(deliveryAddress),
+      discount,
     });
     return res.status(201).json({
       success: true,
@@ -72,18 +65,8 @@ export const myOrders = asyncErrorHandler(async (req, res, next) => {
 });
 
 export const allOrders = asyncErrorHandler(async (req, res, next) => {
-  const key = "all-orders";
-  let orders = [];
-  if (myCache.has(key)) {
-    // console.log("cached data")
-    orders = JSON.parse(myCache.get(key) as string);
-  } else {
-    // console.log("berfor orders")
-    orders = await Order.find();
-    // console.log("after order")
-    // console.log(orders)
-    myCache.set(key, JSON.stringify(orders));
-  }
+  const orders = await Order.find({ user: req.user._id })
+    .populate('orderItems')
   return res.status(200).json({
     success: true,
     orders,

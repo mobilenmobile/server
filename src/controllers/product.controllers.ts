@@ -31,9 +31,11 @@ export const newProduct = asyncErrorHandler(
       pattern,
       headsetType,
       variance,
+      colors,
+      ramAndStorage
     } = req.body;
 
-    console.log("new product req body=>", JSON.parse(variance));
+    console.log("new product req body=>",JSON.parse(colors))
 
     if (!brand || !category || !productModel) {
       return next(new ErrorHandler("provide all product fields", 400));
@@ -67,6 +69,8 @@ export const newProduct = asyncErrorHandler(
       productSkinPattern: pattern,
       productHeadsetType: headsetType,
       productVariance: JSON.parse(variance),
+      productColors:JSON.parse(colors),
+      productRamAndStorage:JSON.parse(ramAndStorage)
       // productTitle: title,
     });
     return res.status(200).json({ success: true, newProduct });
@@ -131,7 +135,10 @@ export const updateProduct = asyncErrorHandler(
       pattern,
       headsetType,
       variance,
+
     } = req.body;
+
+    console.log("req-body-", req.body);
 
     const product = await Product.findById(id);
     if (!product) {
@@ -151,6 +158,7 @@ export const updateProduct = asyncErrorHandler(
     if (pattern) product.productSkinPattern = pattern;
     if (headsetType) product.productHeadsetType = headsetType;
     if (variance) product.productVariance = JSON.parse(variance);
+  
 
     const prod = await product.save();
     console.log("prod", prod);

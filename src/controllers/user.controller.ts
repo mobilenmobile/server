@@ -115,3 +115,26 @@ export const deleteUser = asyncErrorHandler(async (req, res, next) => {
     .status(200)
     .json({ success: true, message: "User deleted successfully" });
 });
+
+
+
+export const updateProfile = asyncErrorHandler(async (req, res, next) => {
+  const { profile } = req.body
+  const user = await User.findById(req.user._id);
+  if (!user) {
+    return next(new ErrorHandler("No user found by this id", 404));
+  }
+
+  const profileData = JSON.parse(profile)
+  user.name = profileData.profileName
+  user.profile = profileData
+  user.email = profileData.profileEmailId
+  await user.save();
+
+  return res.status(200).json({
+    success: true,
+    message: "Successfully changed user previlege",
+  });
+});
+
+

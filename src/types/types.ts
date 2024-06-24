@@ -49,6 +49,8 @@ export interface NewProductRequestBody {
   offers: string;
   uniqueId: string;
   variance: string;
+  colors: string;
+  ramAndStorage: string;
   // productType: string;
 }
 

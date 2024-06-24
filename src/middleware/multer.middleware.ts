@@ -12,4 +12,8 @@ const storage = multer.diskStorage({
   },
 });
 
-export const fileUpload = multer({ storage });
+//define multer size
+export const fileUpload = multer({
+  storage: storage,
+  limits: { fileSize: 10 * 1024 * 1024 }
+});
