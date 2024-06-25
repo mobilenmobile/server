@@ -11,11 +11,12 @@ import {
   deletePreviewCloudinary,
 } from "../controllers/product.controllers.js";
 
-import { adminOnly } from "../middleware/auth.middleware.js";
+import { adminOnly, authenticated } from "../middleware/auth.middleware.js";
+import { processOrder } from "../controllers/order.controller.js";
 
 const productRouter = express.Router();
 
-productRouter.post("/new",adminOnly,fileUpload.array("productImages"), newProduct);
+productRouter.post("/new", adminOnly, fileUpload.array("productImages"), newProduct);
 productRouter.post(
   "/previewImages",
   fileUpload.array("productImages"),
@@ -27,8 +28,8 @@ productRouter.get("/getsingleproduct/:id", getSingleProduct);
 productRouter.post("/deletePreviewImage", deletePreviewCloudinary);
 productRouter.get("/search", getAllProducts);
 
-productRouter.post("/updateproduct/:id",adminOnly,updateProduct);
-productRouter.delete("/deleteproduct/:id",adminOnly,deleteProduct);
+productRouter.post("/updateproduct/:id", adminOnly, updateProduct);
+productRouter.delete("/deleteproduct/:id", adminOnly, deleteProduct);
 
 
 export default productRouter;

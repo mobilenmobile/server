@@ -8,6 +8,7 @@ import userRoute from "./routes/user.routes.js";
 import orderRoute from "./routes/order.routes.js";
 import productRoute from "./routes/product.routes.js";
 import paymentRoute from "./routes/payment.routes.js";
+import reviewRoute from "./routes/review.route.js"
 import dashboardRoute from "./routes/dashboard.routes.js";
 import chatbotRoute from "./routes/chatbot.routes.js";
 import addressRoute from "./routes/address.routes.js";
@@ -46,6 +47,7 @@ app.use(cookieParser());
 app.use("/api/v1/user", userRoute);
 app.use("/api/v1/product", productRoute);
 app.use("/api/v1/order", orderRoute);
+app.use("/api/v1/review", reviewRoute);
 app.use("/api/v1/address", addressRoute);
 app.use("/api/v1/payment", paymentRoute);
 app.use("/api/v1/dashboard", dashboardRoute);

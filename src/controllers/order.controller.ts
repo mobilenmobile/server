@@ -6,11 +6,12 @@ import ErrorHandler from "../utils/errorHandler.js";
 import { Request } from "express";
 import { myCache } from "../app.js";
 import { ClearCache, reduceStock } from "../utils/features.js";
-import mongoose from "mongoose";
 
 export const newOrder = asyncErrorHandler(
   async (req: Request, res, next) => {
+
     console.log(req.body)
+
     const {
       orderItems,
       orderStatuses,
@@ -25,9 +26,13 @@ export const newOrder = asyncErrorHandler(
     if (!deliveryAddress || !orderItems || !total) {
       return next(new ErrorHandler("Please Enter all Fields", 400));
     }
+
+    console.log(JSON.parse(deliveryAddress))
+
     if (!req.user._id) {
       return next(new ErrorHandler("unauthenticated user", 400));
     }
+
     const order = await Order.create({
       user: req.user._id,
       orderItems: JSON.parse(orderItems),
@@ -96,49 +101,83 @@ export const getSingleOrder = asyncErrorHandler(async (req, res, next) => {
 export const processOrder = asyncErrorHandler(async (req, res, next) => {
   const { id } = req.params;
   const order = await Order.findById(id);
+
   if (!order) {
     return next(new ErrorHandler("order not found", 404));
   }
-  switch (order.status) {
-    case "Processing":
-      order.status = "Shipped";
+  console.log(order, "------and---------", order.orderStatuses.length)
+
+  let orderStatus = order.orderStatuses[order.orderStatuses.length - 1]
+  console.log(orderStatus)
+
+  if (!orderStatus) {
+    return next(new ErrorHandler("status not found", 404));
+  }
+
+  switch (orderStatus.status) {
+    case "pending":
+      order.orderStatuses.push({
+        date: new Date(),
+        status: 'processing'
+      });
       break;
-    case "Shipped":
-      order.status = "Delivered";
+    case "processing":
+      order.orderStatuses.push({
+        date: new Date(),
+        status: 'shipped'
+      });
+      break;
+    case "shipped":
+      order.orderStatuses.push({
+        date: new Date(),
+        status: 'delivered'
+      });
       break;
     default:
-      order.status = "Delivered";
+      order.orderStatuses.push({
+        date: new Date(),
+        status: 'delivered'
+      });
       break;
   }
   await order.save();
 
-  await ClearCache({
-    product: false,
-    order: true,
-    admin: true,
-    userId: order.user,
-  });
   return res.status(200).json({
     success: true,
     message: "Order processed Successfully",
   });
 });
+
+
+export const cancellOrder = asyncErrorHandler(async (req, res, next) => {
+  const { id } = req.params;
+  const order = await Order.findById(id);
+
+  if (!order) {
+    return next(new ErrorHandler("order not found", 404));
+  }
+
+  order.orderStatuses.push({
+    date: new Date(),
+    status: 'cancelled'
+  });
+
+  await order.save();
+
+  return res.status(200).json({
+    success: true,
+    message: "Order Cancelled Successfully",
+  });
+});
+
+
 export const deleteOrder = asyncErrorHandler(async (req, res, next) => {
   const { id } = req.params;
   const order = await Order.findById(id);
   if (!order) {
     return next(new ErrorHandler("order not found", 404));
   }
-
   await order.deleteOne();
-
-  await ClearCache({
-    product: false,
-    order: true,
-    admin: true,
-    userId: order.user,
-    orderId: String(order._id),
-  });
   return res.status(200).json({
     success: true,
     message: "Order Deleted Successfully",

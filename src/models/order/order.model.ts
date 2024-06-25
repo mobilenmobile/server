@@ -25,20 +25,24 @@ import mongoose, { Schema } from "mongoose";
 //   selectedVariance: { type: varianceTypeSchema, required: true },
 // })
 
-
-const AddressSchema = new Schema({
-  fullname: { type: String, required: true },
-  houseno: { type: String, required: true },
-  pincode: { type: String, required: true },
+// Define the Address schema
+const addressSchema = new Schema({
+  fullName: { type: String, required: true },
+  houseNo: { type: String, required: true },
+  pinCode: { type: String, required: true },
   state: { type: String, required: true },
-  mobilenumber: { type: String, required: true },
+  mobileNo: { type: String, required: true },
   area: { type: String, required: true },
+  city: { type: String, required: true },
   place: {
     type: String,
     enum: ['home', 'office'],
     required: true
-  }
+  },
+  default: { type: Boolean, default: false },
 });
+
+
 // orderItems,
 // orderStatuses,
 // total,
@@ -47,6 +51,8 @@ const AddressSchema = new Schema({
 // paymentStatus,
 // deliveryAddress,
 // discount,
+
+
 const orderSchema = new Schema({
   user: {
     type: Schema.Types.ObjectId,
@@ -54,10 +60,10 @@ const orderSchema = new Schema({
     required: true
   },
   orderItems: {
-    type:[ Object],
+    type: [Object],
     required: true
   },
-  deliveryAddress: { type: AddressSchema, required: true },
+  deliveryAddress: { type: addressSchema, required: true },
   orderStatuses: {
     type: [Object],
   },

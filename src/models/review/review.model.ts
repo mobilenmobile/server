@@ -2,21 +2,22 @@ import mongoose, { Schema } from "mongoose";
 
 const reviewSchema = new Schema(
   {
-    reviewuser: {
+    reviewUser: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "user",
     },
-    reviewproduct: {
+    reviewProduct: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "product",
     },
-    reviewImgGallery: [],
+    reviewImgGallery: [String],
     reviewRating: {
-      type: String,
+      type: Number,
     },
     reviewDescription: {
       type: String,
     },
+    
   },
   {
     timestamps: true,
