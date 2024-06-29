@@ -1,11 +1,11 @@
 import { asyncErrorHandler } from "../middleware/error.middleware.js";
 import { Address } from "../models/address/address.model.js";
-import { Order } from "../models/order/order.model.js";
-import { NewOrderRequestBody, } from "../types/types.js";
 import ErrorHandler from "../utils/errorHandler.js";
 import { Request } from "express";
 
 
+
+// new address controller
 export const newAddress = asyncErrorHandler(
     async (req: Request, res, next) => {
         console.log(req.body)
@@ -93,6 +93,9 @@ export const updateAddress = asyncErrorHandler(
     }
 );
 
+
+
+//fetch all address of the user
 export const allAddress = asyncErrorHandler(async (req, res, next) => {
     const allAddress = await Address.find({ user: req.user._id })
     if (!req.user._id) {
@@ -105,6 +108,7 @@ export const allAddress = asyncErrorHandler(async (req, res, next) => {
 });
 
 
+//delete address of the user
 export const deleteAddress = asyncErrorHandler(async (req, res, next) => {
     const { id } = req.params;
     const address = await Address.findById(id);

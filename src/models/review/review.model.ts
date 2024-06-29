@@ -17,12 +17,10 @@ const reviewSchema = new Schema(
     reviewDescription: {
       type: String,
     },
-    
   },
   {
     timestamps: true,
   }
 );
 
-export const Review =
-  mongoose.models.review || mongoose.model("review", reviewSchema);
+export const Review = mongoose.models.review || mongoose.model("Review", reviewSchema);

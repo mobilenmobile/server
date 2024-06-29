@@ -20,8 +20,9 @@ export const errorMiddleware = (
   });
 };
 
+
 export const asyncErrorHandler =
   (func: ControllerType) =>
-  (req: Request, res: Response, next: NextFunction) => {
-    return Promise.resolve(func(req, res, next)).catch(next);
-  };
+    (req: Request, res: Response, next: NextFunction) => {
+      return Promise.resolve(func(req, res, next)).catch(next);
+    };

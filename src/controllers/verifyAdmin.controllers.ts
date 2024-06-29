@@ -23,9 +23,10 @@ export const verifyAdmin = asyncErrorHandler(
       const token = await jwt.sign(tokenData, process.env.JWT_SECRET!, {
         expiresIn: "1d",
       });
-      console.log(token);
-      res.setHeader("Set-Cookie", "hey=voldemort");
 
+      console.log(token);
+
+      res.setHeader("Set-Cookie", "hey=voldemort");
       res.getHeader("Set-Cookie");
 
       return res

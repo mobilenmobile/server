@@ -83,7 +83,8 @@ const orderSchema = new Schema({
   paymentStatus: {
     type: Boolean,
     default: false
-  }
+  },
+  
 
 });
 

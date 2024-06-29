@@ -11,12 +11,13 @@ import {
 import ErrorHandler from "../utils/errorHandler";
 
 
+// api to create new category
 export const addNewCategory = asyncErrorHandler(
   async (req: Request<{}, {}, NewCategoryRequestBody>, res, next) => {
     const { categoryName, categoryDescription, categoryImgUrl } = req.body;
 
     if (!categoryName || !categoryImgUrl) {
-        return next(new ErrorHandler("please provide category name/images.", 400));
+      return next(new ErrorHandler("please provide category name/images.", 400));
     }
 
     const category = await Category.create({
@@ -28,6 +29,9 @@ export const addNewCategory = asyncErrorHandler(
   }
 );
 
+
+
+//api to searchcategory
 export const searchCategory = asyncErrorHandler(
   async (req: Request<{}, {}, SearchCategoryQuery>, res, next) => {
     const { categoryname } = req.query;
@@ -58,6 +62,8 @@ export const searchCategory = asyncErrorHandler(
   }
 );
 
+
+//api to delete specfic category
 export const deleteCategory = asyncErrorHandler(
   async (req: Request<{}, {}, deleteCategoryQuery>, res, next) => {
     const { id } = req.body;

@@ -6,8 +6,8 @@ const addressRouter = express.Router()
 
 addressRouter.post("/newReview/:id", authenticated, newReview)
 addressRouter.put("/updateReview/:id", authenticated, updateReview)
-addressRouter.get("/allReviews/:id", authenticated, allReviews)
+addressRouter.get("/allReviews/:id",  allReviews)
 addressRouter.delete("/deleteReview/:id", authenticated, deleteReview)
 
-
+//some data
 export default addressRouter

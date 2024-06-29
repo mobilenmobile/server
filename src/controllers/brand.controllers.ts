@@ -1,17 +1,16 @@
 import { asyncErrorHandler } from "../middleware/error.middleware";
 import { Brand } from "../models/brand/brand.model";
 import {
-  BaseQuery,
   NewBrandRequestBody,
   SearchBrandRequestQuery,
   brandBaseQuery,
   deleteBrandQuery,
 } from "../types/types";
 import { Request } from "express";
-import { ClearCache } from "../utils/features";
-import { uploadOnCloudinary } from "../utils/cloudinary";
 import ErrorHandler from "../utils/errorHandler";
 
+
+//api to create new brand
 export const newBrand = asyncErrorHandler(
   async (req: Request<{}, {}, NewBrandRequestBody>, res, next) => {
     const { brandName, brandImgUrl, brandLogoUrl } = req.body;
@@ -23,14 +22,9 @@ export const newBrand = asyncErrorHandler(
       brandLogoUrl,
     });
 
-
     if (!brandName || !brandLogoUrl || !brandImgUrl) {
       return next(new ErrorHandler("please provide all fields", 400));
-  }
-
-
-    // console.log(brand);
-    await ClearCache({ product: true, admin: true });
+    }
 
     return res.status(201).json({
       success: true,
@@ -39,6 +33,8 @@ export const newBrand = asyncErrorHandler(
   }
 );
 
+
+//api to get all brand
 export const getAllBrand = asyncErrorHandler(
   async (req: Request<{}, {}, SearchBrandRequestQuery>, res, next) => {
     const { brandname } = req.query;
@@ -66,6 +62,8 @@ export const getAllBrand = asyncErrorHandler(
   }
 );
 
+
+//api to delete brand
 export const deleteBrand = asyncErrorHandler(
   async (req: Request<{}, {}, deleteBrandQuery>, res, next) => {
     const { id } = req.body;

@@ -3,24 +3,36 @@
 import mongoose, { Schema } from "mongoose";
 import validator from "validator";
 
-interface IUser extends Document {
-  name: string;
-  profile: string;
-  email: string;
-  role: "admin" | "user";
-  createdAt: Date;
-  updatedAt: Date;
-}
+
+
+// interface IUser extends Document {
+//   name: string;
+//   profile: typeof ProfileSchema;
+//   email: string;
+//   role: "admin" | "user";
+//   createdAt: Date;
+//   updatedAt: Date;
+// }
 
 // Define the Address schema
 const ProfileSchema = new Schema({
-  profileName: { type: String, required: true },
-  profileEmailId: { type: String, required: true },
-  profilePhoneNo: { type: String, required: true },
-  profileGender: { type: String, required: true },
-  profileLocation: { type: String, required: true },
-  profileAlternateMobileNo: { type: String, required: true }
+  profileImageUrl: { type: String, default: "/defaultprofileimage.png" },
+  profileName: { type: String, default: "" },
+  profileEmailId: { type: String, default: "" },
+  profilePhoneNo: { type: String, default: "" },
+  profileGender: { type: String, default: "" },
+  profileLocation: { type: String, default: "" },
+  profileAlternateMobileNo: { type: String, default: "" }
 });
+const DefaultProfileData = {
+  profileImageUrl: "/defaultprofileimage.png",
+  profileName: "",
+  profileEmailId: "",
+  profilePhoneNo: "",
+  profileGender: "",
+  profileLocation: "",
+  profileAlternateMobileNo: ""
+}
 
 
 const userSchema = new Schema(
@@ -39,7 +51,7 @@ const userSchema = new Schema(
       required: [true, "Please enter email"],
       validate: validator.default.isEmail,
     },
-    profile: { type: ProfileSchema },
+    profile: { type: ProfileSchema, default: DefaultProfileData },
     role: {
       type: String,
       enum: ["admin", "user"],
@@ -73,5 +85,5 @@ const userSchema = new Schema(
   }
 );
 
-export const User = mongoose.model<IUser>("User", userSchema);
+export const User = mongoose.model("User", userSchema);
 

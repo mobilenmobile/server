@@ -1,24 +1,20 @@
 import { Request, Response } from "express";
-
-import { ApiError } from "../utils/ApiError";
 import { ApiResponse } from "../utils/ApiResponse";
-import { asyncHandler } from "../utils/asyncHandler";
-
 import { resetChatHistory, run } from "../gemini/chatbot";
+import { asyncErrorHandler } from "../middleware/error.middleware";
+import ErrorHandler from "../utils/errorHandler";
 
 let flag = 0;
 
-const getChatbotResponse = asyncHandler(async (req: Request, res: Response) => {
+export const getChatbotResponse = asyncErrorHandler(async (req: Request, res: Response, next) => {
   try {
     const msg = req.body.msg;
     if (!msg) {
-      throw new ApiError(400, "Please provide a message!");
+      // throw new ApiError(400, "Please provide a message!");
+      return next(new ErrorHandler("Please provide a message!", 400));
     }
-
     const chatBotResponse = await run(msg);
-
     if (chatBotResponse) flag++;
-
     return res
       .status(201)
       .json(
@@ -29,22 +25,23 @@ const getChatbotResponse = asyncHandler(async (req: Request, res: Response) => {
         )
       );
   } catch (error) {
-    throw new ApiError(500, "Failed to do response, Please try again later!");
+    // throw new ApiError(500, "Failed to do response, Please try again later!");
+    return next(new ErrorHandler("Failed to do response, Please try again later!", 500));
   }
 });
 
-const startNewChat = asyncHandler(async (req: Request, res: Response) => {
+export const startNewChat = asyncErrorHandler(async (req: Request, res: Response, next) => {
   try {
     resetChatHistory();
-
     flag = 0;
-
     return res
       .status(201)
       .json(new ApiResponse(200, flag, "Chat reset successfully!"));
   } catch (error) {
-    throw new ApiError(500, "Failed to reset chat, Please try again later!");
+    // throw new ApiError(500, "Failed to reset chat, Please try again later!");
+    return next(new ErrorHandler("Failed to reset chat, Please try again later!", 500));
   }
+  
 });
 
-export { getChatbotResponse, startNewChat };
+
