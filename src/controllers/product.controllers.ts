@@ -370,8 +370,153 @@ export const getLimitedProductsByBrands = asyncErrorHandler(async (req, res, nex
 
 })
 
+interface Product {
+  _id: string;
+  productTitle: string;
+  productCategory: string;
+  productBrand: {
+    _id: string;
+    name: string; // Assuming the brand has a name property
+  };
+  productModel: string;
+  productDescription: string;
+  productVariance: ProductVariance;
+  // Add more properties as needed
+}
+
+interface ProductVariance {
+  _id: string;
+  id: string;
+  color: string; // Assuming color is always present in productVariance
+  ramAndStorage: {
+    _id: string;
+    id: string;
+    ram: string;
+    storage: string;
+  }[];
+  thumbnail: string;
+  sellingPrice: string;
+  boxPrice: string;
+}
+
+// Function to filter and sort products
+export const getFilterAndSortProducts = asyncErrorHandler(async (req, res, next) => {
+
+  // Example filters object (adjust as per your UI or requirements)
+  const filters = {
+    searchText: req.query.search || '',
+    minPrice: Number(req.query.minPrice) || 0,
+    maxPrice: Number(req.query.maxPrice) || 0,
+    rating: req.query.rating || 0,
+    brand: req.query.brand || '',
+    color: req.query.color || '',
+    memory: req.query.memory || '',
+    sortBy: req.query.sortBy || 'priceLowToHigh' // Options: 'priceLowToHigh', 'priceHighToLow', 'topRated'
+  };
+
+  console.log(filters)
+
+  const baseQuery: FilterQuery<BaseQuery> = {};
+
+  if (typeof filters.searchText === 'string') {
+    baseQuery.productTitle = {
+      $regex: filters.searchText,
+      $options: "i",
+    };
+  }
+
+  const data = await Product.find(baseQuery).populate("productCategory")
+    .populate("productBrand")
 
 
+  let flatProducts: any = []
+
+  data.forEach(product => {
+    product.productVariance.forEach((variant: ProductVariance) => {
+      const newProduct = {
+        productid: `${product._id}`,
+        keyid: `${product._id}${variant.id.replace(/\s+/g, "")}`,
+        variantid: `${variant.id.replace(/\s+/g, "")}`,
+        title: `${product.productTitle} ${product.productModel}`,
+        thumbnail: variant.thumbnail,
+        boxPrice: variant.boxPrice,
+        sellingPrice: variant.sellingPrice,
+        rating: product.productRating,
+        color: variant.color, // Replace with actual rating if available
+        brand: product.productBrand?.brandName || 'nobrand'
+      };
+      flatProducts.push(newProduct);
+    });
+  });
+
+
+  let filteredProducts = [...flatProducts];
+
+
+  // Apply search text filter
+  // if (typeof filters.searchText === 'string') {
+  //   const searchRegex = new RegExp(filters.searchText.trim(), 'i'); // Case insensitive search
+  //   filteredProducts = filteredProducts.filter(product => searchRegex.test(product.title));
+  // }
+  // Apply filters
+  if (filters.minPrice && filters.maxPrice) {
+    console.log("---filtering based on minprice and maxprice")
+    filteredProducts = filteredProducts.filter(product => {
+      const sellingPrice = Number(product.sellingPrice);
+      return sellingPrice >= filters.minPrice && sellingPrice <= filters.maxPrice;
+    });
+  }
+
+  if (filters.rating) {
+    console.log("---filtering based on rating")
+    filteredProducts = filteredProducts.filter(product => product.rating >= filters.rating);
+  }
+
+  if (filters.brand) {
+    console.log("---filtering based on brand")
+    filteredProducts = filteredProducts.filter(product => product.brand === filters.brand);
+  }
+
+  if (filters.color) {
+    console.log("---filtering based on color")
+    filteredProducts = filteredProducts.filter(product => product.color === filters.color);
+  }
+
+  if (filters.memory) {
+    console.log("---filtering based on memory")
+    filteredProducts = filteredProducts.filter(product => product.memory === filters.memory);
+  }
+
+  // Apply sorting
+  if (filters.sortBy === 'priceLowToHigh') {
+    console.log("---filtering based pricelowtohigh")
+    filteredProducts.sort((a, b) => Number(a.sellingPrice) - Number(b.sellingPrice));
+  } else if (filters.sortBy === 'priceHighToLow') {
+    console.log("---filtering based hightolow")
+    filteredProducts.sort((a, b) => Number(b.sellingPrice) - Number(a.sellingPrice));
+  } else if (filters.sortBy === 'topRated') {
+    console.log("---filtering based on toprated")
+    filteredProducts.sort((a, b) => b.rating - a.rating);
+  }
+
+
+  // console.log(flatProducts, "-----and---------", filteredProducts)
+  return res.status(200).json({
+    success: true,
+    products: filteredProducts,
+    message: "successfully filtered and sorted products",
+  });
+})
+
+
+
+
+
+
+
+
+
+// Example usage:
 // export const getorderwithreview = asyncErrorHandler(async (req, res, next) => {
 //   // Find orders
 //   const orders = await Order.find().populate({

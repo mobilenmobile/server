@@ -11,6 +11,7 @@ import {
   deletePreviewCloudinary,
   getLimitedProductsByBrands,
   deleteProductDirectly,
+  getFilterAndSortProducts,
 } from "../controllers/product.controllers.js";
 
 import { adminOnly } from "../middleware/auth.middleware.js";
@@ -31,6 +32,7 @@ productRouter.get("/getsingleproduct/:id", getSingleProduct);
 productRouter.post("/deletePreviewImage", deletePreviewCloudinary);
 
 productRouter.get("/search", getAllProducts);
+productRouter.get("/searchfilterandsort", getFilterAndSortProducts);
 
 productRouter.get("/getlimitedproductsbybrand", getLimitedProductsByBrands);
 
@@ -38,6 +40,7 @@ productRouter.post("/updateproduct/:id", adminOnly, updateProduct);
 
 productRouter.delete("/deleteproduct/:id", adminOnly, deleteProduct);
 productRouter.delete("/deleteproductdirectly/:id", adminOnly, deleteProductDirectly);
+
 
 
 
