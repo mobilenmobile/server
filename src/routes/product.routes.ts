@@ -12,6 +12,7 @@ import {
   getLimitedProductsByBrands,
   deleteProductDirectly,
   getFilterAndSortProducts,
+  getAllAdminProducts,
 } from "../controllers/product.controllers.js";
 
 import { adminOnly } from "../middleware/auth.middleware.js";
@@ -26,18 +27,13 @@ productRouter.post(
 );
 
 productRouter.get("/latest", getLatestProduct);
-
 productRouter.get("/getsingleproduct/:id", getSingleProduct);
-
 productRouter.post("/deletePreviewImage", deletePreviewCloudinary);
-
 productRouter.get("/search", getAllProducts);
+productRouter.get("/getAllAdminProducts", getAllAdminProducts);
 productRouter.get("/searchfilterandsort", getFilterAndSortProducts);
-
 productRouter.get("/getlimitedproductsbybrand", getLimitedProductsByBrands);
-
 productRouter.post("/updateproduct/:id", adminOnly, updateProduct);
-
 productRouter.delete("/deleteproduct/:id", adminOnly, deleteProduct);
 productRouter.delete("/deleteproductdirectly/:id", adminOnly, deleteProductDirectly);
 

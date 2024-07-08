@@ -2,7 +2,7 @@ import mongoose, { Schema } from "mongoose";
 import { User } from "../auth/user.model";
 
 // Define the Address schema
-const addressSchema = new Schema({
+export const addressSchema = new Schema({
     user: { type: Schema.Types.ObjectId, ref: User },
     fullName: { type: String, required: true },
     houseNo: { type: String, required: true },

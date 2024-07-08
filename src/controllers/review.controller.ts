@@ -43,19 +43,30 @@ export const newReview = asyncErrorHandler(
         if (!req.user._id) {
             return next(new ErrorHandler("unauthenticated", 400));
         }
+        let review = await Review.findOne({ user: req.user._id, id });
+        console.log("----------existingitem---------", review)
 
-        const newReviews = await Review.create({
-            reviewUser: req.user._id,
-            reviewProduct: id,
-            reviewImgGallery: JSON.parse(reviewImgGallery),
-            reviewRating,
-            reviewDescription
-        });
-        await handleReviewChange(newReviews._id, id, newReviews.reviewRating)
+        if (review) {
+            if (reviewRating) review.reviewRating = reviewRating
+            if (reviewDescription) review.reviewDescription = reviewRating
+            if (reviewImgGallery) review.reviewImgGallery = JSON.parse(reviewImgGallery)
+            await review.save()
+        }
+
+        if (!review) {
+            review = await Review.create({
+                reviewUser: req.user._id,
+                reviewProduct: id,
+                reviewImgGallery: JSON.parse(reviewImgGallery),
+                reviewRating,
+                reviewDescription
+            });
+        }
+        await handleReviewChange(review._id, id, review.reviewRating)
         return res.status(201).json({
             success: true,
             message: "Review created successfully",
-            newReviews,
+            review,
         });
     }
 );

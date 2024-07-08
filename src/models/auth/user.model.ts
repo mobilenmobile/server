@@ -2,17 +2,11 @@
 
 import mongoose, { Schema } from "mongoose";
 import validator from "validator";
+import { OfferSchema } from "../offer/offer.model";
+import { addressSchema } from "../address/address.model";
 
 
 
-// interface IUser extends Document {
-//   name: string;
-//   profile: typeof ProfileSchema;
-//   email: string;
-//   role: "admin" | "user";
-//   createdAt: Date;
-//   updatedAt: Date;
-// }
 
 // Define the Address schema
 const ProfileSchema = new Schema({
@@ -34,6 +28,14 @@ const DefaultProfileData = {
   profileAlternateMobileNo: ""
 }
 
+// interface IUser extends Document {
+//   uid: string,
+//   name: string,
+//   email: string,
+//   profile: typeof ProfileSchema,
+//   coupon: typeof OfferSchema,
+//   address: typeof addressSchema,
+// }
 
 const userSchema = new Schema(
   {
@@ -52,26 +54,11 @@ const userSchema = new Schema(
       validate: validator.default.isEmail,
     },
     profile: { type: ProfileSchema, default: DefaultProfileData },
-    role: {
-      type: String,
-      enum: ["admin", "user"],
-      default: "user",
+    coupon: {
+      type: Schema.Types.ObjectId,
+      ref: "offer",
+      // 6686618cc97c745ba57d72d0
     },
-    reward: {
-      type: Number,
-    },
-    wishlist: [
-      {
-        type: Schema.Types.ObjectId,
-        ref: "Product",
-      },
-    ],
-    cart: [
-      {
-        type: Schema.Types.ObjectId,
-        ref: "Product",
-      },
-    ],
     address: [
       {
         type: Schema.Types.ObjectId,

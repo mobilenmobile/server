@@ -73,6 +73,7 @@ const orderSchema = new Schema({
   },
   couponcode: {
     type: String,
+    default: ''
   },
   discount: {
     type: Number
@@ -84,7 +85,6 @@ const orderSchema = new Schema({
     type: Boolean,
     default: false
   },
-  
 
 });
 

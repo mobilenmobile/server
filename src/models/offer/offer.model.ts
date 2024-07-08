@@ -1,6 +1,14 @@
 import mongoose, { Schema } from "mongoose";
 
-const OfferSchema = new Schema(
+
+export interface CouponDocument extends Document {
+  offerExpiry: Date;
+  offerCouponDiscount: number;
+  // Other fields
+}
+
+
+ export const OfferSchema = new Schema(
   {
     offerCouponCode: {
       type: String,

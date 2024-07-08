@@ -66,30 +66,32 @@ export const updateOffer = asyncErrorHandler(
 export const searchAllOffer = asyncErrorHandler(
   async (req: Request<{}, {}, SearchOfferQuery>, res, next) => {
 
-    const { offercode, offerdescription } = req.query;
-    const baseQuery: offerBaseQuery = {};
+    // const { offercode, offerdescription } = req.query;
+    // const baseQuery: offerBaseQuery = {};
 
-    if (offercode) {
-      if (typeof offercode !== "string") {
-        return;
-      }
-      baseQuery.offerCode = {
-        $regex: offercode,
-        $options: "i",
-      };
-    }
+    // if (offercode) {
+    //   if (typeof offercode !== "string") {
+    //     return;
+    //   }
+    //   baseQuery.offerCode = {
+    //     $regex: offercode,
+    //     $options: "i",
+    //   };
+    // }
 
-    if (offerdescription) {
-      if (typeof offerdescription !== "string") {
-        return;
-      }
-      baseQuery.offerDescription = {
-        $regex: offerdescription,
-        $options: "i",
-      };
-    }
-    const offer = await Offer.find(baseQuery);
-
+    // if (offerdescription) {
+    //   if (typeof offerdescription !== "string") {
+    //     return;
+    //   }
+    //   baseQuery.offerDescription = {
+    //     $regex: offerdescription,
+    //     $options: "i",
+    //   };
+    // }
+    // Get current date
+    const currentDate = new Date();
+    const offer = await Offer.find();
+    console.log(offer)
     if (!offer) {
       return res.status(404).json("no offer found.");
     }

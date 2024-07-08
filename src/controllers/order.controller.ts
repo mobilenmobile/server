@@ -138,8 +138,6 @@ export const processOrder = asyncErrorHandler(async (req, res, next) => {
   });
 });
 
-
-
 //api to cancell order
 export const cancellOrder = asyncErrorHandler(async (req, res, next) => {
   const { id } = req.params;
@@ -148,7 +146,7 @@ export const cancellOrder = asyncErrorHandler(async (req, res, next) => {
   if (!order) {
     return next(new ErrorHandler("order not found", 404));
   }
-  
+
   order.orderStatuses.push({
     date: new Date(),
     status: 'cancelled'
@@ -186,7 +184,7 @@ export const getAllOrders = asyncErrorHandler(async (req, res, next) => {
   const orders = await Order.find({ user: userId });
 
   if (!orders || orders.length === 0) {
-    return res.status(404).json({ error: 'No orders found for the user' });
+    return next(new ErrorHandler("order not found", 404));
   }
 
   // Create an array to store promises for fetching reviews for all items in all orders
@@ -195,21 +193,22 @@ export const getAllOrders = asyncErrorHandler(async (req, res, next) => {
 
     // Fetch reviews for all items in the current order
     const orderItemsWithReviews = await Promise.all(order.orderItems.map(async (item: any) => {
-      const productId = item.product;
+
+      console.log("item", item)
 
       // Find reviews based on userId and productId
       const reviews = await Review.find({
         reviewUser: userId,
-        reviewProduct: productId
+        reviewProduct: item.productId
       });
-
+      console.log("reviews", reviews)
       // Return an object with item details and associated reviews
       return {
         item,
         reviews: reviews
       };
     }));
-
+    console.log("orderItemwithreviews", orderItemsWithReviews)
     // Return an object with order details and items with reviews
     return {
       _id: orderId,
