@@ -282,10 +282,9 @@ export const getWishlistItems = asyncErrorHandler(async (req: Request, res, next
 
   console.log("-------------wishlistitems--------------", wishlistItems)
   const wishlistItemsData = wishlistItems.map((item) => {
-
-
     if (item.productId.productVariance) {
-      const variantData = item.productId.productVariance.map((variant: any) => {
+      const variantData = item.productId.productVariance.find((variant: any) => {
+        console.log("variant id ----------------------", variant.id, item.selectedVarianceId)
         if (variant.id == item.selectedVarianceId) {
           return variant
         }
@@ -293,13 +292,14 @@ export const getWishlistItems = asyncErrorHandler(async (req: Request, res, next
       console.log("variantData", variantData)
       const productDiscount = calculateDiscount(variantData[0]?.boxPrice, variantData[0]?.sellingPrice)
       return {
+
         _id: item._id,
         productId: item.productId._id,
         selectedVarianceId: item.selectedVarianceId,
         productTitle: item.productId.productTitle,
-        thumbnail: variantData[0]?.thumbnail || '',
-        boxPrice: variantData[0]?.boxPrice || '',
-        sellingPrice: variantData[0]?.$sellingPrice || '',
+        thumbnail: variantData?.thumbnail || '',
+        boxPrice: variantData?.boxPrice || '',
+        sellingPrice: variantData?.$sellingPrice || '',
         productRating: item.productId.productRating,
         discount: productDiscount,
       }
@@ -324,27 +324,31 @@ export const getCartItems = asyncErrorHandler(async (req: Request, res, next) =>
     // console.log(item)
 
     if (item.productId.productVariance) {
-      const variantData = item.productId.productVariance.map((variant: any) => {
+      const variantData = item.productId.productVariance.find((variant: any) => {
         if (variant.id == item.selectedVarianceId) {
           return variant
         }
       })
+
       // console.log("variantData", variantData)
-      const productDiscount = calculateDiscount(variantData[0].boxPrice, variantData[0].sellingPrice)
-      return {
-        _id: item._id,
-        productTitle: item.productId.productTitle,
-        thumbnail: variantData[0].thumbnail,
-        boxPrice: variantData[0].boxPrice,
-        sellingPrice: variantData[0].sellingPrice,
-        color: variantData[0].color,
-        ramAndStorage: variantData[0].ramAndStorage[0],
-        productRating: item.productId.productRating,
-        quantity: item.quantity,
-        productId: item.productId._id,
-        selectedVarianceId: item.selectedVarianceId,
-        discount: productDiscount,
+      const productDiscount = calculateDiscount(variantData?.boxPrice, variantData?.sellingPrice)
+      if (variantData.quantity && Number(variantData.quantity) > 0) {
+        return {
+          _id: item._id,
+          productTitle: item.productId.productTitle,
+          thumbnail: variantData?.thumbnail,
+          boxPrice: variantData?.boxPrice,
+          sellingPrice: variantData?.sellingPrice,
+          color: variantData?.color,
+          ramAndStorage: variantData?.ramAndStorage[0],
+          productRating: item.productId.productRating,
+          quantity: item.quantity,
+          productId: item.productId._id,
+          selectedVarianceId: item.selectedVarianceId,
+          discount: productDiscount,
+        }
       }
+
     }
   })
   console.log(cartItemsData)
@@ -422,22 +426,22 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
     // console.log(item)
     if (item.productId.productVariance) {
 
-      const variantData = item.productId.productVariance.map((variant: any) => {
+      const variantData = item.productId.productVariance.find((variant: any) => {
         console.log(variant.id.replace(/\s+/g, ""), (item.selectedVarianceId))
         if ((variant.id.replace(/\s+/g, "")) == (item.selectedVarianceId.replace(/\s+/g, ""))) {
           return variant
         }
       })
       console.log("variantData", variantData)
-      const productDiscount = calculateDiscount(variantData[0].boxPrice, variantData[0].sellingPrice)
+      const productDiscount = calculateDiscount(variantData?.boxPrice, variantData?.sellingPrice)
       return {
         _id: item._id,
         productTitle: item.productId.productTitle,
-        thumbnail: variantData[0].thumbnail,
-        boxPrice: variantData[0].boxPrice,
-        sellingPrice: variantData[0].sellingPrice,
-        color: variantData[0].color,
-        ramAndStorage: variantData[0].ramAndStorage[0],
+        thumbnail: variantData?.thumbnail,
+        boxPrice: variantData?.boxPrice,
+        sellingPrice: variantData?.sellingPrice,
+        color: variantData?.color,
+        ramAndStorage: variantData?.ramAndStorage[0],
         productRating: item.productId.productRating,
         quantity: item.quantity,
         productId: item.productId._id,
