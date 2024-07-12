@@ -217,7 +217,7 @@ export const getSingleProduct = asyncErrorHandler(async (req, res, next) => {
 
   // product.productColors = extractedColorArr
   // let updatedProduct = { ...product, Colors: extractedColorArr };
-  
+
   console.log(updateProduct)
   return res.status(200).json({
     success: true,
@@ -468,15 +468,24 @@ export const getAllProducts = asyncErrorHandler(
           // console.log("--------------------------------ram---------------------", variant.ramAndStorage[0])
 
           //dynamically creating title of product
-          const title = `${product.productTitle} ${variant.ramAndStorage && `(${variant.ramAndStorage[0].ram != '0' ? `${variant.ramAndStorage[0].ram}GB` : ''} ${variant.ramAndStorage[0].storage != '0' ? `${variant.ramAndStorage[0].storage}GB` : ''})`
-            }`
+          let title = product.productTitle
 
+          if (variant['ramAndStorage'].length > 0 && variant.ramAndStorage[0]?.ram) {
+            // title = `${product.productTitle} ${variant.ramAndStorage
+            //   && `(${variant.ramAndStorage[0].ram != '0' ? `${variant.color} ${variant.ramAndStorage[0].ram}GB` : ''} ${variant.ramAndStorage[0].storage != '0' ? `${variant.ramAndStorage[0].storage}GB` : ''})`
+            //   }`
+            title = `${product.productTitle} ${variant.ramAndStorage
+              && `(${variant.color} ${variant.ramAndStorage[0].storage != '0' ? `${variant.ramAndStorage[0].storage}GB` : ''})`
+              }`
+          } else {
+            title = `${product.productTitle} (${variant.color})`
+          }
           //creating different product based on variance
           const newProduct = {
             productid: `${product._id}`,
             keyid: `${product._id}${variant.id.replace(/\s+/g, "")}`,
             variantid: `${variant.id.replace(/\s+/g, "")}`,
-            title: title,
+            title: title.toLowerCase(),
             thumbnail: variant.thumbnail,
             boxPrice: variant.boxPrice,
             sellingPrice: variant.sellingPrice,
@@ -633,21 +642,36 @@ export const getFilterAndSortProducts = asyncErrorHandler(async (req, res, next)
 
   data.forEach(product => {
     product.productVariance.forEach((variant: ProductVariance) => {
-      const productDiscount = calculateDiscount(variant.boxPrice, variant.sellingPrice)
-      const newProduct = {
-        productid: `${product._id}`,
-        keyid: `${product._id}${variant.id.replace(/\s+/g, "")}`,
-        variantid: `${variant.id.replace(/\s+/g, "")}`,
-        title: `${product.productTitle} ${product.productModel}`,
-        thumbnail: variant.thumbnail,
-        boxPrice: variant.boxPrice,
-        sellingPrice: variant.sellingPrice,
-        discount: productDiscount,
-        rating: product.productRating,
-        color: variant.color, // Replace with actual rating if available
-        brand: product.productBrand?.brandName || 'nobrand'
-      };
-      flatProducts.push(newProduct);
+
+      if (Number(variant.quantity) > 0) {
+        const productDiscount = calculateDiscount(variant.boxPrice, variant.sellingPrice)
+        let title = product.productTitle
+
+        if (variant['ramAndStorage'].length > 0 && variant.ramAndStorage[0]?.ram) {
+          // title = `${product.productTitle} ${variant.ramAndStorage
+          //   && `(${variant.ramAndStorage[0].ram != '0' ? `${variant.color} ${variant.ramAndStorage[0].ram}GB` : ''} ${variant.ramAndStorage[0].storage != '0' ? `${variant.ramAndStorage[0].storage}GB` : ''})`
+          //   }`
+          title = `${product.productTitle} ${variant.ramAndStorage
+            && `(${variant.color} ${variant.ramAndStorage[0].storage != '0' ? `${variant.ramAndStorage[0].storage}GB` : ''})`
+            }`
+        } else {
+          title = `${product.productTitle} (${variant.color})`
+        }
+        const newProduct = {
+          productid: `${product._id}`,
+          keyid: `${product._id}${variant.id.replace(/\s+/g, "")}`,
+          variantid: `${variant.id.replace(/\s+/g, "")}`,
+          title: title,
+          thumbnail: variant.thumbnail,
+          boxPrice: variant.boxPrice,
+          sellingPrice: variant.sellingPrice,
+          discount: productDiscount,
+          rating: product.productRating,
+          color: variant.color, // Replace with actual rating if available
+          brand: product.productBrand?.brandName || 'nobrand'
+        };
+        flatProducts.push(newProduct);
+      }
     });
   });
 
@@ -662,23 +686,29 @@ export const getFilterAndSortProducts = asyncErrorHandler(async (req, res, next)
     console.log("---filtering based on minprice and maxprice")
     filteredProducts = filteredProducts.filter(product => {
       const sellingPrice = Number(product.sellingPrice);
-      return sellingPrice >= filters.minPrice && sellingPrice <= filters.maxPrice;
+      console.log("--------------selling price-------------", filters.minPrice, ">", sellingPrice, "<=", filters.maxPrice)
+      console.log(sellingPrice >= filters.minPrice && sellingPrice <= filters.maxPrice)
+      return sellingPrice >= Number(filters.minPrice) && sellingPrice <= Number(filters.maxPrice);
     });
   }
 
   if (filters.rating) {
     console.log("---filtering based on rating")
-    filteredProducts = filteredProducts.filter(product => product.rating >= filters.rating);
+    filteredProducts = filteredProducts.filter(product => product.rating >= Number(filters.rating));
   }
 
   if (filters.brand) {
     console.log("---filtering based on brand")
     filteredProducts = filteredProducts.filter(product => product.brand === filters.brand);
   }
-
   if (filters.color) {
-    console.log("---filtering based on color")
-    filteredProducts = filteredProducts.filter(product => product.color === filters.color);
+    filteredProducts = filteredProducts.filter(product => {
+      // Convert both product color and filter color to lowercase for case-insensitive comparison
+      if (typeof filters.color == 'string') {
+        return product.color.toLowerCase().includes(filters.color.toLowerCase());
+      }
+
+    });
   }
 
   if (filters.memory) {
