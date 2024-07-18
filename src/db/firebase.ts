@@ -17,15 +17,17 @@ export const firebase = admin.apps.length
   ? admin.app()
   : admin.initializeApp(config);
 
-export const getUid = async (authToken: string): Promise<{ uid: string; }> => {
-  const decodedToken = await getAuth()
-    .verifyIdToken(authToken)
-    .then((decodedToken) => {
-      const uid = decodedToken.uid;
-      return { authenticated: true, uid: uid }
-    })
-  // console.log("from firebase decoded token =>",decodedToken)
-  return decodedToken
+export const getUid = async (authToken: string): Promise<{ authenticated: boolean, uid: string; }> => {
+  try {
+    const decodedToken = await getAuth().verifyIdToken(authToken)
+    console.log(decodedToken)
+    if (decodedToken) {
+      return { authenticated: true, uid: decodedToken.uid }
+    }
+    return { authenticated: false, uid: '' }
+  } catch (error) {
+    return { authenticated: false, uid: '' }
+  }
 }
 
 
