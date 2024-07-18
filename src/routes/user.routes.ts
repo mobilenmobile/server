@@ -17,7 +17,7 @@ userRouter.put("/removeCoupon", authenticated, removeCouponCode)
 userRouter.post("/decreasecartproductquantity", authenticated, decreaseCartProductQuantity)
 userRouter.post("/updateWishlist", authenticated, updateWishlist)
 userRouter.post("/updateCart", authenticated, updateCart)
-userRouter.delete("/removewishlistitem/:id", authenticated, removeWishlistItem)
+userRouter.put("/removewishlistitem", authenticated, removeWishlistItem)
 userRouter.delete("/removecartitem/:id", authenticated, removeCartItem)
 
 

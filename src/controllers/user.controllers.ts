@@ -280,17 +280,17 @@ export const getWishlistItems = asyncErrorHandler(async (req: Request, res, next
 
   const wishlistItems = await Wishlist.find({ user: req.user._id }).populate("productId");
 
-  console.log("-------------wishlistitems--------------", wishlistItems)
+  // console.log("-------------wishlistitems--------------", wishlistItems)
   const wishlistItemsData = wishlistItems.map((item) => {
     if (item.productId.productVariance) {
       const variantData = item.productId.productVariance.find((variant: any) => {
         console.log("variant id ----------------------", variant.id, item.selectedVarianceId)
-        if (variant.id == item.selectedVarianceId) {
+        if (variant.id.replace(/\s+/g, "") == item.selectedVarianceId) {
           return variant
         }
       })
-      console.log("variantData", variantData)
-      const productDiscount = calculateDiscount(variantData[0]?.boxPrice, variantData[0]?.sellingPrice)
+      // console.log("variantData", variantData)
+      const productDiscount = calculateDiscount(variantData?.boxPrice, variantData?.sellingPrice)
       return {
 
         _id: item._id,
@@ -299,13 +299,13 @@ export const getWishlistItems = asyncErrorHandler(async (req: Request, res, next
         productTitle: item.productId.productTitle,
         thumbnail: variantData?.thumbnail || '',
         boxPrice: variantData?.boxPrice || '',
-        sellingPrice: variantData?.$sellingPrice || '',
+        sellingPrice: variantData?.sellingPrice || '',
         productRating: item.productId.productRating,
         discount: productDiscount,
       }
     }
   })
-  console.log(wishlistItemsData)
+  // console.log(wishlistItemsData)s
   return res.status(200).json({ success: true, wishlistItemsData });
 
 });
@@ -370,15 +370,24 @@ export const removeWishlistItem = asyncErrorHandler(async (req: Request, res, ne
   if (!req.user._id) {
     return next(new ErrorHandler("unauthenticated", 400));
   }
-  if (!req.params.id) {
-    return next(new ErrorHandler("no id", 400));
+  // if (!req.params.id) {
+  //   return next(new ErrorHandler("no id", 400));
+  // }
+  console.log(req.body)
+  const { productId, selectedVarianceId } = req.body
+
+  if (!productId || !selectedVarianceId) {
+    return next(new ErrorHandler("no product id", 400));
   }
-  const wishlistItem = await Wishlist.findOne({ user: req.user._id, _id: req.params.id });
+
+  const wishlistItem = await Wishlist.findOne({ user: req.user._id, productId: productId, selectedVarianceId: selectedVarianceId });
+  console.log("found wishlistitem ", wishlistItem)
+
   if (!wishlistItem) {
     return next(new ErrorHandler("wishlistitem not found", 400));
   }
 
-  await Wishlist.findByIdAndDelete(req.params.id);
+  await Wishlist.findByIdAndDelete(wishlistItem._id);
   return res.status(200).json({ success: true, message: "successfully deleted item from wishlist" });
 
 });

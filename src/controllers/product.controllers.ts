@@ -122,7 +122,7 @@ export const getSingleProduct = asyncErrorHandler(async (req, res, next) => {
 
   console.log(product)
   // Function to modify strings starting with "0-"
-  if (product.productRamAndStorage && product.productBrand.brandName == 'apple') {
+  if (product?.productRamAndStorage && product?.productBrand?.brandName == 'apple') {
     let modifiedRamAndStorage = product.productRamAndStorage.map((item: { id: string }) => {
       if (item.id.startsWith("0-")) {
         return item.id = item.id.substring(2); // Take substring from index 2 to end
@@ -572,7 +572,6 @@ export const getLimitedProductsByBrands = asyncErrorHandler(async (req, res, nex
     }
   ]);
 
-
   return res.status(200).json({
     success: true,
     products: result,
@@ -661,7 +660,7 @@ export const getFilterAndSortProducts = asyncErrorHandler(async (req, res, next)
           productid: `${product._id}`,
           keyid: `${product._id}${variant.id.replace(/\s+/g, "")}`,
           variantid: `${variant.id.replace(/\s+/g, "")}`,
-          title: title,
+          title: title.toLowerCase(),
           thumbnail: variant.thumbnail,
           boxPrice: variant.boxPrice,
           sellingPrice: variant.sellingPrice,
@@ -727,8 +726,6 @@ export const getFilterAndSortProducts = asyncErrorHandler(async (req, res, next)
     console.log("---filtering based on toprated")
     filteredProducts.sort((a, b) => b.rating - a.rating);
   }
-
-
   // console.log(flatProducts, "-----and---------", filteredProducts)
   return res.status(200).json({
     success: true,
