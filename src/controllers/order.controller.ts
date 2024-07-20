@@ -20,9 +20,11 @@ export const newOrder = asyncErrorHandler(
       paymentStatus,
       deliveryAddress,
       discount,
+      discountedTotal,
+      finalAmount
     } = req.body;
 
-    if (!deliveryAddress || !orderItems || !total) {
+    if (!deliveryAddress || !orderItems || !total || !finalAmount) {
       return next(new ErrorHandler("Please Enter all Fields", 400));
     }
 
@@ -42,6 +44,8 @@ export const newOrder = asyncErrorHandler(
       paymentStatus,
       deliveryAddress: JSON.parse(deliveryAddress),
       discount,
+      discountedTotal,
+      finalAmount
     });
     return res.status(201).json({
       success: true,
@@ -222,7 +226,25 @@ export const getAllOrders = asyncErrorHandler(async (req, res, next) => {
   // Execute all review promises concurrently
   const ordersWithReviews = await Promise.all(reviewPromises);
   // Define the desired order of statuses
+  const statusOrder = ['placed', 'packed', 'shipped', 'outfordelivery', 'delivered', 'cancelled'];
 
+  // Function to determine the last status of an order
+
+  function getLastStatus(order: any) {
+    if (order.orderStatuses.length > 0) {
+      return order.orderStatuses[order.orderStatuses.length - 1].status;
+    }
+    return null; // Return null if no statuses are present
+  }
+
+  // Sorting orders based on the last status
+  ordersWithReviews.sort((a, b) => {
+    let lastStatusA = getLastStatus(a);
+    let lastStatusB = getLastStatus(b);
+    console.log(lastStatusA, lastStatusB)
+    // Sort orders based on the index of their last status in statusOrder
+    return statusOrder.indexOf(lastStatusA) - statusOrder.indexOf(lastStatusB);
+  });
   // res.json(jsonResponse);
   return res.status(200).json({
     success: true,

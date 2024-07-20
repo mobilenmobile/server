@@ -1,6 +1,6 @@
 import express from "express";
 
-import { decreaseCartProductQuantity, getAppliedCoupon, getCartDetails, getCartItems, getUser, getWishlistItems, newUser, removeCartItem, removeCouponCode, removeWishlistItem, updateCart, updateCouponCode, updateProfile, updateProfileImage, updateWishlist } from "../controllers/user.controllers.js";
+import { clearCart, decreaseCartProductQuantity, getAppliedCoupon, getCartDetails, getCartItems, getUser, getWishlistItems, newUser, removeCartItem, removeCouponCode, removeWishlistItem, updateCart, updateCouponCode, updateProfile, updateProfileImage, updateWishlist } from "../controllers/user.controllers.js";
 import { adminOnly, authenticated } from "../middleware/auth.middleware.js";
 
 
@@ -19,6 +19,7 @@ userRouter.post("/updateWishlist", authenticated, updateWishlist)
 userRouter.post("/updateCart", authenticated, updateCart)
 userRouter.put("/removewishlistitem", authenticated, removeWishlistItem)
 userRouter.delete("/removecartitem/:id", authenticated, removeCartItem)
+userRouter.delete("/clearcart", authenticated, clearCart)
 
 
 export default userRouter;

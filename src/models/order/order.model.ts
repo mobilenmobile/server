@@ -85,7 +85,12 @@ const orderSchema = new Schema({
     type: Boolean,
     default: false
   },
-
+  discountedTotal: {
+    type: Number
+  },
+  finalAmount: {
+    type: Number
+  },
 });
 
 const Order = mongoose.models.order || mongoose.model("order", orderSchema);

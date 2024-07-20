@@ -486,6 +486,7 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
   let couponDiscount = 0
   if (appliedCoupon && appliedCoupon.offerCouponDiscount) {
     couponDiscount = Math.round((Number(appliedCoupon.offerCouponDiscount) * totals.DiscountedTotal) / 100)
+    couponDiscount = couponDiscount > 500 ? 499 : couponDiscount
   }
   const finalCartTotal = totals.DiscountedTotal - (couponDiscount)
 
@@ -496,6 +497,23 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
     cartItemsData,
     cartDetails: { ...totals, finalCartTotal, couponDiscount },
     offer: user?.coupon,
+  });
+});
+
+
+
+
+// api to clear cart
+export const clearCart = asyncErrorHandler(async (req: Request, res, next) => {
+  if (!req.user._id) {
+    return next(new ErrorHandler("unauthenticated", 400));
+  }
+  // const cartItems = await cart.find({ user: req.user._id })
+  const deletedItems = await cart.deleteMany({ user: req.user._id });
+  console.log(`${deletedItems.deletedCount} cart items deleted.`);
+  return res.status(200).json({
+    success: true,
+    message: `${deletedItems.deletedCount} Cart items deleted successfully`,
   });
 });
 

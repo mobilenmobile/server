@@ -31,7 +31,7 @@ productRouter.get("/getsingleproduct/:id", getSingleProduct);
 productRouter.post("/deletePreviewImage", deletePreviewCloudinary);
 productRouter.get("/search", getAllProducts);
 productRouter.get("/getAllAdminProducts", getAllAdminProducts);
-productRouter.get("/searchfilterandsort", getFilterAndSortProducts);
+productRouter.post("/searchfilterandsort", getFilterAndSortProducts);
 productRouter.get("/getlimitedproductsbybrand", getLimitedProductsByBrands);
 productRouter.post("/updateproduct/:id", adminOnly, updateProduct);
 productRouter.delete("/deleteproduct/:id", adminOnly, deleteProduct);
