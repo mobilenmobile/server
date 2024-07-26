@@ -5,7 +5,21 @@ import { Request } from "express";
 import { Review } from "../models/review/review.model.js";
 
 
-// api to create new order
+
+//------------------------xxxxxx List-Of-Apis xxxxxxxxx-------------------
+
+// 1.newOrder
+// 2.getSingleOrderDetails
+// 3.processOrder
+// 4.cancellOrder
+// 5.deleteOrder
+// 6.getAllOrders
+// 7.getAllAdminOrders
+
+//----------------------xxxxxx List-Of-Apis-End xxxxxxxxx-------------------------
+
+
+//------------- api to create new order-----------------------------------------------------
 export const newOrder = asyncErrorHandler(
   async (req: Request, res, next) => {
 
@@ -55,30 +69,47 @@ export const newOrder = asyncErrorHandler(
   }
 );
 
+//--------------------api to get single order details---------------------------------------
+export const getSingleOrderDetails = asyncErrorHandler(async (req, res, next) => {
+  const { id } = req.params;
+  const order = await Order.findById(id).populate("user", "name");
+  if (!order) {
+    return next(new ErrorHandler("Order Not Found", 404));
+  }
+  // Fetch reviews for all items in the current order
+  const orderItemsWithReviews = await Promise.all(order.orderItems.map(async (item: any) => {
+    console.log("item", item)
+    // Find reviews based on userId and productId
+    const reviews = await Review.find({
+      reviewUser: req.user._id,
+      reviewProduct: item.productId
+    });
+    console.log("reviews", reviews)
+    // Return an object with item details and associated reviews
+    return {
+      deliveryAddress: order.deliveryAddress,
+      orderStatuses: order.orderStatuses,
+      total: order.total,
+      couponcode: order.couponcode,
+      discount: order.discount,
+      paymentMode: order.paymentMethod?.paymentMode,
+      paymentStatus: order.paymentStatus,
+      discountedTotal: order.discountedTotal,
+      finalAmount: order.finalAmount,
+      orderItems: item,
+      review: reviews?.length > 0 ? reviews[0] : {}
+    };
+  }));
 
-// //api to get single order details
-// export const getSingleOrder = asyncErrorHandler(async (req, res, next) => {
-//   const { id } = req.params;
-//   const key = `order-${id}`;
-//   let order;
-//   if (myCache.has(key)) {
-//     order = JSON.parse(myCache.get(key) as string);
-//   } else {
-//     order = await Order.findById(id).populate("user", "name");
-//     if (!order) {
-//       return next(new ErrorHandler("Order Not Found", 404));
-//     }
-//     myCache.set(key, JSON.stringify(order));
-//   }
-//   return res.status(200).json({
-//     success: true,
-//     message: "Order Fetched Successfully",
-//     order,
-//   });
-// });
+  // console.log("orderItemwithreviews", orderItemsWithReviews)
+  return res.status(200).json({
+    success: true,
+    message: "Order details fetched Successfully",
+    orderDetails: orderItemsWithReviews
+  });
+});
 
-
-//api to process order
+//--------------------api to process order------------------------------------------------
 export const processOrder = asyncErrorHandler(async (req, res, next) => {
   const { id } = req.params;
   const order = await Order.findById(id);
@@ -142,7 +173,7 @@ export const processOrder = asyncErrorHandler(async (req, res, next) => {
   });
 });
 
-//api to cancell order
+//--------------------api to cancell order---------------------------------------------------
 export const cancellOrder = asyncErrorHandler(async (req, res, next) => {
   const { id } = req.params;
   const order = await Order.findById(id);
@@ -164,8 +195,7 @@ export const cancellOrder = asyncErrorHandler(async (req, res, next) => {
   });
 });
 
-
-//api to delete order
+//-------------------api to delete order------------------------------------------------------
 export const deleteOrder = asyncErrorHandler(async (req, res, next) => {
   const { id } = req.params;
   const order = await Order.findById(id);
@@ -179,14 +209,11 @@ export const deleteOrder = asyncErrorHandler(async (req, res, next) => {
   });
 });
 
-
-//api to get all orders for the user logged in 
+//-----------------api to get all orders for the user logged in---------------------------------------------
 export const getAllOrders = asyncErrorHandler(async (req, res, next) => {
   const userId = req.user._id; // Assuming req.user.id contains the user's ID
-
   // Find all orders for the user
   const orders = await Order.find({ user: userId });
-
   if (!orders || orders.length === 0) {
     return next(new ErrorHandler("order not found", 404));
   }
@@ -248,14 +275,13 @@ export const getAllOrders = asyncErrorHandler(async (req, res, next) => {
   // res.json(jsonResponse);
   return res.status(200).json({
     success: true,
-    message: "order fetched Successfully",
+    message: "orders fetched Successfully",
     orders: ordersWithReviews
   });
 
 })
 
-
-//api to get all orders
+//-------------------api to get all orders----------------------------------------------------------------
 export const getAllAdminOrders = asyncErrorHandler(async (req, res, next) => {
 
   const userId = req.user._id; // Assuming req.user.id contains the user's ID
@@ -303,8 +329,8 @@ export const getAllAdminOrders = asyncErrorHandler(async (req, res, next) => {
 })
 
 
+// //api to get order details not needed !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-// //api to get order details
 // export const myOrders = asyncErrorHandler(async (req, res, next) => {
 //   const { id } = req.query;
 

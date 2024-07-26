@@ -2,21 +2,24 @@
 import admin from "firebase-admin";
 import { getAuth } from "firebase-admin/auth";
 
-
 const { privateKey } = JSON.parse(process.env.FIREBASE_PRIVATE_KEY || "")
+
+
 const config = {
   credential: admin.credential.cert({
     projectId: process.env.FIREBASE_PROJECT_ID,
-    // project_id: process.env.FIREBASE_PROJECT_ID,
     privateKey: privateKey,
     clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
   }),
 }
 
+// ----------------- initialize firebase app------------------------------------------
 export const firebase = admin.apps.length
   ? admin.app()
   : admin.initializeApp(config);
 
+
+//--------------------- function to access uid of user if authenticated----------------------------------------  
 export const getUid = async (authToken: string): Promise<{ authenticated: boolean, uid: string; }> => {
   try {
     const decodedToken = await getAuth().verifyIdToken(authToken)
@@ -30,6 +33,8 @@ export const getUid = async (authToken: string): Promise<{ authenticated: boolea
   }
 }
 
+
+// ------------------- functions to get all users and delete them from firebase ----------------------
 
 // function getAllUsers(nextPageToken: string | undefined) {
 //   admin.auth().listUsers(100, nextPageToken)

@@ -1,5 +1,5 @@
 import express from "express"
-import { cancellOrder, deleteOrder, getAllAdminOrders, getAllOrders, newOrder, processOrder } from "../controllers/order.controller"
+import { cancellOrder, deleteOrder, getAllAdminOrders, getAllOrders, getSingleOrderDetails, newOrder, processOrder } from "../controllers/order.controller"
 import { authenticated } from "../middleware/auth.middleware"
 
 const orderRouter = express.Router()
@@ -7,6 +7,8 @@ const orderRouter = express.Router()
 orderRouter.post("/createOrder", authenticated, newOrder)
 
 orderRouter.get("/allOrders", authenticated, getAllOrders)
+
+orderRouter.get("/orderDetails/:id",authenticated, getSingleOrderDetails)
 
 orderRouter.get("/getAllAdminOrders", authenticated, getAllAdminOrders)
 

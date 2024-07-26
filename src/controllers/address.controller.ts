@@ -3,9 +3,16 @@ import { Address } from "../models/address/address.model.js";
 import ErrorHandler from "../utils/errorHandler.js";
 import { Request } from "express";
 
+//----------------------xxxxxx List-Of-Apis xxxxxxxxx-------------------
 
+// 1.newAddress
+// 2.updateAddress
+// 3.allAddress
+// 4.deleteAddress
 
-// new address controller
+//----------------------xxxxxx List-Of-Apis-End xxxxxxxxx-------------------
+
+// ----------- api to create new address ------------------------------------
 export const newAddress = asyncErrorHandler(
     async (req: Request, res, next) => {
         console.log(req.body)
@@ -26,7 +33,6 @@ export const newAddress = asyncErrorHandler(
             return next(new ErrorHandler("Please Enter all Fields", 400));
         }
         if (!req.user._id) {
-
             return next(new ErrorHandler("unauthenticated", 400));
 
         }
@@ -43,13 +49,13 @@ export const newAddress = asyncErrorHandler(
         });
         return res.status(201).json({
             success: true,
-            message: "Order created successfully",
+            message: "New Address created successfully",
             newAddress,
         });
     }
 );
 
-
+//------------ api to update the existing address -------------------------------
 export const updateAddress = asyncErrorHandler(
     async (req: Request, res, next) => {
         const id = (req.params as { id: string }).id;
@@ -85,7 +91,7 @@ export const updateAddress = asyncErrorHandler(
 
         const updatedAddress = await address.save();
 
-        return res.status(200).json({
+        return res.status(201).json({
             success: true,
             message: "Product Updated Successfully",
             updatedAddress,
@@ -93,9 +99,7 @@ export const updateAddress = asyncErrorHandler(
     }
 );
 
-
-
-//fetch all address of the user
+//--------------fetch all address of the user-------------------------------------
 export const allAddress = asyncErrorHandler(async (req, res, next) => {
     const allAddress = await Address.find({ user: req.user._id })
     if (!req.user._id) {
@@ -103,12 +107,12 @@ export const allAddress = asyncErrorHandler(async (req, res, next) => {
     }
     return res.status(200).json({
         success: true,
+        message: "all address fetched successfully",
         allAddress,
     });
 });
 
-
-//delete address of the user
+//------------------delete address of the user-------------------------------------
 export const deleteAddress = asyncErrorHandler(async (req, res, next) => {
     const { id } = req.params;
     const address = await Address.findById(id);

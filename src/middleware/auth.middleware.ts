@@ -68,6 +68,9 @@ export const adminOnly = asyncErrorHandler(async (req, res, next) => {
   const user = await User.findOne({ uid: verifyAuth.uid });
   console.log(user);
   if (!user) return next(new ErrorHandler("your id is invalid", 401));
+  if (user.email !== "sycoder@gmail.com") {
+    return next(new ErrorHandler("you are not authorized to perform this operation ", 401));
+  }
   req.user = user;
   // if (user.role !== "admin") {
   //     return next(new ErrorHandler("access is unauthorized", 401))

@@ -6,11 +6,36 @@ import { User } from "../models/auth/user.model";
 import { Product } from "../models/product/product.model";
 import { Wishlist } from "../models/wishlist/wishlist.model";
 import { cart } from "../models/cart/cart.model";
-import { CouponDocument, Offer } from "../models/offer/offer.model";
-import { userInfo } from "os";
+import { Offer } from "../models/offer/offer.model";
 import { calculateDiscount } from "./product.controllers";
 
-//api to create new user
+
+
+
+//------------------------xxxxxx List-Of-Apis xxxxxxxxx-------------------
+
+
+// 1.newUser
+// 2.getUser
+// 3.updateProfile
+// 4.updateProfileImage
+// 5.updateCouponCode
+// 6.getAppliedCoupon
+// 7.removeCouponCode
+// 8.updateWishlist
+// 9.getWishlistItems
+// 10.removeWishlistItem
+// 11.updateCart
+// 12.decreaseCartProductQuantity
+// 13.getCartItems
+// 14.removeCartItem
+// 15.getCartDetails
+// 16.clearCart
+
+//----------------------xxxxxx List-Of-Apis-End xxxxxxxxx-------------------------
+
+
+//------------------------api to create new user----------------------------------
 export const newUser = asyncErrorHandler(
   async (req: Request<{}, {}, NewUserRequestBody>, res, next) => {
     const { name, uid, email } = req.body;
@@ -34,16 +59,15 @@ export const newUser = asyncErrorHandler(
     };
 
     const user = await User.create(userData);
-    return res.status(200).json({ success: true, user });
+    return res.status(200).json({
+      success: true,
+      message: `welcome ${name} to mnm`,
+      user
+    });
   }
 );
 
-export const getCookie = (req: any, res: any) => {
-  console.log("cookie", req.get("Cookie"));
-  console.log(req.headers);
-  return res.status(200).json({ success: true });
-};
-
+//------------------------api to get user details ----------------------------------
 export const getUser = asyncErrorHandler(async (req: Request, res, next) => {
   const uid = req.params.uid;
   const user = await User.findOne({ uid }).populate("coupon")
@@ -52,10 +76,14 @@ export const getUser = asyncErrorHandler(async (req: Request, res, next) => {
     return next(new ErrorHandler("user doesnt exist", 400));
   }
 
-  return res.status(200).json({ success: true, user });
+  return res.status(200).json({
+    success: true,
+    message: "successfully fetched user details",
+    user
+  });
 });
 
-//api to update profile 
+//-----------------------api to update profile ----------------------------------------
 export const updateProfile = asyncErrorHandler(async (req, res, next) => {
   const { profile } = req.body
   const user = await User.findById(req.user._id);
@@ -75,7 +103,7 @@ export const updateProfile = asyncErrorHandler(async (req, res, next) => {
   });
 });
 
-//api to update profile image
+//---------------------api to update profile image-------------------------------------------
 export const updateProfileImage = asyncErrorHandler(async (req, res, next) => {
   const { profileImageUrl } = req.body
   console.log(req.body)
@@ -94,7 +122,7 @@ export const updateProfileImage = asyncErrorHandler(async (req, res, next) => {
   });
 });
 
-//api to add coupon code for cart
+//------------------api to add coupon code for cart------------------------------------------
 export const updateCouponCode = asyncErrorHandler(async (req, res, next) => {
   const { couponId } = req.body
   if (!couponId) {
@@ -123,7 +151,7 @@ export const updateCouponCode = asyncErrorHandler(async (req, res, next) => {
   });
 });
 
-//api to add coupon code for cart
+//-------------------api to get applied coupon code for cart--------------------------------------------------
 export const getAppliedCoupon = asyncErrorHandler(async (req, res, next) => {
   const user = await User.findById(req.user._id).populate("coupon")
   if (!user) {
@@ -139,7 +167,7 @@ export const getAppliedCoupon = asyncErrorHandler(async (req, res, next) => {
   });
 });
 
-//api to add coupon code for cart
+//-------------------api remove coupon code for cart--------------------------------------------
 export const removeCouponCode = asyncErrorHandler(async (req, res, next) => {
 
   const user = await User.findById(req.user._id);
@@ -158,7 +186,7 @@ export const removeCouponCode = asyncErrorHandler(async (req, res, next) => {
   });
 });
 
-//api to update wislist
+//---------------------api to update wislist----------------------------------------------------
 export const updateWishlist = asyncErrorHandler(async (req, res, next) => {
 
   const { productId, selectedVarianceId } = req.body
@@ -194,84 +222,7 @@ export const updateWishlist = asyncErrorHandler(async (req, res, next) => {
 
 });
 
-
-//api to update cart
-export const updateCart = asyncErrorHandler(async (req, res, next) => {
-
-  const { productId, selectedVarianceId, quantity } = req.body
-
-  if (!productId || !selectedVarianceId) {
-    return next(new ErrorHandler("please enter all fields", 404));
-  }
-
-  const product = await Product.findById(productId);
-  if (!product) {
-    return next(new ErrorHandler("No product found with this id", 404));
-  }
-
-  const cartItem = await cart.findOne({ productId, selectedVarianceId, user: req.user._id });
-
-  console.log(cartItem)
-
-  if (cartItem && cartItem.quantity < 10) {
-    cartItem.quantity = cartItem.quantity + 1
-    await cartItem.save()
-  }
-
-  if (!cartItem) {
-    await cart.create({
-      user: req.user._id,
-      productId,
-      selectedVarianceId,
-      quantity
-    })
-  }
-
-  return res.status(200).json({
-    success: true,
-    message: "Successfully updated cart",
-    cartItem
-  });
-
-});
-
-//api to decrease product quantity in cart
-export const decreaseCartProductQuantity = asyncErrorHandler(async (req, res, next) => {
-
-  const { productId, selectedVarianceId } = req.body
-
-  if (!productId || !selectedVarianceId) {
-    return next(new ErrorHandler("please enter all fields", 404));
-  }
-
-  const product = await Product.findById(productId);
-  if (!product) {
-    return next(new ErrorHandler("No product found with this id", 404));
-  }
-
-  const cartItem = await cart.findOne({ productId, selectedVarianceId, user: req.user._id });
-
-  console.log(cartItem)
-
-  if (!cartItem) {
-    return next(new ErrorHandler("cart item not found", 404));
-  }
-
-  if (cartItem && cartItem.quantity > 0) {
-    cartItem.quantity = cartItem.quantity - 1
-    await cartItem.save()
-  }
-
-  return res.status(200).json({
-    success: true,
-    message: "Successfully decreased product quantity",
-    cartItem
-  });
-
-});
-
-
-// api to get wishlist items 
+//----------------- api to get wishlist items -----------------------------------------------------------
 export const getWishlistItems = asyncErrorHandler(async (req: Request, res, next) => {
 
   if (!req.user._id) {
@@ -306,11 +257,130 @@ export const getWishlistItems = asyncErrorHandler(async (req: Request, res, next
     }
   })
   // console.log(wishlistItemsData)s
-  return res.status(200).json({ success: true, wishlistItemsData });
+  return res.status(200).json({
+    success: true,
+    message: "successfully fetched wishlist items",
+    wishlistItemsData
+  });
 
 });
 
-// api to get wishlist items 
+// ---------------api to remove wishlist item-------------------------------------------------------
+export const removeWishlistItem = asyncErrorHandler(async (req: Request, res, next) => {
+  if (!req.user._id) {
+    return next(new ErrorHandler("unauthenticated", 400));
+  }
+  // if (!req.params.id) {
+  //   return next(new ErrorHandler("no id", 400));
+  // }
+  console.log(req.body)
+  const { productId, selectedVarianceId } = req.body
+
+  if (!productId || !selectedVarianceId) {
+    return next(new ErrorHandler("no product id", 400));
+  }
+
+  const wishlistItem = await Wishlist.findOne({ user: req.user._id, productId: productId, selectedVarianceId: selectedVarianceId });
+  console.log("found wishlistitem ", wishlistItem)
+
+  if (!wishlistItem) {
+    return next(new ErrorHandler("wishlistitem not found", 400));
+  }
+
+  await Wishlist.findByIdAndDelete(wishlistItem._id);
+  return res.status(200).json({ success: true, message: "successfully deleted item from wishlist" });
+
+});
+
+
+//---------------------api to update cart----------------------------------------------------------
+export const updateCart = asyncErrorHandler(async (req, res, next) => {
+
+  const { productId, selectedVarianceId, quantity } = req.body
+
+  if (!productId || !selectedVarianceId) {
+    return next(new ErrorHandler("please enter all fields", 404));
+  }
+
+  const product = await Product.findById(productId);
+  if (!product) {
+    return next(new ErrorHandler("No product found with this id", 404));
+  }
+  const selectedVariantData = product.productVariance.find((variant: { id: string; }) => {
+    console.log("compare id ", variant.id.replace(/\s+/g, "") == selectedVarianceId.replace(/\s+/g, ""))
+    console.log("-----------------------varinat from update cart-------------")
+    console.log(variant)
+    return variant.id.replace(/\s+/g, "") == selectedVarianceId.replace(/\s+/g, "")
+  })
+
+  console.log("varinat----->", selectedVariantData)
+
+  if (selectedVariantData?.quantity == '0' || selectedVariantData?.quantity == 0) {
+    return next(new ErrorHandler("product is out of stock", 404));
+  }
+
+  const cartItem = await cart.findOne({ productId, selectedVarianceId, user: req.user._id });
+
+  console.log(cartItem)
+
+  if (cartItem && cartItem.quantity < 10) {
+    cartItem.quantity = cartItem.quantity + 1
+    await cartItem.save()
+  }
+
+  if (!cartItem) {
+    await cart.create({
+      user: req.user._id,
+      productId,
+      selectedVarianceId,
+      quantity
+    })
+  }
+
+  return res.status(200).json({
+    success: true,
+    message: "Successfully updated cart",
+    cartItem
+  });
+
+});
+
+//----------------api to decrease product quantity in cart------------------------------------------------
+export const decreaseCartProductQuantity = asyncErrorHandler(async (req, res, next) => {
+
+  const { productId, selectedVarianceId } = req.body
+
+  if (!productId || !selectedVarianceId) {
+    return next(new ErrorHandler("please enter all fields", 404));
+  }
+
+  const product = await Product.findById(productId);
+  if (!product) {
+    return next(new ErrorHandler("No product found with this id", 404));
+  }
+
+  const cartItem = await cart.findOne({ productId, selectedVarianceId, user: req.user._id });
+
+  console.log(cartItem)
+
+  if (!cartItem) {
+    return next(new ErrorHandler("cart item not found", 404));
+  }
+
+  if (cartItem && cartItem.quantity > 0) {
+    cartItem.quantity = cartItem.quantity - 1
+    await cartItem.save()
+  }
+
+  return res.status(200).json({
+    success: true,
+    message: "Successfully decreased product quantity",
+    cartItem
+  });
+
+});
+
+//---------------- api to get cart items -----------------------------------------------------------
 export const getCartItems = asyncErrorHandler(async (req: Request, res, next) => {
 
   if (!req.user._id) {
@@ -352,55 +422,14 @@ export const getCartItems = asyncErrorHandler(async (req: Request, res, next) =>
     }
   })
   console.log(cartItemsData)
-  return res.status(200).json({ success: true, cartItemsData });
+  return res.status(200).json({
+    success: true,
+    message: "successfully fetched cartitems data",
+    cartItemsData
+  });
 });
 
-
-// api to get cart items
-// export const getCartItems = asyncErrorHandler(async (req: Request, res, next) => {
-//   if (!req.user?._id) {
-//     return next(new ErrorHandler("unauthenticated", 400));
-//   }
-//   const cartItems = await cart.find({ user: req.user._id });
-//   return res.status(200).json({ success: true, cartItems });
-
-// });
-// api to remove wishlist items
-export const removeWishlistItem = asyncErrorHandler(async (req: Request, res, next) => {
-  if (!req.user._id) {
-    return next(new ErrorHandler("unauthenticated", 400));
-  }
-  // if (!req.params.id) {
-  //   return next(new ErrorHandler("no id", 400));
-  // }
-  console.log(req.body)
-  const { productId, selectedVarianceId } = req.body
-
-  if (!productId || !selectedVarianceId) {
-    return next(new ErrorHandler("no product id", 400));
-  }
-
-  const wishlistItem = await Wishlist.findOne({ user: req.user._id, productId: productId, selectedVarianceId: selectedVarianceId });
-  console.log("found wishlistitem ", wishlistItem)
-
-  if (!wishlistItem) {
-    return next(new ErrorHandler("wishlistitem not found", 400));
-  }
-
-  await Wishlist.findByIdAndDelete(wishlistItem._id);
-  return res.status(200).json({ success: true, message: "successfully deleted item from wishlist" });
-
-});
-// api to get cart items
-// export const getCartItems = asyncErrorHandler(async (req: Request, res, next) => {
-//   if (!req.user?._id) {
-//     return next(new ErrorHandler("unauthenticated", 400));
-//   }
-//   const cartItems = await cart.find({ user: req.user._id });
-//   return res.status(200).json({ success: true, cartItems });
-
-// });
-// api to remove wishlist items
+//---------------- api to remove cart item-----------------------------------------------------------
 export const removeCartItem = asyncErrorHandler(async (req: Request, res, next) => {
   if (!req.user._id) {
     return next(new ErrorHandler("unauthenticated", 400));
@@ -418,21 +447,27 @@ export const removeCartItem = asyncErrorHandler(async (req: Request, res, next) 
 
 });
 
-
-
-// api to get wishlist items 
+// ------------------ api to get cart details -------------------------------------------------------
 export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) => {
 
   if (!req.user._id) {
     return next(new ErrorHandler("unauthenticated", 400));
   }
-  const cartItems = await cart.find({ user: req.user._id }).populate("productId");
+  // const cartItems = await cart.find({ user: req.user._id }).populate("productId");
+  const cartItems = await cart.find({ user: req.user._id }).populate({
+    path: 'productId',
+    populate: {
+      path: 'productCategory',
+    }
+  });
+
+  // console.log("categorynew----------------->", cartItemsnew)
   const user = await User.findOne({ _id: req.user._id })
   const appliedCoupon = await Offer.findOne({ _id: user?.coupon })
 
   //mapping through cartItems to structure the data
   const cartItemsData = cartItems.map((item) => {
-    // console.log(item)
+    console.log("single product------------>", item)
     if (item.productId.productVariance) {
 
       const variantData = item.productId.productVariance.find((variant: any) => {
@@ -445,6 +480,7 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
       const productDiscount = calculateDiscount(variantData?.boxPrice, variantData?.sellingPrice)
       return {
         _id: item._id,
+        category: item.productId?.productCategory?.categoryName,
         productTitle: item.productId.productTitle,
         thumbnail: variantData?.thumbnail,
         boxPrice: variantData?.boxPrice,
@@ -481,29 +517,25 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
     Total: 0,
     DiscountedTotal: 0,
   })
-
-
   let couponDiscount = 0
   if (appliedCoupon && appliedCoupon.offerCouponDiscount) {
     couponDiscount = Math.round((Number(appliedCoupon.offerCouponDiscount) * totals.DiscountedTotal) / 100)
     couponDiscount = couponDiscount > 500 ? 499 : couponDiscount
   }
   const finalCartTotal = totals.DiscountedTotal - (couponDiscount)
-
   console.log(totals)
   console.log(cartItemsData)
+
   return res.status(200).json({
     success: true,
+    message: "Cart details fetched successfully",
     cartItemsData,
     cartDetails: { ...totals, finalCartTotal, couponDiscount },
     offer: user?.coupon,
   });
 });
 
-
-
-
-// api to clear cart
+// ----------------  api to clear cart -----------------------------------------------------------------
 export const clearCart = asyncErrorHandler(async (req: Request, res, next) => {
   if (!req.user._id) {
     return next(new ErrorHandler("unauthenticated", 400));
@@ -516,7 +548,3 @@ export const clearCart = asyncErrorHandler(async (req: Request, res, next) => {
     message: `${deletedItems.deletedCount} Cart items deleted successfully`,
   });
 });
-
-
-
-// 667e538fc550fe679870bbe2

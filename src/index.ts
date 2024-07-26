@@ -37,7 +37,6 @@ function startServer(port: number) {
   });
 }
 
-
 connectDB()
   .then(() => {
     startServer(Number(process.env.PORT) || 3000)

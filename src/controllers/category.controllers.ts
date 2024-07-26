@@ -10,8 +10,16 @@ import {
 } from "../types/types";
 import ErrorHandler from "../utils/errorHandler";
 
+//----------------------xxxxxx List-Of-Apis xxxxxxxxx-------------------
 
-// api to create new category
+// 1.addNewCategory
+// 2.searchCategory
+// 3.deleteCategory
+
+//----------------------xxxxxx List-Of-Apis-End xxxxxxxxx-------------------
+
+
+//------------ api to create new category-----------------------------------------
 export const addNewCategory = asyncErrorHandler(
   async (req: Request<{}, {}, NewCategoryRequestBody>, res, next) => {
     const { categoryName, categoryDescription, categoryImgUrl } = req.body;
@@ -25,13 +33,15 @@ export const addNewCategory = asyncErrorHandler(
       categoryDescription,
       categoryImgUrl,
     });
-    return res.status(201).json({ success: true, category });
+    return res.status(201).json({
+      success: true,
+      message: "New category created successfully",
+      category
+    });
   }
 );
 
-
-
-//api to searchcategory
+//------------------api to search category------------------------------------------
 export const searchCategory = asyncErrorHandler(
   async (req: Request<{}, {}, SearchCategoryQuery>, res, next) => {
     const { categoryname } = req.query;
@@ -57,13 +67,13 @@ export const searchCategory = asyncErrorHandler(
 
     return res.status(200).json({
       success: true,
+      message: "category found successfully",
       category,
     });
   }
 );
 
-
-//api to delete specfic category
+//-------------------api to delete specfic category-----------------------------------
 export const deleteCategory = asyncErrorHandler(
   async (req: Request<{}, {}, deleteCategoryQuery>, res, next) => {
     const { id } = req.body;

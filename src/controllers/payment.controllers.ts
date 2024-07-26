@@ -2,7 +2,17 @@ import Razorpay from "razorpay";
 import { asyncErrorHandler } from "../middleware/error.middleware";
 import ErrorHandler from "../utils/errorHandler";
 
-//api to process order payment
+
+//------------------------xxxxxx List-Of-Apis xxxxxxxxx-------------------
+
+// 1.orderPayment
+// 2.getPaymentDetails
+
+//----------------------xxxxxx List-Of-Apis-End xxxxxxxxx-------------------------
+
+
+
+//--------------api to create order id for payment ----------------------------------------
 export const orderPayment = asyncErrorHandler(async (req, res, next) => {
 
     const razorpayInstance = new Razorpay({
@@ -23,12 +33,13 @@ export const orderPayment = asyncErrorHandler(async (req, res, next) => {
 
     return res.status(200).json({
         success: true,
-        message: "Order payment done Successfully",
+        message: "Order id created successfully",
         orderPaymentDetails: razorpayOrderDetails
     });
 
 });
-//api to process order payment
+
+//--------------api to get payment details from payment id ------------------------------------------
 export const getPaymentDetails = asyncErrorHandler(async (req, res, next) => {
 
     const razorpayInstance = new Razorpay({

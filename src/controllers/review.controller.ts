@@ -1,33 +1,48 @@
-import mongoose, { Mongoose } from "mongoose";
+import mongoose from "mongoose";
 import { asyncErrorHandler } from "../middleware/error.middleware.js";
-import { Address } from "../models/address/address.model.js";
 import { Product } from "../models/product/product.model.js";
 import { Review } from "../models/review/review.model.js";
 import ErrorHandler from "../utils/errorHandler.js";
 import { Request } from "express";
 
 
-//api to create new review
+//------------------------xxxxxx List-Of-Apis xxxxxxxxx-------------------
+
+// 1.newReview
+// 2.updateReview
+// 3.allReviews
+// 4.getSingleProductReview
+// 5.deleteReview
+
+// ---------------functions------------------
+
+// 1.updateProductRating
+// 2.handleReviewChange
+
+//----------------------xxxxxx List-Of-Apis-End xxxxxxxxx-------------------------
+
+
+
+//-------------------------api to create new review-----------------------------------
 export const newReview = asyncErrorHandler(
 
     async (req: Request, res, next) => {
 
         console.log(req.body)
 
-        const id = (req.params as { id: string }).id;
+        const productId = (req.params as { id: string }).id;
 
-        if (!id) {
+        if (!productId) {
             return next(new ErrorHandler("no id present", 400));
         }
 
-        const product = await Product.findById(id);
+        const product = await Product.findById(productId);
 
         if (!product) {
             return next(new ErrorHandler("Product not found  ", 404));
         }
 
         const {
-            productId,
             reviewImgGallery,
             reviewRating,
             reviewDescription
@@ -44,7 +59,7 @@ export const newReview = asyncErrorHandler(
         if (!req.user._id) {
             return next(new ErrorHandler("unauthenticated", 400));
         }
-        let review = await Review.findOne({ user: req.user._id, _id: id, productId: productId });
+        let review = await Review.findOne({ reviewUser: req.user._id, productId: productId });
 
         console.log("----------existingitem---------", review)
 
@@ -58,13 +73,13 @@ export const newReview = asyncErrorHandler(
         if (!review) {
             review = await Review.create({
                 reviewUser: req.user._id,
-                reviewProduct: id,
+                reviewProduct: productId,
                 reviewImgGallery: JSON.parse(reviewImgGallery),
                 reviewRating,
                 reviewDescription
             });
         }
-        await handleReviewChange(review._id, id, review.reviewRating)
+        await handleReviewChange(review._id, productId, review.reviewRating)
         return res.status(201).json({
             success: true,
             message: "Review added successfully",
@@ -74,7 +89,7 @@ export const newReview = asyncErrorHandler(
 );
 
 
-//api to update review
+//--------------------------api to update review-------------------------------------------
 export const updateReview = asyncErrorHandler(
     async (req: Request, res, next) => {
 
@@ -117,7 +132,7 @@ export const updateReview = asyncErrorHandler(
 );
 
 
-//api to get all reviews
+//-------------------------api to get all reviews-------------------------------------------
 export const allReviews = asyncErrorHandler(async (req, res, next) => {
 
     const id = (req.params as { id: string }).id;
@@ -208,6 +223,7 @@ export const allReviews = asyncErrorHandler(async (req, res, next) => {
 
     return res.status(200).json({
         success: true,
+        message:"reviews fetched successfully",
         totalRatings,
         averageRating,
         reviewsCount,
@@ -220,10 +236,31 @@ export const allReviews = asyncErrorHandler(async (req, res, next) => {
 });
 
 
-//api to delete review
+//----------------------api to get user reviews------------------------------------------------
+export const getSingleProductReview = asyncErrorHandler(async (req, res, next) => {
+
+    const id = (req.params as { id: string }).id;
+
+    if (!id) {
+        return next(new ErrorHandler("incorrect product id", 400));
+    }
+    const review = await Review.findOne({ reviewProduct: id, reviewUser: req.user._id })
+
+    if (!review) {
+        return next(new ErrorHandler("no reviews found", 202));
+    }
+
+    return res.status(200).json({
+        success: true,
+        message: "successfully fetched review",
+        review
+    });
+});
+
+//----------------------api to delete review----------------------------------------------------
 export const deleteReview = asyncErrorHandler(async (req, res, next) => {
     const { id } = req.params;
-    const review = await Address.findById(id);
+    const review = await Review.findById(id);
 
     if (!review) {
         return next(new ErrorHandler("review not found", 404));
@@ -239,7 +276,7 @@ export const deleteReview = asyncErrorHandler(async (req, res, next) => {
 });
 
 
-// Function to calculate and update product rating based on reviews
+//---------- Function to calculate and update product rating based on reviews-----------------------
 async function updateProductRating(productId: string) {
     console.log("productid=> ", productId)
     const reviews = await Review.find({ reviewProduct: productId });
@@ -284,9 +321,6 @@ async function updateProductRating(productId: string) {
         console.error('Error updating product rating:', err);
     }
 }
-
-
-
 
 
 

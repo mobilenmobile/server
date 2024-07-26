@@ -5,6 +5,7 @@ import {
   SearchRequestQuery,
   UpdateProductRequestBody,
 } from "../types/types.js";
+
 import ErrorHandler from "../utils/errorHandler.js";
 import { Request } from "express";
 import { myCache } from "../app.js";
@@ -16,12 +17,27 @@ import {
   deleteImgInCloudinary,
   uploadMultipleCloudinary,
 } from "../utils/cloudinary.js";
-
 import { FilterQuery } from "mongoose";
-import { storage } from "firebase-admin";
 
 
-//api to create new product
+//----------------------xxxxxx ListOfApis xxxxxxxxx-------------------
+
+// 1.newProduct
+// 2.previewImages
+// 3.getLatestProduct
+// 4.getSingleProduct
+// 5.updateProduct
+// 6.deleteProduct
+// 7.deleteProductDirectly
+// 8.deletePreviewCloudinary -- delete images from uploadOnCloudinary
+// 9.getAllAdminProducts
+// 10.getAllProducts
+// 11.getLimitedProductsByBrands -- give only title of selected brand available in stock
+// 12.getFilterAndSortProducts  -- handle filtering and sorting of products
+
+//----------------------xxxxxx List-Of-Apis-End xxxxxxxxx-------------------
+
+//------------------api to create new product-----------
 export const newProduct = asyncErrorHandler(
   async (req: Request<{}, {}, NewProductRequestBody>, res, next) => {
     console.log("----------------", req.body, "----------------");
@@ -76,11 +92,16 @@ export const newProduct = asyncErrorHandler(
       productRamAndStorage: JSON.parse(ramAndStorage)
       // productTitle: title,
     });
-    return res.status(200).json({ success: true, newProduct });
+    return res.status(200).json({
+      success: true,
+      message: "product created successfully",
+      newProduct
+    });
   }
 );
 
-//api to get image url by uploading on cloudinary
+
+//-----------------api to get image url by uploading on cloudinary------------------
 export const previewImages = asyncErrorHandler(async (req, res, next) => {
   const photos = req.files;
   console.log("photos =>", photos);
@@ -92,10 +113,15 @@ export const previewImages = asyncErrorHandler(async (req, res, next) => {
   const imgUrl = await uploadMultipleCloudinary(photos);
   console.log(imgUrl);
 
-  return res.status(200).json({ success: true, imgUrl });
+  return res.status(200).json({
+    success: true,
+    message: "image uploaded successfully",
+    imgUrl
+  });
 });
 
-//api to get latest product
+
+//-----------------------------api to get latest product-----------------------------
 export const getLatestProduct = asyncErrorHandler(async (req, res, next) => {
   //created at -1 means we get in descending order
 
@@ -104,12 +130,13 @@ export const getLatestProduct = asyncErrorHandler(async (req, res, next) => {
 
   return res.status(200).json({
     success: true,
+    message: "latest products fetched successfully",
     products,
   });
 });
 
 
-//api to get single product 
+//-----------------------------api to get single product-----------------------------------
 export const getSingleProduct = asyncErrorHandler(async (req, res, next) => {
   let product;
   const id = req.params.id;
@@ -134,99 +161,15 @@ export const getSingleProduct = asyncErrorHandler(async (req, res, next) => {
     product.productRamAndStorage = modifiedRamAndStorage
   }
 
-
-
-  // const cssColorNames = [
-  //   "aliceblue", "antiquewhite", "aqua", "aquamarine", "azure", "beige", "bisque", "black",
-  //   "blanchedalmond", "blue", "blueviolet", "brown", "burlywood", "cadetblue", "chartreuse",
-  //   "chocolate", "coral", "cornflowerblue", "cornsilk", "crimson", "cyan", "darkblue",
-  //   "darkcyan", "darkgoldenrod", "darkgray", "darkgreen", "darkgrey", "darkkhaki", "darkmagenta",
-  //   "darkolivegreen", "darkorange", "darkorchid", "darkred", "darksalmon", "darkseagreen",
-  //   "darkslateblue", "darkslategray", "darkslategrey", "darkturquoise", "darkviolet",
-  //   "deeppink", "deepskyblue", "dimgray", "dimgrey", "dodgerblue", "firebrick", "floralwhite",
-  //   "forestgreen", "fuchsia", "gainsboro", "ghostwhite", "gold", "goldenrod", "gray", "green",
-  //   "greenyellow", "grey", "honeydew", "hotpink", "indianred", "indigo", "ivory", "khaki",
-  //   "lavender", "lavenderblush", "lawngreen", "lemonchiffon", "lightblue", "lightcoral",
-  //   "lightcyan", "lightgoldenrodyellow", "lightgray", "lightgreen", "lightgrey", "lightpink",
-  //   "lightsalmon", "lightseagreen", "lightskyblue", "lightslategray", "lightslategrey",
-  //   "lightsteelblue", "lightyellow", "lime", "limegreen", "linen", "magenta", "maroon",
-  //   "mediumaquamarine", "mediumblue", "mediumorchid", "mediumpurple", "mediumseagreen",
-  //   "mediumslateblue", "mediumspringgreen", "mediumturquoise", "mediumvioletred", "midnightblue",
-  //   "mintcream", "mistyrose", "moccasin", "navajowhite", "navy", "oldlace", "olive",
-  //   "olivedrab", "orange", "orangered", "orchid", "palegoldenrod", "palegreen", "paleturquoise",
-  //   "palevioletred", "papayawhip", "peachpuff", "peru", "pink", "plum", "powderblue", "purple",
-  //   "rebeccapurple", "red", "rosybrown", "royalblue", "saddlebrown", "salmon", "sandybrown",
-  //   "seagreen", "seashell", "sienna", "silver", "skyblue", "slateblue", "slategray", "slategrey",
-  //   "snow", "springgreen", "steelblue", "tan", "teal", "thistle", "tomato", "turquoise", "violet",
-  //   "wheat", "white", "whitesmoke", "yellow", "yellowgreen"
-  // ];
-
-  // function findBestMatchingColor(productColor: string): string {
-  //   // Convert productColor to lowercase for case insensitivity
-  //   let lowerProductColor = productColor.toLowerCase();
-
-  //   // Initialize variables to track the best color match and the maximum number of matched words
-  //   let bestMatch = "";
-  //   let maxMatches = 0;
-
-  //   // Function to calculate the similarity between two strings based on substring match
-  //   const calculateSimilarity = (str1: string, str2: string): number => {
-  //     let maxLength = Math.max(str1.length, str2.length);
-  //     let minLength = Math.min(str1.length, str2.length);
-
-  //     // Calculate the number of common substrings
-  //     let commonSubstrings = 0;
-  //     for (let i = 0; i < minLength; i++) {
-  //       for (let j = i + 1; j <= minLength; j++) {
-  //         let substring = str1.substring(i, j);
-  //         if (str2.includes(substring)) {
-  //           commonSubstrings++;
-  //         }
-  //       }
-  //     }
-
-  //     // Return similarity as a ratio of common substrings to the maximum length
-  //     return commonSubstrings / maxLength;
-  //   };
-
-  //   // Iterate through cssColorNames to find the best matching CSS color name
-  //   cssColorNames.forEach(cssColor => {
-  //     // Convert cssColor to lowercase for case insensitivity
-  //     let lowerCssColor = cssColor.toLowerCase();
-  //     // Check if cssColor is a substring of lowerProductColor or vice versa
-  //     let similarity = calculateSimilarity(lowerProductColor, lowerCssColor);
-  //     // Update the best match if higher similarity found
-  //     if (similarity > maxMatches) {
-  //       bestMatch = cssColor;
-  //       maxMatches = similarity;
-  //     }
-  //   });
-  //   // Return the best match found or the original productColor if no match found
-  //   return bestMatch || lowerProductColor;
-  // }
-
-
-  // // const extractedColorArr: string[] = product.productColors.map((productColor: string) => findBestMatchingColor(productColor));
-  // // console.log("Extracted colors:", extractedColorArr);
-  // let extractedColorArr: { originalColor: string, similarColor: string }[] = product.productColors.map((color: string) => {
-  //   let similarColor = findBestMatchingColor(color);
-  //   return { originalColor: color.toLowerCase(), similarColor: similarColor };
-  // });
-
-
-  // console.log("Extracted colors:", extractedColorArr);
-
-  // product.productColors = extractedColorArr
-  // let updatedProduct = { ...product, Colors: extractedColorArr };
-
   console.log(updateProduct)
   return res.status(200).json({
     success: true,
+    message: "product fetched successfully",
     product,
   });
 });
 
-//api to update product for admin only
+//------------------------api to update product for admin only-------------------------------
 export const updateProduct = asyncErrorHandler(
   async (req: Request<{}, {}, UpdateProductRequestBody>, res, next) => {
     const id = (req.params as { id: string }).id;
@@ -238,7 +181,7 @@ export const updateProduct = asyncErrorHandler(
       pattern,
       headsetType,
       variance,
-
+      colors
     } = req.body;
 
     console.log("req-body", req.body);
@@ -262,7 +205,7 @@ export const updateProduct = asyncErrorHandler(
     if (pattern) product.productSkinPattern = pattern;
     if (headsetType) product.productHeadsetType = headsetType;
     if (variance) product.productVariance = JSON.parse(variance);
-
+    if (colors) product.productColors = JSON.parse(colors)
 
     const prod = await product.save();
     console.log("prod", prod);
@@ -275,7 +218,7 @@ export const updateProduct = asyncErrorHandler(
 );
 
 
-//api to delete product
+//--------------------------------api to delete product---------------------------------------
 export const deleteProduct = asyncErrorHandler(async (req, res, next) => {
   const product = await Product.findById(req.params.id);
   console.log("deletedProduct " + product);
@@ -299,7 +242,7 @@ export const deleteProduct = asyncErrorHandler(async (req, res, next) => {
   });
 });
 
-//api to delete only product 
+//-----------------api to delete only product not its cloundinary images -----------------------
 export const deleteProductDirectly = asyncErrorHandler(async (req, res, next) => {
   const product = await Product.findById(req.params.id);
   console.log("deletedProduct " + product);
@@ -314,7 +257,7 @@ export const deleteProductDirectly = asyncErrorHandler(async (req, res, next) =>
 });
 
 
-//api to delete image 
+//-----------------------api to delete cloudinary image-------------------------------------------
 export const deletePreviewCloudinary = asyncErrorHandler(
   async (req, res, next) => {
     console.log(req.body);
@@ -327,15 +270,13 @@ export const deletePreviewCloudinary = asyncErrorHandler(
     const response = await deleteImgInCloudinary(imgUrl);
     return res.status(200).json({
       success: true,
-      message: "photo successfully deleted from cloudinary.",
+      message: "Image successfully deleted from cloudinary.",
       response,
     });
   }
 );
 
-
-
-//api to get all products
+//---------------------api to get all Admin products withoud changing structure-----------------------------------
 export const getAllAdminProducts = asyncErrorHandler(
   async (req: Request<{}, {}, {}, SearchRequestQuery>, res, next) => {
     const { search, sort, category, price } = req.query;
@@ -394,6 +335,7 @@ export const getAllAdminProducts = asyncErrorHandler(
 
     return res.status(200).json({
       success: true,
+      message: "all products fetched successfully",
       products,
       totalPage,
       totalProducts,
@@ -402,7 +344,7 @@ export const getAllAdminProducts = asyncErrorHandler(
 );
 
 
-//api to get all products
+//---------------------api to get all products and change its structure------------------------------------
 export const getAllProducts = asyncErrorHandler(
   async (req: Request<{}, {}, {}, SearchRequestQuery>, res, next) => {
     const { search, sort, category, price } = req.query;
@@ -487,6 +429,7 @@ export const getAllProducts = asyncErrorHandler(
             keyid: `${product._id}${variant.id.replace(/\s+/g, "")}`,
             variantid: `${variant.id.replace(/\s+/g, "")}`,
             title: title.toLowerCase(),
+            category: product?.productCategory?.categoryName,
             thumbnail: variant.thumbnail,
             boxPrice: variant.boxPrice,
             sellingPrice: variant.sellingPrice,
@@ -510,15 +453,15 @@ export const getAllProducts = asyncErrorHandler(
 
     return res.status(200).json({
       success: true,
+      message: "all products fetched successfully",
       products: flatProducts,
       totalPage,
       totalProducts,
-
     });
   }
 );
 
-// api to get selected brand titles 
+// ------------------api to get selected product title for selected brand------------------------------------- 
 export const getLimitedProductsByBrands = asyncErrorHandler(async (req, res, next) => {
   // Find the category ID for "smartphone"
   const smartphoneCategory = await Category.findOne({ categoryName: 'smartphone' });
@@ -568,13 +511,29 @@ export const getLimitedProductsByBrands = asyncErrorHandler(async (req, res, nex
       $project: {
         _id: 0,
         brandName: '$brand.brandName',
-        products: { $slice: ['$products', 10] } // Limit to 10 products per brand
+        // products: { $slice: ['$products', 10] } // Limit to 10 products per brand
+        products: {
+          $slice: [
+            {
+              $map: {
+                input: { $slice: ['$products', 10] },
+                as: 'product',
+                in: {
+                  _id: '$$product._id', // Assuming _id is the product ID
+                  productTitle: '$$product.productTitle'
+                }
+              }
+            },
+            10
+          ]
+        }
       }
     }
   ]);
 
   return res.status(200).json({
     success: true,
+    message: "products fetched successfully",
     products: result,
   });
 
@@ -611,7 +570,7 @@ interface ProductVariance {
   boxPrice: string;
 }
 
-// Function to filter and sort products
+// -------------------Api to filter and sort products-------------------------------------
 export const getFilterAndSortProducts = asyncErrorHandler(async (req, res, next) => {
   // Example filters object (adjust as per your UI or requirements)
   // const filters = {
@@ -698,7 +657,7 @@ export const getFilterAndSortProducts = asyncErrorHandler(async (req, res, next)
   // Apply filters
 
   const minPriceValue = minPrice.sort()[0]
-  const maxPriceValue = maxPrice.sort()[0]
+  const maxPriceValue = maxPrice.sort()[maxPrice.length - 1]
 
   if (minPriceValue && maxPriceValue) {
     console.log("---filtering based on minprice and maxprice")
@@ -791,7 +750,7 @@ export const getFilterAndSortProducts = asyncErrorHandler(async (req, res, next)
   });
 })
 
-
+//------------------------function to calculate discount of product-------------------------
 export function calculateDiscount(boxPrice?: string, sellingPrice?: string) {
   if (boxPrice?.length == 0 || sellingPrice?.length == 0) {
     return 0

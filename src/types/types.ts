@@ -69,7 +69,7 @@ export interface UpdateProductRequestBody {
   imgUrls: string[];
   thumbnail: string;
   category: string;
-
+  colors: string
   brand: string;
   discountedPercentage: string;
   color: string;

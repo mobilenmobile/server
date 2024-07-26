@@ -4,8 +4,18 @@ import { resetChatHistory, run } from "../gemini/chatbot";
 import { asyncErrorHandler } from "../middleware/error.middleware";
 import ErrorHandler from "../utils/errorHandler";
 
-let flag = 0;
 
+
+//----------------------xxxxxx List-Of-Apis xxxxxxxxx-------------------
+
+// 1.getChatbotResponse
+// 2.startNewChat
+
+//----------------------xxxxxx List-Of-Apis-End xxxxxxxxx-------------------
+
+
+let flag = 0;
+// ------------------------- Api to get chatbot response----------------------------------------------------------
 export const getChatbotResponse = asyncErrorHandler(async (req: Request, res: Response, next) => {
   try {
     const msg = req.body.msg;
@@ -30,6 +40,7 @@ export const getChatbotResponse = asyncErrorHandler(async (req: Request, res: Re
   }
 });
 
+// ------------------------- Api to start new chat ----------------------------------------------------------
 export const startNewChat = asyncErrorHandler(async (req: Request, res: Response, next) => {
   try {
     resetChatHistory();

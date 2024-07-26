@@ -28,15 +28,17 @@ productRouter.post(
 
 productRouter.get("/latest", getLatestProduct);
 productRouter.get("/getsingleproduct/:id", getSingleProduct);
-productRouter.post("/deletePreviewImage", deletePreviewCloudinary);
 productRouter.get("/search", getAllProducts);
-productRouter.get("/getAllAdminProducts", getAllAdminProducts);
 productRouter.post("/searchfilterandsort", getFilterAndSortProducts);
 productRouter.get("/getlimitedproductsbybrand", getLimitedProductsByBrands);
+
+
+// ---------------------- Admin routes-----------------------------------------------
+productRouter.get("/getAllAdminProducts", adminOnly, getAllAdminProducts);
 productRouter.post("/updateproduct/:id", adminOnly, updateProduct);
 productRouter.delete("/deleteproduct/:id", adminOnly, deleteProduct);
 productRouter.delete("/deleteproductdirectly/:id", adminOnly, deleteProductDirectly);
-
+productRouter.post("/deletePreviewImage", adminOnly, deletePreviewCloudinary);
 
 
 
