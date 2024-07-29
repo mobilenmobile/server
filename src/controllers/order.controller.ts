@@ -87,25 +87,28 @@ export const getSingleOrderDetails = asyncErrorHandler(async (req, res, next) =>
     console.log("reviews", reviews)
     // Return an object with item details and associated reviews
     return {
-      deliveryAddress: order.deliveryAddress,
-      orderStatuses: order.orderStatuses,
-      total: order.total,
-      couponcode: order.couponcode,
-      discount: order.discount,
-      paymentMode: order.paymentMethod?.paymentMode,
-      paymentStatus: order.paymentStatus,
-      discountedTotal: order.discountedTotal,
-      finalAmount: order.finalAmount,
-      orderItems: item,
+      ...item,
       review: reviews?.length > 0 ? reviews[0] : {}
     };
   }));
-
-  // console.log("orderItemwithreviews", orderItemsWithReviews)
+  const orderDetails = {
+    orderId:order._id,
+    deliveryAddress: order.deliveryAddress,
+    orderStatuses: order.orderStatuses,
+    total: order.total,
+    couponcode: order.couponcode,
+    discount: order.discount,
+    paymentMode: order.paymentMethod?.paymentMode,
+    paymentStatus: order.paymentStatus,
+    discountedTotal: order.discountedTotal,
+    finalAmount: order.finalAmount,
+    orderItems: orderItemsWithReviews
+  }
+  console.log("orderItemwithreviews", orderItemsWithReviews)
   return res.status(200).json({
     success: true,
     message: "Order details fetched Successfully",
-    orderDetails: orderItemsWithReviews
+    orderDetails,
   });
 });
 

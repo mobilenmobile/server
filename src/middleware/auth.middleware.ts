@@ -30,7 +30,7 @@ export const authenticated = asyncErrorHandler(async (req, res, next) => {
   if (verifyAuth.uid.length < 1)
     return next(new ErrorHandler("Token is invalid ", 401));
   const user = await User.findOne({ uid: verifyAuth.uid });
-  console.log(user);
+  // console.log(user);
   if (!user) return next(new ErrorHandler("your id is invalid", 401));
   req.user = user;
   // if (user.role !== "admin") {
