@@ -13,6 +13,7 @@ import {
   deleteProductDirectly,
   getFilterAndSortProducts,
   getAllAdminProducts,
+  getSimilarProducts,
 } from "../controllers/product.controllers.js";
 
 import { adminOnly } from "../middleware/auth.middleware.js";
@@ -31,7 +32,7 @@ productRouter.get("/getsingleproduct/:id", getSingleProduct);
 productRouter.get("/search", getAllProducts);
 productRouter.post("/searchfilterandsort", getFilterAndSortProducts);
 productRouter.get("/getlimitedproductsbybrand", getLimitedProductsByBrands);
-
+productRouter.post("/getsimilarproducts", getSimilarProducts);
 
 // ---------------------- Admin routes-----------------------------------------------
 productRouter.get("/getAllAdminProducts", adminOnly, getAllAdminProducts);

@@ -32,8 +32,9 @@ import { FilterQuery } from "mongoose";
 // 8.deletePreviewCloudinary -- delete images from uploadOnCloudinary
 // 9.getAllAdminProducts
 // 10.getAllProducts
-// 11.getLimitedProductsByBrands -- give only title of selected brand available in stock
-// 12.getFilterAndSortProducts  -- handle filtering and sorting of products
+// 11.getSimilarProducts
+// 12.getLimitedProductsByBrands -- give only title of selected brand available in stock
+// 13.getFilterAndSortProducts  -- handle filtering and sorting of products
 
 //----------------------xxxxxx List-Of-Apis-End xxxxxxxxx-------------------
 
@@ -457,6 +458,97 @@ export const getAllProducts = asyncErrorHandler(
       products: flatProducts,
       totalPage,
       totalProducts,
+    });
+  }
+);
+//---------------------api to get similar products and change its structure------------------------------------
+export const getSimilarProducts = asyncErrorHandler(
+  async (req, res, next) => {
+
+    const categoryIds = req.body.categoryIds
+    console.log("categoryIds-------------------->", categoryIds)
+    const parsedCategoryIds = categoryIds
+    
+    let limitProducts = 5
+
+    if (!Array.isArray(parsedCategoryIds) || parsedCategoryIds.length === 0) {
+      return res.status(400).json({ message: 'Invalid category IDs' });
+    }
+
+    if (parsedCategoryIds.length == 1) {
+      limitProducts = 5
+    } else if (parsedCategoryIds.length == 2) {
+      limitProducts = 3
+    } else if (parsedCategoryIds.length == 3) {
+      limitProducts = 2
+    } else if (parsedCategoryIds.length >= 4) {
+      limitProducts = 1
+    }
+
+    // Fetch 5 products for each category ID
+    const productsPromises = parsedCategoryIds.map((categoryId:string) => {
+      return Product.find({ productCategory: categoryId }).limit(limitProducts).exec();
+    });
+
+    const productsByCategory = await Promise.all(productsPromises);
+
+    // Flatten the array of arrays into a single array
+    const allProducts = productsByCategory.flat();
+
+    let flatProducts: any = []
+
+    allProducts.forEach(product => {
+      product.productVariance.forEach((variant: ProductVariance) => {
+        const productDiscount = calculateDiscount(variant.boxPrice, variant.sellingPrice)
+        // console.log(variant)
+        if (Number(variant.quantity) > 0) {
+          // console.log("--------------------------------ram---------------------", variant.ramAndStorage[0])
+
+          //dynamically creating title of product
+          let title = product.productTitle
+
+          if (variant['ramAndStorage'].length > 0 && variant.ramAndStorage[0]?.ram) {
+            // title = `${product.productTitle} ${variant.ramAndStorage
+            //   && `(${variant.ramAndStorage[0].ram != '0' ? `${variant.color} ${variant.ramAndStorage[0].ram}GB` : ''} ${variant.ramAndStorage[0].storage != '0' ? `${variant.ramAndStorage[0].storage}GB` : ''})`
+            //   }`
+            title = `${product.productTitle} ${variant.ramAndStorage
+              && `(${variant.color} ${variant.ramAndStorage[0].storage != '0' ? `${variant.ramAndStorage[0].storage}GB` : ''})`
+              }`
+          } else {
+            title = `${product.productTitle} (${variant.color})`
+          }
+          //creating different product based on variance
+          const newProduct = {
+            productid: `${product._id}`,
+            keyid: `${product._id}${variant.id.replace(/\s+/g, "")}`,
+            variantid: `${variant.id.replace(/\s+/g, "")}`,
+            title: title.toLowerCase(),
+            category: product?.productCategory?.categoryName,
+            thumbnail: variant.thumbnail,
+            boxPrice: variant.boxPrice,
+            sellingPrice: variant.sellingPrice,
+            discount: productDiscount,
+            rating: product.productRating,
+            color: variant.color, // Replace with actual rating if available
+            brand: product.productBrand?.brandName || 'nobrand'
+          };
+          flatProducts.push(newProduct)
+        }
+      });
+    });
+
+    //shuffling the products array
+    for (let i = flatProducts.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [flatProducts[i], flatProducts[j]] = [flatProducts[j], flatProducts[i]];
+    }
+
+    console.log("similar products", allProducts)
+    return res.status(200).json({
+      success: true,
+      message: "products fetched successfully",
+      products: flatProducts,
+      TotalProducts: flatProducts.length
     });
   }
 );
