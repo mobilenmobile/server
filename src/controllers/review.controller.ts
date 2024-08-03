@@ -48,8 +48,6 @@ export const newReview = asyncErrorHandler(
             reviewDescription
         } = req.body;
 
-
-
         console.log(req.body)
 
         // if (!reviewDescription) {
@@ -57,11 +55,14 @@ export const newReview = asyncErrorHandler(
         // }
 
         if (!req.user._id) {
+
             return next(new ErrorHandler("unauthenticated", 400));
         }
-        let review = await Review.findOne({ reviewUser: req.user._id, productId: productId });
+        let review = await Review.findOne({ reviewUser: req.user._id, productId: product._id });
 
+        console.log("----------existingitem------------------------------------------------------")
         console.log("----------existingitem---------", review)
+        console.log("----------existingitem------------------------------------------------------")
 
         if (review) {
             if (reviewRating) review.reviewRating = reviewRating
@@ -71,6 +72,9 @@ export const newReview = asyncErrorHandler(
         }
 
         if (!review) {
+            console.log("-------------------------x-----------------------------------------------")
+            console.log("------------------------creating new review------------------------------")
+            console.log("-------------------------x-----------------------------------------------")
             review = await Review.create({
                 reviewUser: req.user._id,
                 reviewProduct: productId,
@@ -120,7 +124,7 @@ export const updateReview = asyncErrorHandler(
 
         const updatedReview = await review.save();
         console.log("product id is :-", id)
-        await handleReviewChange(review._id, id, review.reviewRating)
+        await handleReviewChange(review._id, review.reviewProduct, review.reviewRating)
 
         return res.status(200).json({
             success: true,
@@ -133,18 +137,64 @@ export const updateReview = asyncErrorHandler(
 
 
 //-------------------------api to get all reviews-------------------------------------------
-export const allReviews = asyncErrorHandler(async (req, res, next) => {
 
+
+export const allReviews = asyncErrorHandler(async (req, res, next) => {
     const id = (req.params as { id: string }).id;
 
     if (!id) {
-        return next(new ErrorHandler("incorrect product id", 400));
+        return next(new ErrorHandler("Incorrect product ID", 400));
     }
-    // const  = await Review.find({ reviewProduct: id }).populate('reviewUser')
-    const allReviews = await Review.aggregate([
+
+    // Pipeline to get aggregated statistics
+    const aggregationPipeline = [
         {
             $match: {
-                reviewProduct: new mongoose.Types.ObjectId(id)// Match reviews where reviewProduct equals paramsId
+                reviewProduct: new mongoose.Types.ObjectId(id) // Match reviews where reviewProduct equals paramsId
+            }
+        },
+        {
+            $lookup: {
+                from: 'users', // Collection name for users
+                localField: 'reviewUser',
+                foreignField: '_id',
+                as: 'user'
+            }
+        },
+        {
+            $unwind: '$user'
+        },
+        {
+            $group: {
+                _id: null,
+                totalRatings: { $sum: { $cond: [{ $gte: ['$reviewRating', 1] }, 1, 0] } },
+                averageRating: { $avg: '$reviewRating' },
+                reviewsCount: { $sum: { $cond: [{ $gt: [{ $strLenCP: '$reviewDescription' }, 0] }, 1, 0] } },
+                fiveStarCount: { $sum: { $cond: [{ $eq: ['$reviewRating', 5] }, 1, 0] } },
+                fourStarCount: { $sum: { $cond: [{ $eq: ['$reviewRating', 4] }, 1, 0] } },
+                threeStarCount: { $sum: { $cond: [{ $eq: ['$reviewRating', 3] }, 1, 0] } },
+                imageUrls: { $push: '$reviewImgGallery' }
+            }
+        },
+        {
+            $project: {
+                _id: 0,
+                totalRatings: 1,
+                averageRating: { $round: ['$averageRating', 0] }, // Round the number
+                reviewsCount: 1,
+                fiveStarCount: 1,
+                fourStarCount: 1,
+                threeStarCount: 1,
+                imageUrls: { $reduce: { input: '$imageUrls', initialValue: [], in: { $concatArrays: ['$$value', '$$this'] } } }
+            }
+        }
+    ];
+
+    // Pipeline to get all detailed reviews
+    const detailedReviewsPipeline = [
+        {
+            $match: {
+                reviewProduct: new mongoose.Types.ObjectId(id) // Match reviews where reviewProduct equals paramsId
             }
         },
         {
@@ -160,6 +210,7 @@ export const allReviews = asyncErrorHandler(async (req, res, next) => {
         },
         {
             $project: {
+                _id: 1,
                 reviewProduct: 1,
                 reviewImgGallery: 1,
                 reviewRating: 1,
@@ -169,71 +220,138 @@ export const allReviews = asyncErrorHandler(async (req, res, next) => {
                 'user.email': 1
             }
         }
-    ]);
+    ];
 
-    // console.log("Aggregated Reviews with User Details:", aggregatedReviews);
-    // if (!req.user._id) {
-    //     return next(new ErrorHandler("unauthenticated", 400));
-    // }
-    // Initialize variables for calculating averages and counts
-    let totalRatings = 0;
-    let ratingCount = 0;
-    let reviewsCount = 0;
-    let fiveStarCount = 0;
-    let fourStarCount = 0;
-    let threeStarCount = 0;
-    let imageUrls: any[] = [];
+    // Execute the aggregation pipelines
+    const [stats] = await Review.aggregate(aggregationPipeline);
+    const detailedReviews = await Review.aggregate(detailedReviewsPipeline);
 
-    // Loop through each review
-    allReviews.forEach(review => {
-        // Extract image URLs
-        imageUrls = imageUrls.concat(review.reviewImgGallery);
-
-        // Calculate average rating
-        ratingCount += review.reviewRating;
-        totalRatings += review.reviewRating > 0 ? 1 : 0;
-        reviewsCount += review.reviewDescription.length > 0 ? 1 : 0;
-
-        // Count ratings
-        switch (review.reviewRating) {
-            case 5:
-                fiveStarCount++;
-                break;
-            case 4:
-                fourStarCount++;
-                break;
-            case 3:
-                threeStarCount++;
-                break;
-            // Add cases for other ratings if needed
-            default:
-                break;
-        }
-    });
-
-    // Calculate average rating
-    const averageRating = ratingCount / allReviews.length;
-
-    // Output the results
-    console.log("Image URLs:", imageUrls);
-    console.log("Average Rating:", averageRating);
-    console.log("Number of 5-star ratings:", fiveStarCount);
-    console.log("Number of 4-star ratings:", fourStarCount);
-    console.log("Number of 3-star ratings:", threeStarCount);
+    if (!stats) {
+        return res.status(200).json({
+            success: true,
+            message: "No reviews found",
+            totalRatings: 0,
+            averageRating: 0,
+            reviewsCount: 0,
+            fiveStarCount: 0,
+            fourStarCount: 0,
+            threeStarCount: 0,
+            imageUrls: [],
+            allReviews: []
+        });
+    }
 
     return res.status(200).json({
         success: true,
-        message:"reviews fetched successfully",
-        totalRatings,
-        averageRating,
-        reviewsCount,
-        fiveStarCount,
-        fourStarCount,
-        threeStarCount,
-        imageUrls,
-        allReviews,
+        message: "Reviews fetched successfully",
+        ...stats,
+        allReviews: detailedReviews
     });
 });
+
+// export const allReviews = asyncErrorHandler(async (req, res, next) => {
+
+//     const id = (req.params as { id: string }).id;
+
+//     if (!id) {
+//         return next(new ErrorHandler("incorrect product id", 400));
+//     }
+//     // const  = await Review.find({ reviewProduct: id }).populate('reviewUser')
+//     const allReviews = await Review.aggregate([
+//         {
+//             $match: {
+//                 reviewProduct: new mongoose.Types.ObjectId(id)// Match reviews where reviewProduct equals paramsId
+//             }
+//         },
+//         {
+//             $lookup: {
+//                 from: 'users', // Collection name for users
+//                 localField: 'reviewUser',
+//                 foreignField: '_id',
+//                 as: 'user'
+//             }
+//         },
+//         {
+//             $unwind: '$user'
+//         },
+//         {
+//             $project: {
+//                 reviewProduct: 1,
+//                 reviewImgGallery: 1,
+//                 reviewRating: 1,
+//                 reviewDescription: 1,
+//                 updatedAt: 1,
+//                 'user.name': 1,
+//                 'user.email': 1
+//             }
+//         }
+//     ]);
+
+//     // console.log("Aggregated Reviews with User Details:", aggregatedReviews);
+//     // if (!req.user._id) {
+//     //     return next(new ErrorHandler("unauthenticated", 400));
+//     // }
+//     // Initialize variables for calculating averages and counts
+//     let totalRatings = 0;
+//     let ratingCount = 0;
+//     let reviewsCount = 0;
+//     let fiveStarCount = 0;
+//     let fourStarCount = 0;
+//     let threeStarCount = 0;
+//     let imageUrls: any[] = [];
+
+//     // Loop through each review
+//     allReviews.forEach(review => {
+//         // Extract image URLs
+//         imageUrls = imageUrls.concat(review.reviewImgGallery);
+//         console.log(review.reviewRating,ratingCount)
+//         // Calculate average rating
+//         ratingCount += review.reviewRating !== null  && review.reviewRating;
+
+//         totalRatings += review.reviewRating > 0 ? 1 : 0;
+//         reviewsCount += review.reviewDescription.length > 0 ? 1 : 0;
+
+//         // Count ratings
+//         switch (review.reviewRating) {
+//             case 5:
+//                 fiveStarCount++;
+//                 break;
+//             case 4:
+//                 fourStarCount++;
+//                 break;
+//             case 3:
+//                 threeStarCount++;
+//                 break;
+//             // Add cases for other ratings if needed
+//             default:
+//                 break;
+//         }
+//     });
+
+//     console.log("rating count -----------------------------.......", ratingCount)
+//     // Calculate average rating
+//     const averageRating = ratingCount / allReviews.length;
+
+//     // Output the results
+//     console.log("Image URLs:", imageUrls);
+//     console.log("Average Rating:", averageRating);
+//     console.log("Number of 5-star ratings:", fiveStarCount);
+//     console.log("Number of 4-star ratings:", fourStarCount);
+//     console.log("Number of 3-star ratings:", threeStarCount);
+
+//     return res.status(200).json({
+//         success: true,
+//         message: "reviews fetched successfully",
+//         totalRatings,
+//         averageRating: Math.round(averageRating),
+//         reviewsCount,
+//         fiveStarCount,
+//         fourStarCount,
+//         threeStarCount,
+//         imageUrls,
+//         allReviews,
+//     });
+// });
 
 
 //----------------------api to get user reviews------------------------------------------------
@@ -293,8 +411,12 @@ async function updateProductRating(productId: string) {
                     averageRating: { $avg: '$reviewRating' },
                     count: { $sum: 1 }
                 }
+            }, {
+                $project: {
+                    averageRating: { $round: ['$averageRating', 0] }, // Round the number  
+                    count: 1
+                }
             }
-
         ]);
 
         console.log("result==> ", result)
@@ -302,9 +424,10 @@ async function updateProductRating(productId: string) {
             const { averageRating, count } = result[0];
             console.log("avg and count ", averageRating, count)
             // Update product rating in Product collection
+            console.log("updating product rating....................", averageRating)
             const product = await Product.findById(productId);
             await Product.findByIdAndUpdate(productId, {
-                productRating: averageRating,
+                productRating: Math.round(averageRating),
                 productNumReviews: count
             });
 
@@ -329,7 +452,7 @@ async function updateProductRating(productId: string) {
 async function handleReviewChange(reviewId: string, productId: string, rating: number) {
     try {
         // Update or create the review
-        const review = await Review.findByIdAndUpdate(reviewId, { rating: rating }, { new: true });
+        // const review = await Review.findByIdAndUpdate(reviewId, { rating: rating }, { new: true });
 
         // Update the product rating based on the reviews
         console.log("-------reviewId------productId----------rating-----", reviewId, productId, rating)

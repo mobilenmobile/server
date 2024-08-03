@@ -278,6 +278,9 @@ export const deletePreviewCloudinary = asyncErrorHandler(
 );
 
 //---------------------api to get all Admin products withoud changing structure-----------------------------------
+
+
+//api to get all products
 export const getAllAdminProducts = asyncErrorHandler(
   async (req: Request<{}, {}, {}, SearchRequestQuery>, res, next) => {
     const { search, sort, category, price } = req.query;
@@ -330,19 +333,93 @@ export const getAllAdminProducts = asyncErrorHandler(
       Product.find({ baseQuery }),
     ]);
 
-    const totalProducts = (await Product.find(baseQuery)).length;
 
+    console.log("-------admin product--------------------------")
+    console.log(products, filteredProductwithoutlimit)
+    console.log("-------admin product--------------------------")
+    
+    const totalProducts = products.length;
     const totalPage = Math.ceil(totalProducts / limit);
 
     return res.status(200).json({
       success: true,
-      message: "all products fetched successfully",
       products,
       totalPage,
       totalProducts,
     });
   }
 );
+
+
+
+
+
+
+// export const getAllAdminProducts = asyncErrorHandler(
+//   async (req: Request<{}, {}, {}, SearchRequestQuery>, res, next) => {
+//     const { search, sort, category, price } = req.query;
+//     const page = Number(req.query.page) || 1;
+//     const limit = Number(req.query.limit) || 20;
+//     const skip = (page - 1) * limit;
+//     const baseQuery: FilterQuery<BaseQuery> = {};
+
+//     if (search) {
+//       baseQuery.productTitle = {
+//         $regex: search,
+//         $options: "i",
+//       };
+//     }
+//     if (price) {
+//       baseQuery.price = {
+//         $lte: Number(price), //less than equal to
+//       };
+//     }
+//     if (category) {
+//       const findCategory = await Category.findOne({ categoryName: category });
+//       console.log(findCategory);
+
+//       baseQuery.productCategory = findCategory._id;
+//     }
+
+//     const sortBy: any = {};
+
+//     if (sort) {
+//       if (sort === "A-Z") {
+//         sortBy.productTitle = 1;
+//       } else if (sort === "Z-A") {
+//         sortBy.productTitle = -1;
+//       } else if (sort === "oldest") {
+//         sortBy.createdAt = 1;
+//       } else {
+//         sortBy.createdAt = -1;
+//       }
+//     }
+//     console.log(baseQuery);
+//     const productPromise = Product.find(baseQuery)
+//       .populate("productCategory")
+//       .populate("productBrand")
+//       .sort(sort ? sortBy : { createdAt: -1 })
+//       .skip(skip)
+//       .limit(limit);
+
+//     const [products, filteredProductwithoutlimit] = await Promise.all([
+//       productPromise,
+//       Product.find({ baseQuery }),
+//     ]);
+
+//     const totalProducts = (await Product.find(baseQuery)).length;
+
+//     const totalPage = Math.ceil(totalProducts / limit);
+
+//     return res.status(200).json({
+//       success: true,
+//       message: "all products fetched successfully",
+//       products,
+//       totalPage,
+//       totalProducts,
+//     });
+//   }
+// );
 
 
 //---------------------api to get all products and change its structure------------------------------------
@@ -468,7 +545,7 @@ export const getSimilarProducts = asyncErrorHandler(
     const categoryIds = req.body.categoryIds
     console.log("categoryIds-------------------->", categoryIds)
     const parsedCategoryIds = categoryIds
-    
+
     let limitProducts = 5
 
     if (!Array.isArray(parsedCategoryIds) || parsedCategoryIds.length === 0) {
@@ -486,7 +563,7 @@ export const getSimilarProducts = asyncErrorHandler(
     }
 
     // Fetch 5 products for each category ID
-    const productsPromises = parsedCategoryIds.map((categoryId:string) => {
+    const productsPromises = parsedCategoryIds.map((categoryId: string) => {
       return Product.find({ productCategory: categoryId }).limit(limitProducts).exec();
     });
 
@@ -529,6 +606,7 @@ export const getSimilarProducts = asyncErrorHandler(
             sellingPrice: variant.sellingPrice,
             discount: productDiscount,
             rating: product.productRating,
+            reviews: product.productNumReviews,
             color: variant.color, // Replace with actual rating if available
             brand: product.productBrand?.brandName || 'nobrand'
           };
@@ -730,6 +808,7 @@ export const getFilterAndSortProducts = asyncErrorHandler(async (req, res, next)
           sellingPrice: variant.sellingPrice,
           discount: productDiscount,
           rating: product.productRating,
+          reviews: product.productNumReviews,
           color: variant.color,
           brand: product.productBrand?.brandName || 'nobrand',
           memory: variant?.ramAndStorage[0]?.ram,

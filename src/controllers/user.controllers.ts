@@ -480,6 +480,7 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
       const productDiscount = calculateDiscount(variantData?.boxPrice, variantData?.sellingPrice)
       return {
         _id: item._id,
+        keyid: `${item._id}${variantData?.id.replace(/\s+/g, "")}`,
         categoryId: item.productId?.productCategory?._id,
         category: item.productId?.productCategory?.categoryName,
         productTitle: item.productId.productTitle,
