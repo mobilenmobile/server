@@ -27,6 +27,9 @@ productRouter.post(
   previewImages
 );
 
+productRouter.post("/deletePreviewImage", deletePreviewCloudinary);
+
+
 productRouter.get("/latest", getLatestProduct);
 productRouter.get("/getsingleproduct/:id", getSingleProduct);
 productRouter.get("/search", getAllProducts);

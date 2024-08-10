@@ -66,10 +66,8 @@ export const newProduct = asyncErrorHandler(
     if (!refBrand) {
       return next(new ErrorHandler("Please provide the brand ", 400));
     }
-    console.log("refBrand id" + refBrand._id);
-    console.log("refbrand", refBrand);
+
     const refCategory = await Category.findOne({ categoryName: category });
-    console.log("id", refCategory._id);
     if (!refCategory) {
       return next(new ErrorHandler("Please provide the category", 400));
     }
@@ -105,14 +103,14 @@ export const newProduct = asyncErrorHandler(
 //-----------------api to get image url by uploading on cloudinary------------------
 export const previewImages = asyncErrorHandler(async (req, res, next) => {
   const photos = req.files;
-  console.log("photos =>", photos);
+  console.log("photos =>=>=>=>=>=>=>=>+.+>=>+<=>+>[.=>+.+=>=>=>=>=>=>", photos);
 
   if (photos?.length === 0) {
     return next(new ErrorHandler("please choose product image", 400));
   }
 
   const imgUrl = await uploadMultipleCloudinary(photos);
-  console.log(imgUrl);
+  console.log(imgUrl, "..........image url/...........klfdsfjkdafjsdlakfjsdlkfjsadlkfj");
 
   return res.status(200).json({
     success: true,
@@ -149,7 +147,6 @@ export const getSingleProduct = asyncErrorHandler(async (req, res, next) => {
     return next(new ErrorHandler("Product not found", 404));
   }
 
-  console.log(product)
   // Function to modify strings starting with "0-"
   if (product?.productRamAndStorage && product?.productBrand?.brandName == 'apple') {
     let modifiedRamAndStorage = product.productRamAndStorage.map((item: { id: string }) => {
@@ -209,7 +206,6 @@ export const updateProduct = asyncErrorHandler(
     if (colors) product.productColors = JSON.parse(colors)
 
     const prod = await product.save();
-    console.log("prod", prod);
     return res.status(200).json({
       success: true,
       message: "Product Updated Successfully",
@@ -222,7 +218,6 @@ export const updateProduct = asyncErrorHandler(
 //--------------------------------api to delete product---------------------------------------
 export const deleteProduct = asyncErrorHandler(async (req, res, next) => {
   const product = await Product.findById(req.params.id);
-  console.log("deletedProduct " + product);
   if (!product) {
     return next(new ErrorHandler("Product not found", 404));
   }
@@ -337,7 +332,7 @@ export const getAllAdminProducts = asyncErrorHandler(
     console.log("-------admin product--------------------------")
     console.log(products, filteredProductwithoutlimit)
     console.log("-------admin product--------------------------")
-    
+
     const totalProducts = products.length;
     const totalPage = Math.ceil(totalProducts / limit);
 

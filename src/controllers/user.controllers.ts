@@ -100,13 +100,13 @@ export const updateProfile = asyncErrorHandler(async (req, res, next) => {
   return res.status(200).json({
     success: true,
     message: "Successfully changed user previlege",
+
   });
 });
 
 //---------------------api to update profile image-------------------------------------------
 export const updateProfileImage = asyncErrorHandler(async (req, res, next) => {
   const { profileImageUrl } = req.body
-  console.log(req.body)
   if (!profileImageUrl) {
     return next(new ErrorHandler("enter profile image url", 404));
   }
@@ -116,9 +116,12 @@ export const updateProfileImage = asyncErrorHandler(async (req, res, next) => {
   }
   user.profile.profileImageUrl = profileImageUrl
   await user.save();
+
+  console.log(user.profile)
   return res.status(200).json({
     success: true,
     message: "Successfully changed user profile image url",
+    profileImageUrl
   });
 });
 
@@ -128,7 +131,6 @@ export const updateCouponCode = asyncErrorHandler(async (req, res, next) => {
   if (!couponId) {
     return next(new ErrorHandler("enter coupon code", 404));
   }
-  console.log(couponId)
   const couponCode = await Offer.findOne({ _id: couponId })
 
   if (!couponCode) {
@@ -203,7 +205,6 @@ export const updateWishlist = asyncErrorHandler(async (req, res, next) => {
   }
 
   const existingItem = await Wishlist.findOne({ user: req.user._id, productId, selectedVarianceId });
-  console.log("----------existingitem---------", existingItem)
   if (existingItem) {
     return next(new ErrorHandler("This combination already exists in the wishlist.", 404));
   }
@@ -235,7 +236,6 @@ export const getWishlistItems = asyncErrorHandler(async (req: Request, res, next
   const wishlistItemsData = wishlistItems.map((item) => {
     if (item.productId.productVariance) {
       const variantData = item.productId.productVariance.find((variant: any) => {
-        console.log("variant id ----------------------", variant.id, item.selectedVarianceId)
         if (variant.id.replace(/\s+/g, "") == item.selectedVarianceId) {
           return variant
         }
@@ -273,7 +273,6 @@ export const removeWishlistItem = asyncErrorHandler(async (req: Request, res, ne
   // if (!req.params.id) {
   //   return next(new ErrorHandler("no id", 400));
   // }
-  console.log(req.body)
   const { productId, selectedVarianceId } = req.body
 
   if (!productId || !selectedVarianceId) {
@@ -281,7 +280,6 @@ export const removeWishlistItem = asyncErrorHandler(async (req: Request, res, ne
   }
 
   const wishlistItem = await Wishlist.findOne({ user: req.user._id, productId: productId, selectedVarianceId: selectedVarianceId });
-  console.log("found wishlistitem ", wishlistItem)
 
   if (!wishlistItem) {
     return next(new ErrorHandler("wishlistitem not found", 400));
@@ -307,13 +305,9 @@ export const updateCart = asyncErrorHandler(async (req, res, next) => {
     return next(new ErrorHandler("No product found with this id", 404));
   }
   const selectedVariantData = product.productVariance.find((variant: { id: string; }) => {
-    console.log("compare id ", variant.id.replace(/\s+/g, "") == selectedVarianceId.replace(/\s+/g, ""))
-    console.log("-----------------------varinat from update cart-------------")
-    console.log(variant)
     return variant.id.replace(/\s+/g, "") == selectedVarianceId.replace(/\s+/g, "")
   })
 
-  console.log("varinat----->", selectedVariantData)
 
   if (selectedVariantData?.quantity == '0' || selectedVariantData?.quantity == 0) {
     return next(new ErrorHandler("product is out of stock", 404));
@@ -321,7 +315,6 @@ export const updateCart = asyncErrorHandler(async (req, res, next) => {
 
   const cartItem = await cart.findOne({ productId, selectedVarianceId, user: req.user._id });
 
-  console.log(cartItem)
 
   if (cartItem && cartItem.quantity < 10) {
     cartItem.quantity = cartItem.quantity + 1
@@ -361,7 +354,6 @@ export const decreaseCartProductQuantity = asyncErrorHandler(async (req, res, ne
 
   const cartItem = await cart.findOne({ productId, selectedVarianceId, user: req.user._id });
 
-  console.log(cartItem)
 
   if (!cartItem) {
     return next(new ErrorHandler("cart item not found", 404));
@@ -421,7 +413,6 @@ export const getCartItems = asyncErrorHandler(async (req: Request, res, next) =>
 
     }
   })
-  console.log(cartItemsData)
   return res.status(200).json({
     success: true,
     message: "successfully fetched cartitems data",
@@ -467,16 +458,13 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
 
   //mapping through cartItems to structure the data
   const cartItemsData = cartItems.map((item) => {
-    console.log("single product------------>", item)
     if (item.productId.productVariance) {
 
       const variantData = item.productId.productVariance.find((variant: any) => {
-        console.log(variant.id.replace(/\s+/g, ""), (item.selectedVarianceId))
         if ((variant.id.replace(/\s+/g, "")) == (item.selectedVarianceId.replace(/\s+/g, ""))) {
           return variant
         }
       })
-      console.log("variantData", variantData)
       const productDiscount = calculateDiscount(variantData?.boxPrice, variantData?.sellingPrice)
       return {
         _id: item._id,
@@ -525,8 +513,7 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
     couponDiscount = couponDiscount > 500 ? 499 : couponDiscount
   }
   const finalCartTotal = totals.DiscountedTotal - (couponDiscount)
-  console.log(totals)
-  console.log(cartItemsData)
+
 
   return res.status(200).json({
     success: true,
@@ -544,7 +531,6 @@ export const clearCart = asyncErrorHandler(async (req: Request, res, next) => {
   }
   // const cartItems = await cart.find({ user: req.user._id })
   const deletedItems = await cart.deleteMany({ user: req.user._id });
-  console.log(`${deletedItems.deletedCount} cart items deleted.`);
   return res.status(200).json({
     success: true,
     message: `${deletedItems.deletedCount} Cart items deleted successfully`,
