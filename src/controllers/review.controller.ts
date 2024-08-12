@@ -31,13 +31,11 @@ export const newReview = asyncErrorHandler(
         console.log(req.body)
 
         const productId = (req.params as { id: string }).id;
-
         if (!productId) {
             return next(new ErrorHandler("no id present", 400));
         }
 
         const product = await Product.findById(productId);
-
         if (!product) {
             return next(new ErrorHandler("Product not found  ", 404));
         }
@@ -59,7 +57,7 @@ export const newReview = asyncErrorHandler(
         }
         let review = await Review.findOne({ reviewUser: req.user._id, productId: product._id });
 
-
+        console.log(review, "i found the review")
         if (review) {
             if (reviewRating) review.reviewRating = reviewRating
             if (reviewDescription) review.reviewDescription = reviewRating
@@ -68,14 +66,17 @@ export const newReview = asyncErrorHandler(
         }
 
         if (!review) {
-
-            review = await Review.create({
+            console.log("hey review new block of code")
+            console.log(reviewImgGallery, "review img gallery")
+            const newReview = await Review.create({
                 reviewUser: req.user._id,
                 reviewProduct: productId,
                 reviewImgGallery: JSON.parse(reviewImgGallery),
                 reviewRating,
                 reviewDescription
             });
+            console.log(newReview, "review")
+
         }
         await handleReviewChange(review._id, productId, review.reviewRating)
         return res.status(201).json({
