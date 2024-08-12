@@ -337,7 +337,7 @@ export const getAllAdminProducts = asyncErrorHandler(
     console.log("-------admin product--------------------------")
     console.log(products, filteredProductwithoutlimit)
     console.log("-------admin product--------------------------")
-    
+
     const totalProducts = products.length;
     const totalPage = Math.ceil(totalProducts / limit);
 
@@ -755,6 +755,7 @@ export const getFilterAndSortProducts = asyncErrorHandler(async (req, res, next)
   //   sortBy: req.query.sortBy || 'priceLowToHigh' // Options: 'priceLowToHigh', 'priceHighToLow', 'topRated'
   // };
   const {
+    category,
     searchText,
     minPrice,
     maxPrice,
@@ -766,7 +767,8 @@ export const getFilterAndSortProducts = asyncErrorHandler(async (req, res, next)
     sortBy
   } = req.body
 
-  console.log(req.body)
+
+  console.log("---------------------------->>>>>>>>", req.body, "<<<<<<<<<---------------------------------")
   const baseQuery: FilterQuery<BaseQuery> = {};
 
   if (searchText) {
@@ -776,8 +778,15 @@ export const getFilterAndSortProducts = asyncErrorHandler(async (req, res, next)
     };
   }
 
-  const data = await Product.find(baseQuery).populate("productCategory")
+  let data = await Product.find(baseQuery).populate("productCategory")
     .populate("productBrand")
+
+
+  if (searchText == 'smartphones') {
+    data = await Product.find({}).populate("productCategory")
+      .populate("productBrand")
+  }
+// console.log("----------------------------------->>>>>",data,"<<<<<<<<<<<<<--------------------")
 
   let flatProducts: any = []
 
@@ -803,6 +812,7 @@ export const getFilterAndSortProducts = asyncErrorHandler(async (req, res, next)
           keyid: `${product._id}${variant.id.replace(/\s+/g, "")}`,
           variantid: `${variant.id.replace(/\s+/g, "")}`,
           title: title.toLowerCase(),
+          category: product?.productCategory?.categoryName,
           thumbnail: variant.thumbnail,
           boxPrice: variant.boxPrice,
           sellingPrice: variant.sellingPrice,
@@ -826,7 +836,10 @@ export const getFilterAndSortProducts = asyncErrorHandler(async (req, res, next)
   //   filteredProducts = filteredProducts.filter(product => searchRegex.test(product.title));
   // }
   // Apply filters
-
+  if (category && category.length > 0) {
+    console.log("---filtering based on category")
+    filteredProducts = filteredProducts.filter(product => product.category === category);
+  }
   const minPriceValue = minPrice.sort()[0]
   const maxPriceValue = maxPrice.sort()[maxPrice.length - 1]
 

@@ -5,7 +5,7 @@ import { authenticated } from '../middleware/auth.middleware'
 
 const paymentRouter = express.Router()
 
-paymentRouter.post("/orderpayment", authenticated, orderPayment)
+paymentRouter.post("/orderpayment",  orderPayment)
 paymentRouter.get("/getpaymentdetails/:paymentId", getPaymentDetails)
 
 
