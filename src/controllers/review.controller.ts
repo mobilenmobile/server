@@ -48,7 +48,6 @@ export const newReview = asyncErrorHandler(
             reviewDescription
         } = req.body;
 
-        console.log(req.body)
 
         // if (!reviewDescription) {
         //     return next(new ErrorHandler("Please Enter description", 400));
@@ -60,9 +59,6 @@ export const newReview = asyncErrorHandler(
         }
         let review = await Review.findOne({ reviewUser: req.user._id, productId: product._id });
 
-        console.log("----------existingitem------------------------------------------------------")
-        console.log("----------existingitem---------", review)
-        console.log("----------existingitem------------------------------------------------------")
 
         if (review) {
             if (reviewRating) review.reviewRating = reviewRating
@@ -72,9 +68,7 @@ export const newReview = asyncErrorHandler(
         }
 
         if (!review) {
-            console.log("-------------------------x-----------------------------------------------")
-            console.log("------------------------creating new review------------------------------")
-            console.log("-------------------------x-----------------------------------------------")
+
             review = await Review.create({
                 reviewUser: req.user._id,
                 reviewProduct: productId,
@@ -110,7 +104,6 @@ export const updateReview = asyncErrorHandler(
             reviewDescription
         } = req.body;
 
-        console.log("req-body-", req.body);
         const review = await Review.findById(id);
 
         if (!review) {
@@ -123,7 +116,6 @@ export const updateReview = asyncErrorHandler(
         if (JSON.parse(reviewImgGallery).length > 0) review.reviewImgGallery = JSON.parse(reviewImgGallery)
 
         const updatedReview = await review.save();
-        console.log("product id is :-", id)
         await handleReviewChange(review._id, review.reviewProduct, review.reviewRating)
 
         return res.status(200).json({
@@ -396,7 +388,6 @@ export const deleteReview = asyncErrorHandler(async (req, res, next) => {
 
 //---------- Function to calculate and update product rating based on reviews-----------------------
 async function updateProductRating(productId: string) {
-    console.log("productid=> ", productId)
     const reviews = await Review.find({ reviewProduct: productId });
 
     try {
@@ -419,19 +410,15 @@ async function updateProductRating(productId: string) {
             }
         ]);
 
-        console.log("result==> ", result)
         if (result.length > 0) {
             const { averageRating, count } = result[0];
-            console.log("avg and count ", averageRating, count)
             // Update product rating in Product collection
-            console.log("updating product rating....................", averageRating)
             const product = await Product.findById(productId);
             await Product.findByIdAndUpdate(productId, {
                 productRating: Math.round(averageRating),
                 productNumReviews: count
             });
 
-            console.log("product rating changed", product)
 
         } else {
             // If no reviews found, reset product rating
@@ -455,10 +442,8 @@ async function handleReviewChange(reviewId: string, productId: string, rating: n
         // const review = await Review.findByIdAndUpdate(reviewId, { rating: rating }, { new: true });
 
         // Update the product rating based on the reviews
-        console.log("-------reviewId------productId----------rating-----", reviewId, productId, rating)
         await updateProductRating(productId);
 
-        console.log('Review updated successfully from handlereviewchange');
     } catch (err) {
         console.error('Error handling review change:', err);
     }

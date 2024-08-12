@@ -9,4 +9,5 @@ const router = express.Router();
 router.route("/customer-support").post(getChatbotResponse);
 router.route("/start-new-chat").get(startNewChat);
 
-export default router;
+export default router;  
+ 
