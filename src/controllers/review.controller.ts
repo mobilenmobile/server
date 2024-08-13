@@ -57,12 +57,12 @@ export const newReview = asyncErrorHandler(
         }
         console.log(req?.user?._id)
         console.log(product?._id)
-        let review = await Review.findOne({ reviewUser: req.user._id, productId: product._id });
+        let review = await Review.findOne({ reviewUser: req.user._id, reviewProduct: product._id });
 
         console.log(review, "i found the review")
         if (review) {
             if (reviewRating) review.reviewRating = reviewRating
-            if (reviewDescription) review.reviewDescription = reviewRating
+            if (reviewDescription) review.reviewDescription = reviewDescription
             if (reviewImgGallery) review.reviewImgGallery = JSON.parse(reviewImgGallery)
             await review.save()
         }
