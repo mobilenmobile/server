@@ -536,8 +536,9 @@ export const getAllProducts = asyncErrorHandler(
 //---------------------api to get similar products and change its structure------------------------------------
 export const getSimilarProducts = asyncErrorHandler(
   async (req, res, next) => {
-
+    console.log(req.body)
     const categoryIds = req.body.categoryIds
+
     console.log("categoryIds-------------------->", categoryIds)
     const parsedCategoryIds = categoryIds
 
@@ -557,15 +558,20 @@ export const getSimilarProducts = asyncErrorHandler(
       limitProducts = 1
     }
 
+    
+
     // Fetch 5 products for each category ID
     const productsPromises = parsedCategoryIds.map((categoryId: string) => {
-      return Product.find({ productCategory: categoryId }).limit(limitProducts).exec();
+      return  Product.find({ productCategory: categoryId }).limit(limitProducts).exec();
     });
-
+    console.log(productsPromises, "products promises")
     const productsByCategory = await Promise.all(productsPromises);
+
+    console.log(productsByCategory, "by cateogry products")
 
     // Flatten the array of arrays into a single array
     const allProducts = productsByCategory.flat();
+    console.log(allProducts, "all products")
 
     let flatProducts: any = []
 
@@ -781,7 +787,7 @@ export const getFilterAndSortProducts = asyncErrorHandler(async (req, res, next)
     data = await Product.find({}).populate("productCategory")
       .populate("productBrand")
   }
-// console.log("----------------------------------->>>>>",data,"<<<<<<<<<<<<<--------------------")
+  // console.log("----------------------------------->>>>>",data,"<<<<<<<<<<<<<--------------------")
 
   let flatProducts: any = []
 

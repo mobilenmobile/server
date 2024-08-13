@@ -55,6 +55,8 @@ export const newReview = asyncErrorHandler(
 
             return next(new ErrorHandler("unauthenticated", 400));
         }
+        console.log(req?.user?._id)
+        console.log(product?._id)
         let review = await Review.findOne({ reviewUser: req.user._id, productId: product._id });
 
         console.log(review, "i found the review")
@@ -68,14 +70,14 @@ export const newReview = asyncErrorHandler(
         if (!review) {
             console.log("hey review new block of code")
             console.log(reviewImgGallery, "review img gallery")
-            const newReview = await Review.create({
+            review = await Review.create({
                 reviewUser: req.user._id,
                 reviewProduct: productId,
                 reviewImgGallery: JSON.parse(reviewImgGallery),
                 reviewRating,
                 reviewDescription
             });
-            console.log(newReview, "review")
+            console.log(review, "review")
 
         }
         await handleReviewChange(review._id, productId, review.reviewRating)
