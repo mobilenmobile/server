@@ -29,6 +29,7 @@ export type varianceType = {
 
 export interface NewProductRequestBody {
   category: string;
+  subcategory?: string;
   brand: string;
   productModel: string;
   productTitle: string;
@@ -51,6 +52,8 @@ export interface NewProductRequestBody {
   variance: string;
   colors: string;
   ramAndStorage: string;
+  comboProducts: string;
+  freeProducts: string;
   // productType: string;
 }
 

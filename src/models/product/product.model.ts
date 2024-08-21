@@ -87,6 +87,18 @@ const varianceType = new Schema({
 //   productNumReviews: number
 // }
 
+const ComboProducts = new Schema(
+  {
+    productTitle: {
+      type: String,
+
+    },
+    proudctId: {
+      type: String,
+    }
+  }
+)
+
 const productSchema = new Schema(
   {
     productTitle: {
@@ -97,7 +109,11 @@ const productSchema = new Schema(
       ref: "Category",
       required: [true, "product category is required"],
     },
-
+    productSubCategory: {
+      type: Schema.Types.ObjectId,
+      ref: "subCategory",
+      default: ''
+    },
     productBrand: {
       type: Schema.Types.ObjectId,
       ref: "Brand",
@@ -132,6 +148,14 @@ const productSchema = new Schema(
     },
     productNumReviews: {
       type: Number,
+      default: 0
+    },
+    productComboProducts: {
+      type: [ComboProducts],
+      default: 0
+    },
+    productFreeProducts: {
+      type: [ComboProducts],
       default: 0
     }
   },

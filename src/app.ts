@@ -18,6 +18,7 @@ import brandRoute from "./routes/brand.routes.js";
 import morgan from "morgan";
 
 import categoryRoute from "./routes/category.route.js";
+import subCategoryRoute from "./routes/subcategoryroutes.js";
 import offerRoute from "./routes/offer.routes.js";
 import cookieParser from "cookie-parser";
 
@@ -51,6 +52,7 @@ app.use("/api/v1/address", addressRoute);
 app.use("/api/v1/payment", paymentRoute);
 app.use("/api/v1/dashboard", dashboardRoute);
 app.use("/api/v1/category", categoryRoute);
+app.use("/api/v1/subcategory", subCategoryRoute);
 app.use("/api/v1/brand", brandRoute);
 app.use("/api/v1/offer", offerRoute);
 app.use("/api/v1/chatbot", chatbotRoute);

@@ -7,7 +7,7 @@ import {
 } from "../types/types.js";
 
 import ErrorHandler from "../utils/errorHandler.js";
-import { Request } from "express";
+import { NextFunction, Request, Response } from "express";
 import { myCache } from "../app.js";
 import { ClearCache } from "../utils/features.js";
 import { Product } from "../models/product/product.model.js";
@@ -18,6 +18,7 @@ import {
   uploadMultipleCloudinary,
 } from "../utils/cloudinary.js";
 import { FilterQuery } from "mongoose";
+import { subCategory } from "../models/subCategory/subCategory.model.js";
 
 
 //----------------------xxxxxx ListOfApis xxxxxxxxx-------------------
@@ -44,6 +45,7 @@ export const newProduct = asyncErrorHandler(
     console.log("----------------", req.body, "----------------");
     const {
       category,
+      subcategory,
       brand,
       productModel,
       productTitle,
@@ -52,7 +54,9 @@ export const newProduct = asyncErrorHandler(
       headsetType,
       variance,
       colors,
-      ramAndStorage
+      ramAndStorage,
+      comboProducts,
+      freeProducts,
     } = req.body;
 
     console.log("new product req body=>", JSON.parse(colors))
@@ -68,10 +72,15 @@ export const newProduct = asyncErrorHandler(
     }
 
     const refCategory = await Category.findOne({ categoryName: category });
-    if (!refCategory) {
-      return next(new ErrorHandler("Please provide the category", 400));
-    }
 
+    if (!refCategory) {
+      return next(new ErrorHandler("Please provide the category of product", 400));
+    }
+    let refSubCategory
+    
+    if (subcategory) {
+      refSubCategory = await subCategory.findOne({ subCategoryName: subcategory });
+    }
     // // const title = `${brand !== "generic" ? brand : ""}- ${
     // //   productModel !== "generic" ? productModel : ""
     // // } ${pattern.length > 0 ? pattern : ""} ${
@@ -80,6 +89,7 @@ export const newProduct = asyncErrorHandler(
 
     const newProduct = await Product.create({
       productCategory: refCategory._id,
+      productSubCategory: refSubCategory ? refSubCategory._id : null,
       productBrand: refBrand._id,
       productModel: productModel,
       productTitle: productTitle,
@@ -88,7 +98,9 @@ export const newProduct = asyncErrorHandler(
       productHeadsetType: headsetType,
       productVariance: JSON.parse(variance),
       productColors: JSON.parse(colors),
-      productRamAndStorage: JSON.parse(ramAndStorage)
+      productRamAndStorage: JSON.parse(ramAndStorage),
+      productComboProducts: JSON.parse(ramAndStorage),
+      productFreeProducts: JSON.parse(freeProducts),
       // productTitle: title,
     });
     return res.status(200).json({
@@ -274,76 +286,154 @@ export const deletePreviewCloudinary = asyncErrorHandler(
 
 //---------------------api to get all Admin products withoud changing structure-----------------------------------
 
+// Define the types for the query parameters
+interface AdminSearchRequestQuery {
+  searchQuery?: string;
+  category?: string;
+  sort?: 'A-Z' | 'Z-A' | 'oldest' | 'newest';
+  page?: number;
+}
 
 //api to get all products
 export const getAllAdminProducts = asyncErrorHandler(
-  async (req: Request<{}, {}, {}, SearchRequestQuery>, res, next) => {
-    const { search, sort, category, price } = req.query;
-    const page = Number(req.query.page) || 1;
-    const limit = Number(req.query.limit) || 20;
+  async (req: Request<{}, {}, {}, AdminSearchRequestQuery>, res: Response, next: NextFunction) => {
+    const { searchQuery, category, sort, page = 1 } = req.query;
+    const limit = 20; // Set a default limit for pagination
     const skip = (page - 1) * limit;
-    const baseQuery: FilterQuery<BaseQuery> = {};
+    const baseQuery: any = {}; // Define base query for filtering
 
-    if (search) {
+    if (searchQuery) {
       baseQuery.productTitle = {
-        $regex: search,
+        $regex: searchQuery,
         $options: "i",
       };
     }
-    if (price) {
-      baseQuery.price = {
-        $lte: Number(price), //less than equal to
-      };
-    }
+
     if (category) {
       const findCategory = await Category.findOne({ categoryName: category });
-      console.log(findCategory);
-
-      baseQuery.productCategory = findCategory._id;
+      if (findCategory) {
+        baseQuery.productCategory = findCategory._id;
+      } else {
+        // If the category is not found, return an empty result
+        return res.status(404).json({
+          success: false,
+          message: 'Category not found',
+          products: [],
+          totalPage: 0,
+          totalProducts: 0,
+        });
+      }
     }
 
     const sortBy: any = {};
 
     if (sort) {
-      if (sort === "A-Z") {
+      if (sort === 'A-Z') {
         sortBy.productTitle = 1;
-      } else if (sort === "Z-A") {
+      } else if (sort === 'Z-A') {
         sortBy.productTitle = -1;
-      } else if (sort === "oldest") {
+      } else if (sort === 'oldest') {
         sortBy.createdAt = 1;
-      } else {
+      } else if (sort === 'newest') {
         sortBy.createdAt = -1;
       }
     }
-    console.log(baseQuery);
-    const productPromise = Product.find(baseQuery)
-      .populate("productCategory")
-      .populate("productBrand")
-      .sort(sort ? sortBy : { createdAt: -1 })
-      .skip(skip)
-      .limit(limit);
 
-    const [products, filteredProductwithoutlimit] = await Promise.all([
-      productPromise,
-      Product.find({ baseQuery }),
+    // Fetch products with applied filters, sorting, and pagination
+    const [products, totalProductsCount] = await Promise.all([
+      Product.find(baseQuery)
+        .populate('productCategory')
+        .populate('productBrand')
+        .sort(sortBy)
+        .skip(skip)
+        .limit(limit),
+      Product.countDocuments(baseQuery),
     ]);
 
+    const totalPage = Math.ceil(totalProductsCount / limit);
+
+
 
     console.log("-------admin product--------------------------")
-    console.log(products, filteredProductwithoutlimit)
+    console.log(searchQuery)
     console.log("-------admin product--------------------------")
-
-    const totalProducts = products.length;
-    const totalPage = Math.ceil(totalProducts / limit);
-
     return res.status(200).json({
       success: true,
       products,
       totalPage,
-      totalProducts,
+      totalProducts: totalProductsCount,
     });
   }
 );
+
+// export const getAllAdminProducts = asyncErrorHandler(
+//   async (req: Request<{}, {}, {}, SearchRequestQuery>, res, next) => {
+//     const { search, sort, category, price } = req.query;
+//     const page = Number(req.query.page) || 1;
+//     const limit = Number(req.query.limit) || 20;
+//     const skip = (page - 1) * limit;
+//     const baseQuery: FilterQuery<BaseQuery> = {};
+
+//     if (search) {
+//       baseQuery.productTitle = {
+//         $regex: search,
+//         $options: "i",
+//       };
+//     }
+//     if (price) {
+//       baseQuery.price = {
+//         $lte: Number(price), //less than equal to
+//       };
+//     }
+//     if (category) {
+//       const findCategory = await Category.findOne({ categoryName: category });
+//       console.log(findCategory);
+
+//       baseQuery.productCategory = findCategory._id;
+//     }
+
+//     const sortBy: any = {};
+
+//     if (sort) {
+//       if (sort === "A-Z") {
+//         sortBy.productTitle = 1;
+//       } else if (sort === "Z-A") {
+//         sortBy.productTitle = -1;
+//       } else if (sort === "oldest") {
+//         sortBy.createdAt = 1;
+//       } else {
+//         sortBy.createdAt = -1;
+//       }
+//     }
+//     console.log(baseQuery);
+//     const productPromise = Product.find(baseQuery)
+//       .populate("productCategory")
+//       .populate("productBrand")
+//       .sort(sort ? sortBy : { createdAt: -1 })
+//       .skip(skip)
+//       .limit(limit);
+
+//     const [products, filteredProductwithoutlimit] = await Promise.all([
+//       productPromise,
+//       Product.find({ baseQuery }),
+//     ]);
+
+
+//     console.log("-------admin product--------------------------")
+//     console.log(products, filteredProductwithoutlimit)
+//     console.log("-------admin product--------------------------")
+
+//     const totalProducts = products.length;
+//     const totalPage = Math.ceil(totalProducts / limit);
+
+//     return res.status(200).json({
+//       success: true,
+//       products,
+//       totalPage,
+//       totalProducts,
+//     });
+//   }
+// );
 
 
 
@@ -558,11 +648,11 @@ export const getSimilarProducts = asyncErrorHandler(
       limitProducts = 1
     }
 
-    
+
 
     // Fetch 5 products for each category ID
     const productsPromises = parsedCategoryIds.map((categoryId: string) => {
-      return  Product.find({ productCategory: categoryId }).limit(limitProducts).exec();
+      return Product.find({ productCategory: categoryId }).limit(limitProducts).exec();
     });
     console.log(productsPromises, "products promises")
     const productsByCategory = await Promise.all(productsPromises);
