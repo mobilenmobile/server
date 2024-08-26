@@ -18,6 +18,7 @@ import {
 } from "../controllers/user.controllers.js";
 
 import { authenticated } from "../middleware/auth.middleware.js";
+import { getCoinAccount, setUseCoinBalance } from "../controllers/coin.controller.js";
 
 
 const userRouter = express.Router();
@@ -25,6 +26,11 @@ const userRouter = express.Router();
 // --------------------------user routes-------------------------------------------
 userRouter.post("/new", newUser);
 userRouter.get("/userDetails/:uid", authenticated, getUser);
+
+//----------------------- USER COIN SECTION --------------------------------
+userRouter.get("/getCoinAccountDetails", authenticated, getCoinAccount);
+userRouter.post("/coinForPayment", authenticated, setUseCoinBalance);
+
 userRouter.put("/updateProfile", authenticated, updateProfile)
 userRouter.put("/updateProfileImage", authenticated, updateProfileImage)
 

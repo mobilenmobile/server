@@ -8,6 +8,10 @@ import { Wishlist } from "../models/wishlist/wishlist.model";
 import { cart } from "../models/cart/cart.model";
 import { Offer } from "../models/offer/offer.model";
 import { calculateDiscount } from "./product.controllers";
+import { deleteUser } from "../db/firebase";
+import { IncreaseCoins } from "./coin.controller";
+import mongoose, { ObjectId } from "mongoose";
+import { CoinAccount } from "../models/coins/coinAccount";
 
 
 
@@ -59,6 +63,20 @@ export const newUser = asyncErrorHandler(
     };
 
     const user = await User.create(userData);
+    if (!user._id) {
+      // console.log("failed to store user data")
+      deleteUser(uid)
+      return res.status(200).json({
+        success: false,
+        message: `error while signing up`,
+        user
+      });
+
+    }
+    // userId: string, rewardType: string, orderId: string, coinsTobeAdded: number
+
+    await IncreaseCoins(user._id, "signupBonus", "signup", 100)
+
     return res.status(200).json({
       success: true,
       message: `welcome ${name} to mnm`,
@@ -117,7 +135,7 @@ export const updateProfileImage = asyncErrorHandler(async (req, res, next) => {
   user.profile.profileImageUrl = profileImageUrl
   await user.save();
 
-  console.log(user.profile)
+  // console.log(user.profile)
   return res.status(200).json({
     success: true,
     message: "Successfully changed user profile image url",
@@ -270,9 +288,11 @@ export const removeWishlistItem = asyncErrorHandler(async (req: Request, res, ne
   if (!req.user._id) {
     return next(new ErrorHandler("unauthenticated", 400));
   }
+
   // if (!req.params.id) {
   //   return next(new ErrorHandler("no id", 400));
   // }
+
   const { productId, selectedVarianceId } = req.body
 
   if (!productId || !selectedVarianceId) {
@@ -294,23 +314,25 @@ export const removeWishlistItem = asyncErrorHandler(async (req: Request, res, ne
 //---------------------api to update cart----------------------------------------------------------
 export const updateCart = asyncErrorHandler(async (req, res, next) => {
 
-  const { productId, selectedVarianceId, quantity } = req.body
+  const { productId, selectedVarianceId, quantity, customSkin, skinProductDetails } = req.body
 
-  if (!productId || !selectedVarianceId) {
-    return next(new ErrorHandler("please enter all fields", 404));
-  }
+  if (!customSkin) {
+    if (!productId || !selectedVarianceId) {
+      return next(new ErrorHandler("please enter all fields", 404));
+    }
 
-  const product = await Product.findById(productId);
-  if (!product) {
-    return next(new ErrorHandler("No product found with this id", 404));
-  }
-  const selectedVariantData = product.productVariance.find((variant: { id: string; }) => {
-    return variant.id.replace(/\s+/g, "") == selectedVarianceId.replace(/\s+/g, "")
-  })
+    const product = await Product.findById(productId);
+    if (!product) {
+      return next(new ErrorHandler("No product found with this id", 404));
+    }
+    const selectedVariantData = product.productVariance.find((variant: { id: string; }) => {
+      return variant.id.replace(/\s+/g, "") == selectedVarianceId.replace(/\s+/g, "")
+    })
 
+    if (selectedVariantData?.quantity == '0' || selectedVariantData?.quantity == 0) {
+      return next(new ErrorHandler("product is out of stock", 404));
+    }
 
-  if (selectedVariantData?.quantity == '0' || selectedVariantData?.quantity == 0) {
-    return next(new ErrorHandler("product is out of stock", 404));
   }
 
   const cartItem = await cart.findOne({ productId, selectedVarianceId, user: req.user._id });
@@ -321,11 +343,16 @@ export const updateCart = asyncErrorHandler(async (req, res, next) => {
     await cartItem.save()
   }
 
+  console.log(skinProductDetails)
+  console.log(JSON.parse(skinProductDetails))
+
   if (!cartItem) {
     await cart.create({
       user: req.user._id,
       productId,
       selectedVarianceId,
+      customSkin,
+      skinProductDetails: JSON.parse(skinProductDetails),
       quantity
     })
   }
@@ -455,6 +482,7 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
   // console.log("categorynew----------------->", cartItemsnew)
   const user = await User.findOne({ _id: req.user._id })
   const appliedCoupon = await Offer.findOne({ _id: user?.coupon })
+  const coinAccountData = await CoinAccount.find({ userId: req.user._id })
 
   //mapping through cartItems to structure the data
   const cartItemsData = cartItems.map((item) => {
@@ -482,6 +510,8 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
         productId: item.productId._id,
         selectedVarianceId: item.selectedVarianceId,
         discount: productDiscount,
+        customSkin: item?.customSkin || false,
+        skinProductDetails: item?.skinProductDetails || []
       }
     }
   })
@@ -512,14 +542,20 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
     couponDiscount = Math.round((Number(appliedCoupon.offerCouponDiscount) * totals.DiscountedTotal) / 100)
     couponDiscount = couponDiscount > 500 ? 499 : couponDiscount
   }
-  const finalCartTotal = totals.DiscountedTotal - (couponDiscount)
 
+
+
+  const availableCoins = coinAccountData.length > 0 && coinAccountData[0]?.coinAccountBalance || 0
+  const usableCoins = coinAccountData.length > 0 && coinAccountData[0].useCoinForPayment ? coinAccountData[0].coinAccountBalance : 0
+
+
+  const finalCartTotal = totals.DiscountedTotal - (couponDiscount) - usableCoins
 
   return res.status(200).json({
     success: true,
     message: "Cart details fetched successfully",
     cartItemsData,
-    cartDetails: { ...totals, finalCartTotal, couponDiscount },
+    cartDetails: { ...totals, finalCartTotal, couponDiscount, availableCoins },
     offer: user?.coupon,
   });
 });

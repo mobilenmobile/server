@@ -99,7 +99,7 @@ export const searchAllOffer = asyncErrorHandler(
     // Get current date
     const currentDate = new Date();
     const offer = await Offer.find();
-    console.log(offer)
+    // console.log(offer)
     if (!offer) {
       return next(new ErrorHandler("Offer not found", 404));
     }

@@ -21,7 +21,7 @@ import ErrorHandler from "../utils/errorHandler";
 export const newBrand = asyncErrorHandler(
   async (req: Request<{}, {}, NewBrandRequestBody>, res, next) => {
     const { brandName, brandImgUrl, brandLogoUrl } = req.body;
-    console.log(brandName);
+    // console.log(brandName);
 
     const brand = await Brand.create({
       brandName,
@@ -46,10 +46,10 @@ export const newBrand = asyncErrorHandler(
 export const getAllBrand = asyncErrorHandler(
   async (req: Request<{}, {}, SearchBrandRequestQuery>, res, next) => {
     const { brandname } = req.query;
-    console.log(brandname);
+    // console.log(brandname);
 
     const baseQuery: brandBaseQuery = {};
-    console.log(baseQuery);
+    // console.log(baseQuery);
 
     if (brandname) {
       if (typeof brandname !== "string") {
@@ -61,7 +61,7 @@ export const getAllBrand = asyncErrorHandler(
       };
     }
     const allBrand = await Brand.find(baseQuery);
-    console.log(allBrand);
+    // console.log(allBrand);
 
     return res.status(200).json({
       success: true,
@@ -76,7 +76,7 @@ export const deleteBrand = asyncErrorHandler(
   async (req: Request<{}, {}, deleteBrandQuery>, res, next) => {
     const { id } = req.body;
 
-    console.log(req.body);
+    // console.log(req.body);
 
     if (!id) {
       return next(new ErrorHandler("please provide aid", 400));

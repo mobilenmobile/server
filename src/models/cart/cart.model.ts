@@ -1,5 +1,26 @@
 import mongoose, { Schema } from "mongoose";
 
+
+const skinProductDetails = new Schema({
+
+    _id: {
+        type: String
+    },
+    category: {
+        type: String
+    },
+    brand: {
+        type: String
+    },
+    model: {
+        type: String
+    },
+    uploadImgArr: {
+        type: [String]
+    }
+
+})
+
 const cartSchema = new Schema(
     {
         user: {
@@ -14,6 +35,12 @@ const cartSchema = new Schema(
         },
         selectedVarianceId: {
             type: String,
+        },
+        customSkin: {
+            type: Boolean,
+        },
+        skinProductDetails: {
+            type: skinProductDetails
         },
         quantity: {
             type: Number,

@@ -115,14 +115,14 @@ export const newProduct = asyncErrorHandler(
 //-----------------api to get image url by uploading on cloudinary------------------
 export const previewImages = asyncErrorHandler(async (req, res, next) => {
   const photos = req.files;
-  console.log("photos =>=>=>=>=>=>=>=>+.+>=>+<=>+>[.=>+.+=>=>=>=>=>=>", photos);
+  // console.log("photos =>=>=>=>=>=>=>=>+.+>=>+<=>+>[.=>+.+=>=>=>=>=>=>", photos);
 
   if (photos?.length === 0) {
     return next(new ErrorHandler("please choose product image", 400));
   }
 
   const imgUrl = await uploadMultipleCloudinary(photos);
-  console.log(imgUrl, "..........image url/...........klfdsfjkdafjsdlakfjsdlkfjsadlkfj");
+  // console.log(imgUrl, "..........image url/...........klfdsfjkdafjsdlakfjsdlkfjsadlkfj");
 
   return res.status(200).json({
     success: true,
@@ -171,7 +171,7 @@ export const getSingleProduct = asyncErrorHandler(async (req, res, next) => {
     product.productRamAndStorage = modifiedRamAndStorage
   }
 
-  console.log(updateProduct)
+  // console.log(updateProduct)
   return res.status(200).json({
     success: true,
     message: "product fetched successfully",
@@ -194,7 +194,7 @@ export const updateProduct = asyncErrorHandler(
       colors
     } = req.body;
 
-    console.log("req-body", req.body);
+    // console.log("req-body", req.body);
 
     const product = await Product.findById(id);
     if (!product) {
@@ -203,7 +203,7 @@ export const updateProduct = asyncErrorHandler(
 
     if (brand) {
       const refBrand = await Brand.findOne({ brandName: brand });
-      console.log("refBrand " + refBrand);
+      // console.log("refBrand " + refBrand);
       if (!refBrand) {
         return next(new ErrorHandler("Please provide the brand ", 400));
       }
@@ -253,7 +253,7 @@ export const deleteProduct = asyncErrorHandler(async (req, res, next) => {
 //-----------------api to delete only product not its cloundinary images -----------------------
 export const deleteProductDirectly = asyncErrorHandler(async (req, res, next) => {
   const product = await Product.findById(req.params.id);
-  console.log("deletedProduct " + product);
+  // console.log("deletedProduct " + product);
   if (!product) {
     return next(new ErrorHandler("Product not found", 404));
   }
@@ -268,9 +268,9 @@ export const deleteProductDirectly = asyncErrorHandler(async (req, res, next) =>
 //-----------------------api to delete cloudinary image-------------------------------------------
 export const deletePreviewCloudinary = asyncErrorHandler(
   async (req, res, next) => {
-    console.log(req.body);
+    // console.log(req.body);
     const { imgUrl } = req.body;
-    console.log("reqbody", imgUrl);
+    // console.log("reqbody", imgUrl);
 
     if (!imgUrl) {
       return next(new ErrorHandler("please provide images to delete", 400));
@@ -354,9 +354,9 @@ export const getAllAdminProducts = asyncErrorHandler(
 
 
 
-    console.log("-------admin product--------------------------")
-    console.log(searchQuery)
-    console.log("-------admin product--------------------------")
+    // console.log("-------admin product--------------------------")
+    // console.log(searchQuery)
+    // console.log("-------admin product--------------------------")
     return res.status(200).json({
       success: true,
       products,
@@ -529,7 +529,7 @@ export const getAllProducts = asyncErrorHandler(
     }
     if (category) {
       const findCategory = await Category.findOne({ categoryName: category });
-      console.log(findCategory);
+      // console.log(findCategory);
 
       baseQuery.productCategory = findCategory._id;
     }
@@ -547,7 +547,7 @@ export const getAllProducts = asyncErrorHandler(
         sortBy.createdAt = -1;
       }
     }
-    console.log(baseQuery);
+    // console.log(baseQuery);
     const productPromise = Product.find(baseQuery)
       .populate("productCategory")
       .populate("productBrand")
@@ -626,10 +626,10 @@ export const getAllProducts = asyncErrorHandler(
 //---------------------api to get similar products and change its structure------------------------------------
 export const getSimilarProducts = asyncErrorHandler(
   async (req, res, next) => {
-    console.log(req.body)
+    // console.log(req.body)
     const categoryIds = req.body.categoryIds
 
-    console.log("categoryIds-------------------->", categoryIds)
+    // console.log("categoryIds-------------------->", categoryIds)
     const parsedCategoryIds = categoryIds
 
     let limitProducts = 5
@@ -654,14 +654,14 @@ export const getSimilarProducts = asyncErrorHandler(
     const productsPromises = parsedCategoryIds.map((categoryId: string) => {
       return Product.find({ productCategory: categoryId }).limit(limitProducts).exec();
     });
-    console.log(productsPromises, "products promises")
+    // console.log(productsPromises, "products promises")
     const productsByCategory = await Promise.all(productsPromises);
 
-    console.log(productsByCategory, "by cateogry products")
+    // console.log(productsByCategory, "by cateogry products")
 
     // Flatten the array of arrays into a single array
     const allProducts = productsByCategory.flat();
-    console.log(allProducts, "all products")
+    // console.log(allProducts, "all products")
 
     let flatProducts: any = []
 
@@ -712,7 +712,7 @@ export const getSimilarProducts = asyncErrorHandler(
       [flatProducts[i], flatProducts[j]] = [flatProducts[j], flatProducts[i]];
     }
 
-    console.log("similar products", allProducts)
+    // console.log("similar products", allProducts)
     return res.status(200).json({
       success: true,
       message: "products fetched successfully",
@@ -728,7 +728,7 @@ export const getLimitedProductsByBrands = asyncErrorHandler(async (req, res, nex
   const smartphoneCategory = await Category.findOne({ categoryName: 'smartphone' });
 
   if (!smartphoneCategory) {
-    console.log('Smartphone category not found.');
+    // console.log('Smartphone category not found.');
     return;
   }
 
@@ -738,7 +738,7 @@ export const getLimitedProductsByBrands = asyncErrorHandler(async (req, res, nex
   const brands = await Brand.find({ brandName: { $in: ['apple', 'vivo', 'samsung'] } });
 
   if (brands.length === 0) {
-    console.log('Brands not found.');
+    // console.log('Brands not found.');
     return;
   }
 
@@ -859,7 +859,7 @@ export const getFilterAndSortProducts = asyncErrorHandler(async (req, res, next)
   } = req.body
 
 
-  console.log("---------------------------->>>>>>>>", req.body, "<<<<<<<<<---------------------------------")
+  // console.log("---------------------------->>>>>>>>", req.body, "<<<<<<<<<---------------------------------")
   const baseQuery: FilterQuery<BaseQuery> = {};
 
   if (searchText) {
@@ -928,26 +928,26 @@ export const getFilterAndSortProducts = asyncErrorHandler(async (req, res, next)
   // }
   // Apply filters
   if (category && category.length > 0) {
-    console.log("---filtering based on category")
+    // console.log("---filtering based on category")
     filteredProducts = filteredProducts.filter(product => product.category === category);
   }
   const minPriceValue = minPrice.sort()[0]
   const maxPriceValue = maxPrice.sort()[maxPrice.length - 1]
 
   if (minPriceValue && maxPriceValue) {
-    console.log("---filtering based on minprice and maxprice")
+    // console.log("---filtering based on minprice and maxprice")
     filteredProducts = filteredProducts.filter(product => {
       const sellingPrice = Number(product.sellingPrice);
-      console.log("--------------selling price-------------", minPriceValue, ">", sellingPrice, "<=", maxPriceValue)
-      console.log(sellingPrice >= minPriceValue && sellingPrice <= maxPriceValue)
+      // console.log("--------------selling price-------------", minPriceValue, ">", sellingPrice, "<=", maxPriceValue)
+      // console.log(sellingPrice >= minPriceValue && sellingPrice <= maxPriceValue)
       return sellingPrice >= Number(minPriceValue) && sellingPrice <= Number(maxPriceValue);
     });
   }
 
   if (rating && rating.length > 0) {
-    console.log("---filtering based on rating")
+    // console.log("---filtering based on rating")
     filteredProducts = filteredProducts.filter(product => {
-      console.log(rating, product.rating)
+      // console.log(rating, product.rating)
       if (rating.includes(product.rating)) {
         return rating.includes(product.rating)
       }
@@ -956,7 +956,7 @@ export const getFilterAndSortProducts = asyncErrorHandler(async (req, res, next)
   }
 
   if (brand && brand.length > 0) {
-    console.log("---filtering based on brand")
+    // console.log("---filtering based on brand")
     filteredProducts = filteredProducts.filter(product => brand.includes(product.brand));
   }
   if (color && color.length > 0) {
@@ -996,25 +996,25 @@ export const getFilterAndSortProducts = asyncErrorHandler(async (req, res, next)
   }
 
   if (memory && memory.length > 0) {
-    console.log("---filtering based on memory")
+    // console.log("---filtering based on memory")
     filteredProducts = filteredProducts.filter(product => {
       return memory.includes(product.memory)
     });
   }
   if (storage && storage.length > 0) {
-    console.log("---filtering based on storage")
+    // console.log("---filtering based on storage")
     filteredProducts = filteredProducts.filter(product => storage.includes(product.storage));
   }
 
   // Apply sorting
   if (sortBy.includes('priceLowToHigh')) {
-    console.log("---filtering based pricelowtohigh")
+    // console.log("---filtering based pricelowtohigh")
     filteredProducts.sort((a, b) => Number(a.sellingPrice) - Number(b.sellingPrice));
   } else if (sortBy.includes('priceHighToLow')) {
-    console.log("---filtering based hightolow")
+    // console.log("---filtering based hightolow")
     filteredProducts.sort((a, b) => Number(b.sellingPrice) - Number(a.sellingPrice));
   } else if (sortBy.includes('topRated')) {
-    console.log("---filtering based on toprated")
+    // console.log("---filtering based on toprated")
     filteredProducts.sort((a, b) => b.rating - a.rating);
   }
   // console.log(flatProducts, "-----and---------", filteredProducts)

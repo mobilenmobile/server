@@ -15,7 +15,7 @@ import { Request } from "express";
 // ----------- api to create new address ------------------------------------
 export const newAddress = asyncErrorHandler(
     async (req: Request, res, next) => {
-        console.log(req.body)
+        // console.log(req.body)
         const {
             fullName,
             mobileNo,
@@ -27,7 +27,7 @@ export const newAddress = asyncErrorHandler(
             place,
         } = req.body;
 
-        console.log(req.body)
+        // console.log(req.body)
 
         if (!pinCode || !state || !city) {
             return next(new ErrorHandler("Please Enter all Fields", 400));
@@ -72,7 +72,7 @@ export const updateAddress = asyncErrorHandler(
 
         } = req.body;
 
-        console.log("req-body-", req.body);
+        // console.log("req-body-", req.body);
 
         const address = await Address.findById(id);
 

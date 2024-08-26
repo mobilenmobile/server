@@ -91,6 +91,14 @@ const orderSchema = new Schema({
   finalAmount: {
     type: Number
   },
+  coinsCredited: {
+    type: Number,
+    default: 0
+  },
+  coinsDebited: {
+    type: Number,
+    default: 0
+  },
 });
 
 const Order = mongoose.models.order || mongoose.model("order", orderSchema);

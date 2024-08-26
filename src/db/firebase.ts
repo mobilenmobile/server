@@ -34,6 +34,10 @@ export const getUid = async (authToken: string): Promise<{ authenticated: boolea
 }
 
 
+export const deleteUser = async (uid: string) => {
+  await admin.auth().deleteUser(uid);
+}
+
 // ------------------- functions to get all users and delete them from firebase ----------------------
 
 // function getAllUsers(nextPageToken: string | undefined) {

@@ -3,6 +3,10 @@ import { Order } from "../models/order/order.model.js";
 import ErrorHandler from "../utils/errorHandler.js";
 import { Request } from "express";
 import { Review } from "../models/review/review.model.js";
+import { IncreaseCoins } from "./coin.controller.js";
+import { CoinAccount } from "../models/coins/coinAccount.js";
+import { CoinTransaction } from "../models/coins/coinTransaction.js";
+import mongoose from "mongoose";
 
 
 
@@ -47,25 +51,117 @@ export const newOrder = asyncErrorHandler(
     if (!req.user._id) {
       return next(new ErrorHandler("unauthenticated user", 400));
     }
+    // Start a session for transaction management
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
 
-    const order = await Order.create({
-      user: req.user._id,
-      orderItems: JSON.parse(orderItems),
-      orderStatuses: JSON.parse(orderStatuses),
-      total,
-      couponcode,
-      paymentMethod: JSON.parse(paymentMethod),
-      paymentStatus,
-      deliveryAddress: JSON.parse(deliveryAddress),
-      discount,
-      discountedTotal,
-      finalAmount
-    });
+      const newOrder = new Order({
+        user: req.user._id,
+        orderItems: JSON.parse(orderItems),
+        orderStatuses: JSON.parse(orderStatuses),
+        total,
+        couponcode,
+        paymentMethod: JSON.parse(paymentMethod),
+        paymentStatus,
+        deliveryAddress: JSON.parse(deliveryAddress),
+        discount,
+        discountedTotal,
+        finalAmount,
+      });
+
+
+
+      const ItemCategory = newOrder.orderItems.some((item: { category: string }) => item.category === "smartphone") ? "smartphone" : "accessories";
+
+      const coinAccountData = await CoinAccount.findOne({ userId: req.user._id })
+      const deductCoins = await coinAccountData.coinAccountBalance
+      coinAccountData.coinAccountBalance -= coinAccountData.useCoinForPayment ? deductCoins : 0
+
+      // Find the existing coin account or create a new one if not found
+      let coinAccount = await CoinAccount.findOne({ userId: req.user._id }).session(session);
+
+      if (!coinAccount) {
+        // Create a new coin account if it doesn't exist
+        coinAccount = new CoinAccount({ userId: req.user._id, coinAccountBalance: 0 });
+        await coinAccount.save({ session });
+      }
+
+      // Update the coin account balance
+      coinAccount.coinAccountBalance -= deductCoins;
+      await coinAccount.save({ session });
+
+      // console.log("rewardType:----->", rewardType)
+
+      // Create a new transaction record
+      const reducetransaction = new CoinTransaction({
+        userId: req.user._id,
+        orderId: newOrder._id,
+        rewardType: `purchase of ${ItemCategory}`,
+        amountSpent: deductCoins,
+        amountReceived: 0,
+        notes: 'Coins reduced for purchase'
+      });
+
+      await reducetransaction.save({ session }); // Update the coin account balance
+
+
+      // give coins for new purchase
+      let coinPercentage = 0;
+      if (ItemCategory == "smartphone") {
+        coinPercentage = (1 / 100) * newOrder.finalAmount;
+        // await IncreaseCoins(req.user._id, "Purchase of Smartphone", newOrder._id, Math.floor(coinPercentage))
+      }
+
+      if (ItemCategory == "accessories") {
+        coinPercentage = (10 / 100) * newOrder.finalAmount;
+        // await IncreaseCoins(req.user._id, "Purchase of Accessories", newOrder._id, Math.floor(coinPercentage))
+      }
+
+
+      const coinsTobeAdded = Math.floor(coinPercentage)
+      coinAccount.coinAccountBalance += coinsTobeAdded;
+      await coinAccount.save({ session });
+
+      // console.log("rewardType:----->", rewardType)
+
+      // Create a new transaction record
+      const addtransaction = new CoinTransaction({
+        userId: req.user._id,
+        orderId: newOrder._id,
+        rewardType: `purchase of ${ItemCategory}`,
+        amountSpent: 0,
+        amountReceived: coinsTobeAdded,
+        notes: 'Coins added for purchase'
+      });
+
+      await addtransaction.save({ session });
+
+      newOrder.coinsCredited = coinsTobeAdded
+      newOrder.coinsDebited = deductCoins
+      await newOrder.save({ session })
+      console.log("new order--------------->", newOrder)
+      //also give coin for purchase
+      // Commit the transaction
+      await session.commitTransaction();
+      session.endSession();
+
+      // console.log("Transaction successfully completed:", transaction);
+    } catch (error) {
+      // Abort the transaction in case of an error
+      await session.abortTransaction();
+      session.endSession();
+
+      console.error("Error processing transaction:", error);
+      throw error;
+    }
+
     return res.status(201).json({
       success: true,
       message: "Order created successfully",
-      order,
+      order: newOrder,
     });
+
   }
 );
 
@@ -92,7 +188,7 @@ export const getSingleOrderDetails = asyncErrorHandler(async (req, res, next) =>
     };
   }));
   const orderDetails = {
-    orderId:order._id,
+    orderId: order._id,
     deliveryAddress: order.deliveryAddress,
     orderStatuses: order.orderStatuses,
     total: order.total,
