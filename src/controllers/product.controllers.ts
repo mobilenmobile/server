@@ -77,7 +77,7 @@ export const newProduct = asyncErrorHandler(
       return next(new ErrorHandler("Please provide the category of product", 400));
     }
     let refSubCategory
-    
+
     if (subcategory) {
       refSubCategory = await subCategory.findOne({ subCategoryName: subcategory });
     }
@@ -99,7 +99,7 @@ export const newProduct = asyncErrorHandler(
       productVariance: JSON.parse(variance),
       productColors: JSON.parse(colors),
       productRamAndStorage: JSON.parse(ramAndStorage),
-      productComboProducts: JSON.parse(ramAndStorage),
+      productComboProducts: JSON.parse(comboProducts),
       productFreeProducts: JSON.parse(freeProducts),
       // productTitle: title,
     });
@@ -153,7 +153,9 @@ export const getSingleProduct = asyncErrorHandler(async (req, res, next) => {
   const id = req.params.id;
   product = await Product.findById(id)
     .populate("productCategory")
-    .populate("productBrand");
+    .populate("productBrand")
+  // .populate('productComboProducts')
+  // .populate('productFreeProducts')
 
   if (!product) {
     return next(new ErrorHandler("Product not found", 404));
@@ -178,6 +180,154 @@ export const getSingleProduct = asyncErrorHandler(async (req, res, next) => {
     product,
   });
 });
+//-----------------------------api to get single product-----------------------------------
+// export const getSingleProductDetails = asyncErrorHandler(async (req, res, next) => {
+//   let product;
+//   const id = req.params.id;
+//   product = await Product.findById(id)
+//     .populate("productCategory")
+//     .populate("productBrand")
+//     .populate({
+//       path: 'productComboProducts',  // Field to populate
+//       populate: {
+//         path: 'productId',  // Field in ComboProducts to populate
+//         model: 'product'  // Ensure this matches the model name exactly
+//       }
+//     })
+//     .exec();
+
+//   if (!product) {
+//     return next(new ErrorHandler("Product not found", 404));
+//   }
+
+//   // Function to modify strings starting with "0-"
+//   if (product?.productRamAndStorage && product?.productBrand?.brandName == 'apple') {
+//     let modifiedRamAndStorage = product.productRamAndStorage.map((item: { id: string }) => {
+//       if (item.id.startsWith("0-")) {
+//         return item.id = item.id.substring(2); // Take substring from index 2 to end
+//       } else {
+//         return item; // Return unchanged if it doesn't start with "0-"
+//       }
+//     });
+//     product.productRamAndStorage = modifiedRamAndStorage
+//   }
+
+//   // console.log(updateProduct)
+//   return res.status(200).json({
+//     success: true,
+//     message: "product fetched successfully",
+//     product,
+//   });
+// });
+
+export const getSingleProductDetails = asyncErrorHandler(async (req, res, next) => {
+  const id = req.params.id;
+
+  // Fetch the product with populated fields
+  const product = await Product.findById(id)
+    .populate("productCategory")
+    .populate("productBrand")
+    .populate({
+      path: 'productComboProducts',
+      populate: {
+        path: 'productId',
+        model: 'product' // Ensure this matches the model name exactly
+      }
+    })
+    .exec();
+
+  console.log(product)
+
+  // Check if the product exists
+  if (!product) {
+    return next(new ErrorHandler("Product not found", 404));
+  }
+
+  // Transform productComboProducts to the desired format
+  // const transformedComboProducts = product.productComboProducts.map((comboProduct: any) => {
+  //   const variant = comboProduct.productId; // Extract the productId from comboProduct
+
+  //   return {
+  //     productid: `${product._id}`,
+  //     keyid: `${product._id}${variant._id.toString().replace(/\s+/g, "")}`,
+  //     variantid: `${variant._id.toString().replace(/\s+/g, "")}`,
+  //     title: product.productTitle.toLowerCase(),
+  //     category: product.productCategory?.categoryName || 'Unknown Category',
+  //     thumbnail: (variant.productImages && variant.productImages[0]) || 'default_thumbnail.jpg',
+  //     boxPrice: variant.boxPrice,
+  //     sellingPrice: variant.sellingPrice,
+  //     discount: variant.discount || 0,
+  //     rating: product.productRating,
+  //     reviews: product.productNumReviews,
+  //     color: variant.color,
+  //     brand: product.productBrand?.brandName || 'nobrand'
+  //   };
+  // });
+  let transformedComboProducts: any = []
+
+  if (product?.productComboProducts.length > 0) {
+    console.log("product combo products ==> ", product.productComboProducts)
+    product.productComboProducts.forEach((comboProduct: any) => {
+      const product = comboProduct.productId
+      product.productVariance.forEach((variant: ProductVariance) => {
+        const productDiscount = calculateDiscount(variant.boxPrice, variant.sellingPrice)
+        // console.log(variant)
+        if (Number(variant.quantity) > 0) {
+          // console.log("--------------------------------ram---------------------", variant.ramAndStorage[0])
+
+          //dynamically creating title of product
+          let title = product.productTitle
+
+          if (variant['ramAndStorage'].length > 0 && variant.ramAndStorage[0]?.ram) {
+            // title = `${product.productTitle} ${variant.ramAndStorage
+            //   && `(${variant.ramAndStorage[0].ram != '0' ? `${variant.color} ${variant.ramAndStorage[0].ram}GB` : ''} ${variant.ramAndStorage[0].storage != '0' ? `${variant.ramAndStorage[0].storage}GB` : ''})`
+            //   }`
+            title = `${product.productTitle} ${variant.ramAndStorage
+              && `(${variant.color} ${variant.ramAndStorage[0].storage != '0' ? `${variant.ramAndStorage[0].storage}GB` : ''})`
+              }`
+          } else {
+            title = `${product.productTitle} (${variant.color})`
+          }
+          //creating different product based on variance
+          const newProduct = {
+            productid: `${product._id}`,
+            keyid: `${product._id}${variant.id.replace(/\s+/g, "")}`,
+            variantid: `${variant.id.replace(/\s+/g, "")}`,
+            title: title.toLowerCase(),
+            category: product?.productCategory?.categoryName,
+            thumbnail: variant.thumbnail,
+            boxPrice: variant.boxPrice,
+            sellingPrice: variant.sellingPrice,
+            discount: productDiscount,
+            rating: product.productRating,
+            color: variant.color, // Replace with actual rating if available
+            brand: product.productBrand?.brandName || 'nobrand'
+          };
+          transformedComboProducts.push(newProduct)
+        }
+      });
+    });
+  }
+  // Modify `productRamAndStorage` if necessary
+  if (product?.productRamAndStorage && product?.productBrand?.brandName === 'apple') {
+    product.productRamAndStorage = product.productRamAndStorage.map((item: { id: string; }) => {
+      if (item.id.startsWith("0-")) {
+        item.id = item.id.substring(2); // Remove the "0-" prefix
+      }
+      return item;
+    });
+  }
+
+  // Return the response with the transformed combo products
+  return res.status(200).json({
+    success: true,
+    message: "Product fetched successfully",
+    product: {
+      ...product.toObject(), // Convert product to a plain object
+      productComboProducts: transformedComboProducts
+    }
+  });
+});
 
 //------------------------api to update product for admin only-------------------------------
 export const updateProduct = asyncErrorHandler(
@@ -191,7 +341,9 @@ export const updateProduct = asyncErrorHandler(
       pattern,
       headsetType,
       variance,
-      colors
+      colors,
+      comboOfferProducts,
+      freeOfferProducts,
     } = req.body;
 
     // console.log("req-body", req.body);
@@ -216,8 +368,13 @@ export const updateProduct = asyncErrorHandler(
     if (headsetType) product.productHeadsetType = headsetType;
     if (variance) product.productVariance = JSON.parse(variance);
     if (colors) product.productColors = JSON.parse(colors)
+    if (comboOfferProducts) product.productComboProducts = JSON.parse(comboOfferProducts)
+    if (freeOfferProducts) product.productFreeProducts = JSON.parse(freeOfferProducts)
+
+    console.log(JSON.parse(comboOfferProducts))
 
     const prod = await product.save();
+    console.log(prod)
     return res.status(200).json({
       success: true,
       message: "Product Updated Successfully",
@@ -344,6 +501,8 @@ export const getAllAdminProducts = asyncErrorHandler(
       Product.find(baseQuery)
         .populate('productCategory')
         .populate('productBrand')
+        .populate('productComboProducts')
+        .populate('productFreeProducts')
         .sort(sortBy)
         .skip(skip)
         .limit(limit),

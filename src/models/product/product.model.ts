@@ -91,10 +91,12 @@ const ComboProducts = new Schema(
   {
     productTitle: {
       type: String,
+      default: ""
 
     },
-    proudctId: {
-      type: String,
+    productId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "product",
     }
   }
 )
@@ -112,7 +114,7 @@ const productSchema = new Schema(
     productSubCategory: {
       type: Schema.Types.ObjectId,
       ref: "subCategory",
-      default: ''
+     
     },
     productBrand: {
       type: Schema.Types.ObjectId,
@@ -152,11 +154,11 @@ const productSchema = new Schema(
     },
     productComboProducts: {
       type: [ComboProducts],
-      default: 0
+      default: []
     },
     productFreeProducts: {
       type: [ComboProducts],
-      default: 0
+      default: []
     }
   },
   {

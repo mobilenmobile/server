@@ -84,6 +84,8 @@ export interface UpdateProductRequestBody {
   headsetType: string;
   productType: string;
   variance: string;
+  comboOfferProducts: string,
+  freeOfferProducts: string,
 }
 
 export interface updateId {

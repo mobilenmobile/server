@@ -14,6 +14,7 @@ import {
   getFilterAndSortProducts,
   getAllAdminProducts,
   getSimilarProducts,
+  getSingleProductDetails,
 } from "../controllers/product.controllers.js";
 
 import { adminOnly } from "../middleware/auth.middleware.js";
@@ -32,6 +33,7 @@ productRouter.post("/deletePreviewImage", deletePreviewCloudinary);
 
 productRouter.get("/latest", getLatestProduct);
 productRouter.get("/getsingleproduct/:id", getSingleProduct);
+productRouter.get("/getsingleproductdetails/:id", getSingleProductDetails);
 productRouter.get("/search", getAllProducts);
 productRouter.post("/searchfilterandsort", getFilterAndSortProducts);
 productRouter.get("/getlimitedproductsbybrand", getLimitedProductsByBrands);
