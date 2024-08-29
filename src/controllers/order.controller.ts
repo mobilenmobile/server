@@ -145,7 +145,14 @@ export const newOrder = asyncErrorHandler(
       // Commit the transaction
       await session.commitTransaction();
       session.endSession();
+      console.log(newOrder, "....................newOrder//////////")
 
+      return res.status(201).json({
+        success: true,
+        message: "Order cr successfully",
+        newMsg: "just checking",
+        order: newOrder,
+      });
       // console.log("Transaction successfully completed:", transaction);
     } catch (error) {
       // Abort the transaction in case of an error
@@ -153,14 +160,9 @@ export const newOrder = asyncErrorHandler(
       session.endSession();
 
       console.error("Error processing transaction:", error);
-      throw error;
+      throw error
     }
 
-    return res.status(201).json({
-      success: true,
-      message: "Order created successfully",
-      order: newOrder,
-    });
 
   }
 );
