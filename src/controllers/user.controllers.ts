@@ -343,8 +343,8 @@ export const updateCart = asyncErrorHandler(async (req, res, next) => {
     await cartItem.save()
   }
 
-  console.log(skinProductDetails)
-  console.log(JSON.parse(skinProductDetails))
+  // console.log(skinProductDetails)
+  // console.log(JSON.parse(skinProductDetails))
 
   if (!cartItem) {
     await cart.create({
@@ -352,7 +352,7 @@ export const updateCart = asyncErrorHandler(async (req, res, next) => {
       productId,
       selectedVarianceId,
       customSkin,
-      skinProductDetails: JSON.parse(skinProductDetails),
+      skinProductDetails: skinProductDetails ? JSON.parse(skinProductDetails) : null,
       quantity
     })
   }
@@ -683,7 +683,6 @@ export const storeCartItemsInDb = asyncErrorHandler(async (req: Request, res, ne
     const cartItem = new cart(item);
     await cartItem.save();
   }
-
   return res.status(200).json({
     success: true,
     message: "Cart items stored in db",
