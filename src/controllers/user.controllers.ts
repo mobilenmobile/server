@@ -401,13 +401,10 @@ export const decreaseCartProductQuantity = asyncErrorHandler(async (req, res, ne
 
 //---------------- api to get cart items -----------------------------------------------------------
 export const getCartItems = asyncErrorHandler(async (req: Request, res, next) => {
-
   if (!req.user._id) {
     return next(new ErrorHandler("unauthenticated", 400));
   }
-
   const wishlistItems = await cart.find({ user: req.user._id }).populate("productId");
-
   const cartItemsData = wishlistItems.map((item) => {
 
     // console.log(item)
@@ -467,7 +464,8 @@ export const removeCartItem = asyncErrorHandler(async (req: Request, res, next) 
 
 // ------------------ api to get cart details -------------------------------------------------------
 export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) => {
-  const { cart } = req.body()
+  const { cart } = req.body
+  console.log(cart, "cart................")
   if (!req.user._id) {
     return next(new ErrorHandler("unauthenticated", 400));
   }
