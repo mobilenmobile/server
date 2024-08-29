@@ -467,27 +467,44 @@ export const removeCartItem = asyncErrorHandler(async (req: Request, res, next) 
 
 // ------------------ api to get cart details -------------------------------------------------------
 export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) => {
-
+  const { cart } = req.body()
   if (!req.user._id) {
     return next(new ErrorHandler("unauthenticated", 400));
   }
   // const cartItems = await cart.find({ user: req.user._id }).populate("productId");
-  const cartItems = await cart.find({ user: req.user._id }).populate({
-    path: 'productId',
-    populate: {
-      path: 'productCategory',
-    }
-  });
-
+  // const cartItems = await cart.find({ user: req.user._id }).populate({
+  //   path: 'productId',
+  //   populate: {
+  //     path: 'productCategory',
+  //   }
+  // });
   // console.log("categorynew----------------->", cartItemsnew)
   const user = await User.findOne({ _id: req.user._id })
   const appliedCoupon = await Offer.findOne({ _id: user?.coupon })
   const coinAccountData = await CoinAccount.find({ userId: req.user._id })
 
   //mapping through cartItems to structure the data
-  const cartItemsData = cartItems.map((item) => {
-    if (item.productId.productVariance) {
+  const cartItems = await Promise.all(cart.map(async (cartItem: { productId: any; }) => {
+    const product = await Product.findById(cartItem.productId).populate({
+      path: 'productCategory',
+    });
+    // console.log("------------product--------", product);
+    if (product) {
+      return {
+        ...cartItem,
+        productId: product,
+      };
+    }
+    return null; // or handle the case where product is not found
+  }));
 
+  // Remove null entries if there were any
+  const filteredCartItemsData = cartItems.filter(item => item !== null);
+  // console.log("---------cart------------", filteredCartItemsData);
+  // //mapping through cartItems to structure the data
+  const cartItemsData = filteredCartItemsData.map((item) => {
+    console.log("------------- item-------------------", item)
+    if (item.productId.productVariance) {
       const variantData = item.productId.productVariance.find((variant: any) => {
         if ((variant.id.replace(/\s+/g, "")) == (item.selectedVarianceId.replace(/\s+/g, ""))) {
           return variant
@@ -495,8 +512,111 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
       })
       const productDiscount = calculateDiscount(variantData?.boxPrice, variantData?.sellingPrice)
       return {
-        _id: item._id,
-        keyid: `${item._id}${variantData?.id.replace(/\s+/g, "")}`,
+        _id: item.productId._id,
+        keyid: `${item.productId._id}${variantData?.id.replace(/\s+/g, "")}`,
+        categoryId: item.productId?.productCategory?._id,
+        category: item.productId?.productCategory?.categoryName,
+        productTitle: item.productId.productTitle,
+        thumbnail: variantData?.thumbnail,
+        boxPrice: variantData?.boxPrice,
+        sellingPrice: variantData?.sellingPrice,
+        color: variantData?.color,
+        ramAndStorage: variantData?.ramAndStorage[0],
+        productRating: item.productId.productRating,
+        quantity: item.quantity,
+        productId: item.productId._id,
+        selectedVarianceId: item.selectedVarianceId,
+        discount: productDiscount,
+        customSkin: item?.customSkin || false,
+        skinProductDetails: item?.skinProductDetails || []
+      }
+    }
+  })
+
+  let Total = 0
+  let DiscountedTotal = 0
+
+  const cartDetails = cartItemsData.map((item) => {
+    return {
+      Total: Total + (item?.quantity * item?.boxPrice),
+      DiscountedTotal: DiscountedTotal + (item?.quantity * item?.sellingPrice)
+    }
+  })
+
+  const totals = cartItemsData.reduce((accumulator, item) => {
+    const Total = accumulator.Total + (item?.quantity * item?.boxPrice);
+    const DiscountedTotal = accumulator.DiscountedTotal + (item?.quantity * item?.sellingPrice);
+
+    return {
+      Total,
+      DiscountedTotal
+    };
+  }, {
+    Total: 0,
+    DiscountedTotal: 0,
+  })
+
+  let couponDiscount = 0
+  if (appliedCoupon && appliedCoupon.offerCouponDiscount) {
+    couponDiscount = Math.round((Number(appliedCoupon.offerCouponDiscount) * totals.DiscountedTotal) / 100)
+    couponDiscount = couponDiscount > 500 ? 499 : couponDiscount
+  }
+
+  const availableCoins = coinAccountData.length > 0 && coinAccountData[0]?.coinAccountBalance || 0
+  const usableCoins = coinAccountData.length > 0 && coinAccountData[0].useCoinForPayment ? coinAccountData[0].coinAccountBalance : 0
+
+
+  const finalCartTotal = totals.DiscountedTotal - (couponDiscount) - usableCoins
+
+  return res.status(200).json({
+    success: true,
+    message: "Cart details fetched successfully",
+    cartItemsData,
+    cartDetails: { ...totals, finalCartTotal, couponDiscount, availableCoins },
+    offer: user?.coupon,
+  });
+});
+
+
+
+
+// ------------------ api to get cart details -------------------------------------------------------
+export const getUnAuthenticatedCartDetails = asyncErrorHandler(async (req: Request, res, next) => {
+
+  console.log("-------------------? unauthenticated cart details", req.body)
+  const { cart } = req.body
+
+
+  const cartItems = await Promise.all(cart.map(async (cartItem: { productId: any; }) => {
+    const product = await Product.findById(cartItem.productId).populate({
+      path: 'productCategory',
+    });
+    // console.log("------------product--------", product);
+    if (product) {
+      return {
+        ...cartItem,
+        productId: product,
+      };
+    }
+    return null; // or handle the case where product is not found
+  }));
+
+  // Remove null entries if there were any
+  const filteredCartItemsData = cartItems.filter(item => item !== null);
+  // console.log("---------cart------------", filteredCartItemsData);
+  // //mapping through cartItems to structure the data
+  const cartItemsData = filteredCartItemsData.map((item) => {
+    console.log("------------- item-------------------", item)
+    if (item.productId.productVariance) {
+      const variantData = item.productId.productVariance.find((variant: any) => {
+        if ((variant.id.replace(/\s+/g, "")) == (item.selectedVarianceId.replace(/\s+/g, ""))) {
+          return variant
+        }
+      })
+      const productDiscount = calculateDiscount(variantData?.boxPrice, variantData?.sellingPrice)
+      return {
+        _id: item.productId._id,
+        keyid: `${item.productId._id}${variantData?.id.replace(/\s+/g, "")}`,
         categoryId: item.productId?.productCategory?._id,
         category: item.productId?.productCategory?.categoryName,
         productTitle: item.productId.productTitle,
@@ -538,25 +658,35 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
     DiscountedTotal: 0,
   })
   let couponDiscount = 0
-  if (appliedCoupon && appliedCoupon.offerCouponDiscount) {
-    couponDiscount = Math.round((Number(appliedCoupon.offerCouponDiscount) * totals.DiscountedTotal) / 100)
-    couponDiscount = couponDiscount > 500 ? 499 : couponDiscount
+
+
+  let finalCartTotal = totals.DiscountedTotal
+  let deliveryCharges = 150
+  if (finalCartTotal > 500) {
+    deliveryCharges = 0
   }
-
-
-
-  const availableCoins = coinAccountData.length > 0 && coinAccountData[0]?.coinAccountBalance || 0
-  const usableCoins = coinAccountData.length > 0 && coinAccountData[0].useCoinForPayment ? coinAccountData[0].coinAccountBalance : 0
-
-
-  const finalCartTotal = totals.DiscountedTotal - (couponDiscount) - usableCoins
-
+  finalCartTotal = finalCartTotal + deliveryCharges
   return res.status(200).json({
     success: true,
     message: "Cart details fetched successfully",
     cartItemsData,
-    cartDetails: { ...totals, finalCartTotal, couponDiscount, availableCoins },
-    offer: user?.coupon,
+    cartDetails: { ...totals, finalCartTotal, deliveryCharges }
+  });
+});
+// ------------------ api to get cart details -------------------------------------------------------
+export const storeCartItemsInDb = asyncErrorHandler(async (req: Request, res, next) => {
+
+  console.log("-------------------? save cart item in db", req.body)
+  const { cartData } = req.body
+  console.log("-----cartData----", cartData)
+  for (const item of cartData) {
+    const cartItem = new cart(item);
+    await cartItem.save();
+  }
+
+  return res.status(200).json({
+    success: true,
+    message: "Cart items stored in db",
   });
 });
 

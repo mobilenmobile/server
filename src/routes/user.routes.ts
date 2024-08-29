@@ -5,12 +5,14 @@ import {
     decreaseCartProductQuantity,
     getAppliedCoupon,
     getCartDetails,
+    getUnAuthenticatedCartDetails,
     getUser,
     getWishlistItems,
     newUser,
     removeCartItem,
     removeCouponCode,
     removeWishlistItem,
+    storeCartItemsInDb,
     updateCart, updateCouponCode,
     updateProfile,
     updateProfileImage,
@@ -45,6 +47,8 @@ userRouter.post("/updateWishlist", authenticated, updateWishlist)
 userRouter.put("/removewishlistitem", authenticated, removeWishlistItem)
 
 // -------------------------- cart related routes --------------------------------
+userRouter.post("/getUnauthenticatedCartDetails", getUnAuthenticatedCartDetails)
+userRouter.post("/storeCartItemInDb", authenticated, storeCartItemsInDb)
 userRouter.get("/getcartitems", authenticated, getCartDetails)
 userRouter.post("/updateCart", authenticated, updateCart)
 userRouter.delete("/removecartitem/:id", authenticated, removeCartItem)
