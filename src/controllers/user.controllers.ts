@@ -544,16 +544,30 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
 
 
   const availableCoins = coinAccountData.length > 0 && coinAccountData[0]?.coinAccountBalance || 0
-  const usableCoins = coinAccountData.length > 0 && coinAccountData[0].useCoinForPayment ? coinAccountData[0].coinAccountBalance : 0
+
+  const finalCartTotalBeforeCoins = totals.DiscountedTotal - (couponDiscount)
+  const fiftyPercentOfFinalCartTotal = finalCartTotalBeforeCoins * 0.5;
 
 
-  const finalCartTotal = totals.DiscountedTotal - (couponDiscount) - usableCoins
+  const usableCoins = availableCoins > fiftyPercentOfFinalCartTotal ? fiftyPercentOfFinalCartTotal : availableCoins
+
+  let deductCoinsForCart = coinAccountData[0].useCoinForPayment ? usableCoins : 0
+
+  let finalCartTotal = totals.DiscountedTotal - (couponDiscount) - deductCoinsForCart
+
+  let deliveryCharges = 0
+
+  if (finalCartTotal < 500) {
+    deliveryCharges = 150
+  }
+
+  finalCartTotal = finalCartTotal + deliveryCharges
 
   return res.status(200).json({
     success: true,
     message: "Cart details fetched successfully",
     cartItemsData,
-    cartDetails: { ...totals, finalCartTotal, couponDiscount, availableCoins },
+    cartDetails: { ...totals, finalCartTotal, couponDiscount, availableCoins, usableCoins, deliveryCharges },
     offer: user?.coupon,
   });
 });

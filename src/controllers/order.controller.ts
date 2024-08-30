@@ -39,7 +39,8 @@ export const newOrder = asyncErrorHandler(
       deliveryAddress,
       discount,
       discountedTotal,
-      finalAmount
+      finalAmount,
+      usableCoins,
     } = req.body;
 
     if (!deliveryAddress || !orderItems || !total || !finalAmount) {
@@ -68,6 +69,7 @@ export const newOrder = asyncErrorHandler(
         discount,
         discountedTotal,
         finalAmount,
+        usableCoins,
       });
 
 
@@ -75,7 +77,7 @@ export const newOrder = asyncErrorHandler(
       const ItemCategory = newOrder.orderItems.some((item: { category: string }) => item.category === "smartphone") ? "smartphone" : "accessories";
 
       const coinAccountData = await CoinAccount.findOne({ userId: req.user._id })
-      const deductCoins = await coinAccountData.coinAccountBalance
+      const deductCoins = usableCoins | 0
       coinAccountData.coinAccountBalance -= coinAccountData.useCoinForPayment ? deductCoins : 0
 
       // Find the existing coin account or create a new one if not found
@@ -139,6 +141,9 @@ export const newOrder = asyncErrorHandler(
 
       newOrder.coinsCredited = coinsTobeAdded
       newOrder.coinsDebited = deductCoins
+      coinAccountData.useCoinForPayment = false
+
+      await coinAccountData.save({ session })
       await newOrder.save({ session })
       console.log("new order--------------->", newOrder)
       //also give coin for purchase

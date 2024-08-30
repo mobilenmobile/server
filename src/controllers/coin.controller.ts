@@ -31,7 +31,7 @@ export const getCoinAccount = asyncErrorHandler(
     async (req: Request, res, next) => {
         // Fetch coin account data and transactions
         const coinAccountData = await CoinAccount.find({ userId: req.user._id });
-        const coinAccountTransaction = await CoinTransaction.find({ userId: req.user._id }).populate("orderId");
+        const coinAccountTransaction = await CoinTransaction.find({ userId: req.user._id }).populate("orderId").sort({ timestamp: -1 });
 
         // Check if coin account data exists
         if (!coinAccountData) {

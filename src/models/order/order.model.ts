@@ -91,6 +91,10 @@ const orderSchema = new Schema({
   finalAmount: {
     type: Number
   },
+  usableCoins: {
+    type: Number,
+    default: 0,
+  },
   coinsCredited: {
     type: Number,
     default: 0
