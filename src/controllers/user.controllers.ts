@@ -75,7 +75,7 @@ export const newUser = asyncErrorHandler(
     }
     // userId: string, rewardType: string, orderId: string, coinsTobeAdded: number
 
-    await IncreaseCoins(user._id, "signupBonus", "signup", 100)
+    await IncreaseCoins(user._id, "signupBonus", "signup", 200)
 
     return res.status(200).json({
       success: true,
