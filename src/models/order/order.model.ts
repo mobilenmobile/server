@@ -64,6 +64,7 @@ const orderSchema = new Schema({
     required: true
   },
   deliveryAddress: { type: addressSchema, required: true },
+  deliveryCharges: { type: Number, default: 0 },
   orderStatuses: {
     type: [Object],
   },
