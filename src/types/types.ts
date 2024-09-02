@@ -54,6 +54,8 @@ export interface NewProductRequestBody {
   ramAndStorage: string;
   comboProducts: string;
   freeProducts: string;
+  selectedComboCategory: string,
+  selectedFreeCategory: string,
   // productType: string;
 }
 
@@ -86,6 +88,8 @@ export interface UpdateProductRequestBody {
   variance: string;
   comboOfferProducts: string,
   freeOfferProducts: string,
+  selectedComboCategory: string,
+  selectedFreeCategory: string,
 }
 
 export interface updateId {

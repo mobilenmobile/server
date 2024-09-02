@@ -114,7 +114,7 @@ const productSchema = new Schema(
     productSubCategory: {
       type: Schema.Types.ObjectId,
       ref: "subCategory",
-     
+
     },
     productBrand: {
       type: Schema.Types.ObjectId,
@@ -159,7 +159,15 @@ const productSchema = new Schema(
     productFreeProducts: {
       type: [ComboProducts],
       default: []
-    }
+    },
+    productSelectedComboCategory: {
+      type: [String],
+      default: []
+    },
+    productSelectedFreeCategory: {
+      type: [String],
+      default: []
+    },
   },
   {
     timestamps: true,
