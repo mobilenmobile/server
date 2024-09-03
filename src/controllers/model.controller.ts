@@ -4,11 +4,6 @@ import { Model } from "../models/brand/model.model";
 import { Category } from "../models/category/category.model";
 import ErrorHandler from "../utils/errorHandler";
 
-
-
-
-
-
 // Controller to create a new model
 export const newModel = asyncErrorHandler(
     async (req, res, next) => {
@@ -17,17 +12,15 @@ export const newModel = asyncErrorHandler(
         if (!brandName || !categoryName) {
             return next(new ErrorHandler("Brand name and category name are required", 400));
         }
-
-        // Check if brand exists by name
-        const brand = await Brand.findOne({ brandName });
-        if (!brand) {
-            return next(new ErrorHandler("Brand not found", 404));
-        }
-
         // Check if category exists by name
         const category = await Category.findOne({ categoryName: categoryName });
         if (!category) {
             return next(new ErrorHandler("Category not found", 404));
+        }
+        // Check if brand exists by name
+        const brand = await Brand.findOne({ category: category._id, brandName });
+        if (!brand) {
+            return next(new ErrorHandler("Brand not found", 404));
         }
 
         // Check if model already exists for the brand and category
@@ -47,6 +40,33 @@ export const newModel = asyncErrorHandler(
             success: true,
             message: "New model created successfully",
             data: model,
+        });
+    }
+);
+
+
+// /-----------------Api to delete brand----------------------------------------
+
+export const deleteModel = asyncErrorHandler(
+    async (req, res, next) => {
+        const { id } = req.body;
+
+        // console.log(req.body);
+
+        if (!id) {
+            return next(new ErrorHandler("please provide aid", 400));
+        }
+
+        const deleteModel = await Model.findByIdAndDelete(id);
+
+        if (!deleteModel) {
+            return next(new ErrorHandler("No brand found ", 400));
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: "successfully deleted the model",
+            deleteModel,
         });
     }
 );

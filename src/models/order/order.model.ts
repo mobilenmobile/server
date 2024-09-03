@@ -36,7 +36,7 @@ const addressSchema = new Schema({
   city: { type: String, required: true },
   place: {
     type: String,
-    enum: ['home', 'office'],
+    enum: ['home', 'work'],
     required: true
   },
   default: { type: Boolean, default: false },

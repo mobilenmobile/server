@@ -9,7 +9,7 @@ import {
 import express from "express";
 import { fileUpload } from "../middleware/multer.middleware";
 import { adminOnly } from "../middleware/auth.middleware";
-import { newModel, searchModels, searchModelsv2 } from "../controllers/model.controller";
+import { deleteModel, newModel, searchModels, searchModelsv2 } from "../controllers/model.controller";
 
 const router = express.Router();
 
@@ -23,5 +23,8 @@ router.get('/searchmodels', searchModelsv2);
 router.get("/searchbrandv2", getAllBrandv2);
 router.get("/searchbrand", getAllBrand);
 router.delete("/deletebrand", adminOnly, deleteBrand);
+
+// ----------- delete model -----------------------
+router.delete("/deletemodel", adminOnly, deleteModel  );
 
 export default router;
