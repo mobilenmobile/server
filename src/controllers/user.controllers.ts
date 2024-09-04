@@ -12,6 +12,7 @@ import { deleteUser } from "../db/firebase";
 import { IncreaseCoins } from "./coin.controller";
 import mongoose, { ObjectId } from "mongoose";
 import { CoinAccount } from "../models/coins/coinAccount";
+import { profile } from "console";
 
 
 
@@ -42,10 +43,10 @@ import { CoinAccount } from "../models/coins/coinAccount";
 //------------------------api to create new user----------------------------------
 export const newUser = asyncErrorHandler(
   async (req: Request<{}, {}, NewUserRequestBody>, res, next) => {
-    const { name, uid, email } = req.body;
+    const { name, uid, email, phoneNumber } = req.body;
 
     if (!email || !uid) {
-      return next(new ErrorHandler("please provide email or uid", 400));
+      return next(new ErrorHandler("please provide email and uid", 400));
     }
 
     const userExist = await User.findOne({ email });
@@ -56,10 +57,21 @@ export const newUser = asyncErrorHandler(
         .json({ success: true, message: `welcome back ${name}` });
     }
 
+    const profileData = {
+      profileImageUrl: "/defaultprofileimage.png",
+      profileName: name,
+      profileEmailId: email,
+      profilePhoneNo: phoneNumber,
+      profileGender: "",
+      profileLocation: "",
+      profileAlternateMobileNo: ""
+    }
+
     const userData = {
       name: name ? name : "",
       uid,
       email,
+      profile: profileData
     };
 
     const user = await User.create(userData);

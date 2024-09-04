@@ -59,6 +59,7 @@ export const newProduct = asyncErrorHandler(
       freeProducts,
       selectedComboCategory,
       selectedFreeCategory,
+      productVideoUrls,
 
     } = req.body;
 
@@ -106,6 +107,7 @@ export const newProduct = asyncErrorHandler(
       productFreeProducts: JSON.parse(freeProducts),
       productSelectedComboCategory: selectedComboCategory ? JSON.parse(selectedComboCategory) : null,
       productSelectedFreeCategory: selectedFreeCategory ? JSON.parse(selectedFreeCategory) : null,
+      productVideoUrls: productVideoUrls ? JSON.parse(productVideoUrls) : null,
       // productTitle: title,
     });
     return res.status(200).json({
@@ -350,7 +352,8 @@ export const updateProduct = asyncErrorHandler(
       comboOfferProducts,
       freeOfferProducts,
       selectedComboCategory,
-      selectedFreeCategory
+      selectedFreeCategory,
+      productVideoUrls
     } = req.body;
 
     // console.log("req-body", req.body);
@@ -377,9 +380,9 @@ export const updateProduct = asyncErrorHandler(
     if (colors) product.productColors = JSON.parse(colors)
     if (comboOfferProducts) product.productComboProducts = JSON.parse(comboOfferProducts)
     if (freeOfferProducts) product.productFreeProducts = JSON.parse(freeOfferProducts)
-
     if (selectedComboCategory) product.productSelectedComboCategory = selectedComboCategory ? JSON.parse(selectedComboCategory) : null
     if (selectedFreeCategory) product.productSelectedFreeCategory = selectedFreeCategory ? JSON.parse(selectedFreeCategory) : null
+    if (productVideoUrls) product.productVideoUrls = productVideoUrls ? JSON.parse(productVideoUrls) : null
 
     console.log(JSON.parse(comboOfferProducts))
 

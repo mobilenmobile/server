@@ -52,6 +52,10 @@ const varianceType = new Schema({
     type: String,
     required: true,
   },
+  comboPrice: {
+    type: String,
+    // required: true,
+  },
   quantity: {
     type: String,
     required: true,
@@ -168,6 +172,10 @@ const productSchema = new Schema(
       type: [String],
       default: []
     },
+    productVideoUrls: {
+      type: [String],
+      default: []
+    }
   },
   {
     timestamps: true,
