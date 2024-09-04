@@ -4,6 +4,7 @@ import {
     clearCart,
     decreaseCartProductQuantity,
     getAppliedCoupon,
+    getBuyNowCartDetails,
     getCartDetails,
     getUnAuthenticatedCartDetails,
     getUser,
@@ -55,5 +56,8 @@ userRouter.delete("/removecartitem/:id", authenticated, removeCartItem)
 userRouter.post("/decreasecartproductquantity", authenticated, decreaseCartProductQuantity)
 userRouter.delete("/clearcart", authenticated, clearCart)
 
+// ------------------------   buy now related routes-------------------------------------------
+
+userRouter.post("/getBuyNowCartDetails", authenticated, getBuyNowCartDetails)
 
 export default userRouter;

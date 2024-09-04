@@ -99,8 +99,8 @@ export const newProduct = asyncErrorHandler(
       productVariance: JSON.parse(variance),
       productColors: JSON.parse(colors),
       productRamAndStorage: JSON.parse(ramAndStorage),
-      productComboProducts: JSON.parse(comboProducts),
-      productFreeProducts: JSON.parse(freeProducts),
+      productComboProducts: comboProducts && JSON.parse(comboProducts),
+      productFreeProducts: freeProducts && JSON.parse(freeProducts),
       // productTitle: title,
     });
     return res.status(200).json({

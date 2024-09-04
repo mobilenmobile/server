@@ -686,3 +686,160 @@ export const clearCart = asyncErrorHandler(async (req: Request, res, next) => {
     message: `${deletedItems.deletedCount} Cart items deleted successfully`,
   });
 });
+
+
+///--------------------- buyNow Cart -----------------------------
+
+
+
+// export const getbuyNowCartItems = asyncErrorHandler(async (req: Request, res, next) => {
+//   if (!req.user._id) {
+//     return next(new ErrorHandler("unauthenticated", 400));
+//   }
+
+//   // console.log(item)
+
+//   const { productId, selectedVarianceId, quantity, customSkin, skinProductDetails } = req.body
+
+
+//   if (!productId || !selectedVarianceId) {
+//     return next(new ErrorHandler("please enter all fields", 404));
+
+//   }
+//   const product = await Product.findById(productId);
+//   if (!product) {
+//     return next(new ErrorHandler("No product found with this id", 404));
+//   }
+//   const selectedVariantData = product.productVariance.find((variant: { id: string; }) => {
+//     return variant.id.replace(/\s+/g, "") == selectedVarianceId.replace(/\s+/g, "")
+//   })
+
+//   if (selectedVariantData?.quantity == '0' || selectedVariantData?.quantity == 0) {
+//     return next(new ErrorHandler("product is out of stock", 404));
+//   }
+//   // console.log("variantData", variantData)
+//   const productDiscount = calculateDiscount(selectedVariantData?.boxPrice, selectedVariantData?.sellingPrice)
+//   const cartItemsData = {
+//     productTitle: product.productTitle,
+//     thumbnail: selectedVariantData.thumbnail,
+//     boxPrice: selectedVariantData?.boxPrice,
+//     sellingPrice: selectedVariantData?.sellingPrice,
+//     color: selectedVariantData?.color,
+//     ramAndStorage: selectedVariantData?.ramAndStorage[0],
+//     productRating: product.productRating,
+//     quantity: quantity,
+//     productId: product._id,
+//     selectedVarianceId: product.selectedVarianceId,
+//     discount: productDiscount,
+//   }
+
+
+//   return res.status(200).json({
+//     success: true,
+//     message: "successfully fetched buyNow data",
+//     cartItemsData: [cartItemsData]
+//   });
+// })
+
+
+export const getBuyNowCartDetails = asyncErrorHandler(async (req: Request, res, next) => {
+
+  if (!req.user._id) {
+    return next(new ErrorHandler("unauthenticated", 400));
+  }
+
+  const { productId, selectedVarianceId, quantity, customSkin, skinProductDetails } = req.body
+
+
+  if (!productId || !selectedVarianceId) {
+    return next(new ErrorHandler("please enter all fields", 404));
+
+  }
+  const product = await Product.findById(productId);
+  if (!product) {
+    return next(new ErrorHandler("No product found with this id", 404));
+  }
+  const selectedVariantData = product.productVariance.find((variant: { id: string; }) => {
+    return variant.id.replace(/\s+/g, "") == selectedVarianceId.replace(/\s+/g, "")
+  })
+
+  if (selectedVariantData?.quantity == '0' || selectedVariantData?.quantity == 0) {
+    return next(new ErrorHandler("product is out of stock", 404));
+  }
+
+
+  const user = await User.findOne({ _id: req.user._id })
+  const appliedCoupon = await Offer.findOne({ _id: user?.coupon })
+  const coinAccountData = await CoinAccount.find({ userId: req.user._id })
+
+  //mapping through cartItems to structure the data
+
+
+
+
+  const productDiscount = calculateDiscount(selectedVariantData?.boxPrice, selectedVariantData?.sellingPrice)
+  const cartItemsData = [{
+    _id: product._id,
+    keyid: `${product._id}${selectedVariantData?.id.replace(/\s+/g, "")}`,
+    categoryId: product?.productCategory?._id,
+    category: product?.productCategory?.categoryName,
+    productTitle: product?.productTitle,
+    thumbnail: selectedVariantData?.thumbnail,
+    boxPrice: selectedVariantData?.boxPrice,
+    sellingPrice: selectedVariantData?.sellingPrice,
+    color: selectedVariantData?.color,
+    ramAndStorage: selectedVariantData?.ramAndStorage[0],
+    productRating: product.productRating,
+    quantity: quantity,
+    productId: product._id,
+    selectedVarianceId: product?.selectedVarianceId,
+    discount: productDiscount,
+    customSkin: customSkin || false,
+    skinProductDetails: skinProductDetails || []
+  }]
+
+
+
+  let Total = 0
+  let DiscountedTotal = 0
+  const cartDetails = cartItemsData.map((item) => {
+    return {
+      Total: Total + (item?.quantity * item?.boxPrice),
+      DiscountedTotal: DiscountedTotal + (item?.quantity * item?.sellingPrice)
+    }
+  })
+
+  const totals = cartItemsData.reduce((accumulator, item) => {
+    const Total = accumulator.Total + (item?.quantity * item?.boxPrice);
+    const DiscountedTotal = accumulator.DiscountedTotal + (item?.quantity * item?.sellingPrice);
+
+    return {
+      Total,
+      DiscountedTotal
+    };
+  }, {
+    Total: 0,
+    DiscountedTotal: 0,
+  })
+  let couponDiscount = 0
+  if (appliedCoupon && appliedCoupon.offerCouponDiscount) {
+    couponDiscount = Math.round((Number(appliedCoupon.offerCouponDiscount) * totals.DiscountedTotal) / 100)
+    couponDiscount = couponDiscount > 500 ? 499 : couponDiscount
+  }
+
+
+
+  const availableCoins = coinAccountData.length > 0 && coinAccountData[0]?.coinAccountBalance || 0
+  const usableCoins = coinAccountData.length > 0 && coinAccountData[0].useCoinForPayment ? coinAccountData[0].coinAccountBalance : 0
+
+
+  const finalCartTotal = totals.DiscountedTotal - (couponDiscount) - usableCoins
+
+  return res.status(200).json({
+    success: true,
+    message: "Cart details fetched successfully",
+    cartItemsData,
+    cartDetails: { ...totals, finalCartTotal, couponDiscount, availableCoins },
+    offer: user?.coupon,
+  });
+});

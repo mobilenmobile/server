@@ -97,6 +97,10 @@ export interface NewBrandRequestBody {
   brandImgUrl: string;
   brandLogoUrl: string;
 }
+export interface NewSkinBody {
+  skinBrand?: string;
+  skinModel?: string;
+}
 
 export interface NewCategoryRequestBody {
   categoryName: string;
