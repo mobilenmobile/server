@@ -585,8 +585,6 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
 });
 
 
-
-
 // ------------------ api to get cart details -------------------------------------------------------
 export const getUnAuthenticatedCartDetails = asyncErrorHandler(async (req: Request, res, next) => {
 
