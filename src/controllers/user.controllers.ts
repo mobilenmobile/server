@@ -818,7 +818,7 @@ export const getBuyNowCartDetails = asyncErrorHandler(async (req: Request, res, 
     productRating: product.productRating,
     quantity: quantity,
     productId: product._id,
-    selectedVarianceId: product?.selectedVarianceId,
+    selectedVarianceId: selectedVarianceId,
     discount: productDiscount,
     customSkin: customSkin || false,
     skinProductDetails: skinProductDetails || []
