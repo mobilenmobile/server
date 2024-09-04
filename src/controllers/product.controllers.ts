@@ -822,7 +822,7 @@ export const getSimilarProducts = asyncErrorHandler(
 
     // Fetch 5 products for each category ID
     const productsPromises = parsedCategoryIds.map((categoryId: string) => {
-      return Product.find({ productCategory: categoryId }).limit(limitProducts).exec();
+      return Product.find({ productCategory: categoryId }).populate('productCategory').limit(limitProducts).exec();
     });
     // console.log(productsPromises, "products promises")
     const productsByCategory = await Promise.all(productsPromises);
