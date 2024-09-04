@@ -11,9 +11,11 @@ const CategorySchema = new Schema({
   },
   categoryDescription: {
     type: String,
-    required: [true, "Please provide category images"],
+    // required: [true, "Please provide category images"],
   },
+  brands: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Brand' }]
 });
 
 export const Category =
   mongoose.models.category || mongoose.model("Category", CategorySchema);
+

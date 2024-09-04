@@ -20,18 +20,19 @@ import ErrorHandler from "../utils/errorHandler";
 
 
 //------------ api to create new category-----------------------------------------
+
 export const addNewCategory = asyncErrorHandler(
   async (req: Request<{}, {}, NewCategoryRequestBody>, res, next) => {
     const { categoryName, categoryDescription, categoryImgUrl } = req.body;
 
-    if (!categoryName || !categoryImgUrl) {
-      return next(new ErrorHandler("please provide category name/images.", 400));
+    if (!categoryName) {
+      return next(new ErrorHandler("please provide category name.", 400));
     }
 
     const category = await Category.create({
       categoryName,
       categoryDescription,
-      categoryImgUrl,
+      categoryImgUrl: categoryImgUrl ? categoryImgUrl : "",
     });
     return res.status(201).json({
       success: true,

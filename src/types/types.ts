@@ -7,6 +7,7 @@ export interface NewUserRequestBody {
   photo?: string;
   gender?: string;
   role?: string;
+  phoneNumber?: string
   password: string;
 }
 
@@ -54,6 +55,9 @@ export interface NewProductRequestBody {
   ramAndStorage: string;
   comboProducts: string;
   freeProducts: string;
+  selectedComboCategory: string,
+  selectedFreeCategory: string,
+  productVideoUrls: string,
   // productType: string;
 }
 
@@ -86,6 +90,9 @@ export interface UpdateProductRequestBody {
   variance: string;
   comboOfferProducts: string,
   freeOfferProducts: string,
+  selectedComboCategory: string,
+  selectedFreeCategory: string,
+  productVideoUrls: string
 }
 
 export interface updateId {

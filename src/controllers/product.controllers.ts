@@ -57,6 +57,10 @@ export const newProduct = asyncErrorHandler(
       ramAndStorage,
       comboProducts,
       freeProducts,
+      selectedComboCategory,
+      selectedFreeCategory,
+      productVideoUrls,
+
     } = req.body;
 
     console.log("new product req body=>", JSON.parse(colors))
@@ -101,6 +105,7 @@ export const newProduct = asyncErrorHandler(
       productRamAndStorage: JSON.parse(ramAndStorage),
       productComboProducts: comboProducts && JSON.parse(comboProducts),
       productFreeProducts: freeProducts && JSON.parse(freeProducts),
+      productVideoUrls: productVideoUrls ? JSON.parse(productVideoUrls) : null,
       // productTitle: title,
     });
     return res.status(200).json({
@@ -344,6 +349,9 @@ export const updateProduct = asyncErrorHandler(
       colors,
       comboOfferProducts,
       freeOfferProducts,
+      selectedComboCategory,
+      selectedFreeCategory,
+      productVideoUrls
     } = req.body;
 
     // console.log("req-body", req.body);
@@ -370,6 +378,9 @@ export const updateProduct = asyncErrorHandler(
     if (colors) product.productColors = JSON.parse(colors)
     if (comboOfferProducts) product.productComboProducts = JSON.parse(comboOfferProducts)
     if (freeOfferProducts) product.productFreeProducts = JSON.parse(freeOfferProducts)
+    if (selectedComboCategory) product.productSelectedComboCategory = selectedComboCategory ? JSON.parse(selectedComboCategory) : null
+    if (selectedFreeCategory) product.productSelectedFreeCategory = selectedFreeCategory ? JSON.parse(selectedFreeCategory) : null
+    if (productVideoUrls) product.productVideoUrls = productVideoUrls ? JSON.parse(productVideoUrls) : null
 
     console.log(JSON.parse(comboOfferProducts))
 
@@ -466,7 +477,8 @@ export const getAllAdminProducts = asyncErrorHandler(
       };
     }
 
-    if (category) {
+    if (category && category.toLowerCase() != "all") {
+
       const findCategory = await Category.findOne({ categoryName: category });
       if (findCategory) {
         baseQuery.productCategory = findCategory._id;
@@ -485,17 +497,16 @@ export const getAllAdminProducts = asyncErrorHandler(
     const sortBy: any = {};
 
     if (sort) {
-      if (sort === 'A-Z') {
+      if (sort === "A-Z") {
         sortBy.productTitle = 1;
-      } else if (sort === 'Z-A') {
+      } else if (sort === "Z-A") {
         sortBy.productTitle = -1;
-      } else if (sort === 'oldest') {
+      } else if (sort === "oldest") {
         sortBy.createdAt = 1;
-      } else if (sort === 'newest') {
+      } else {
         sortBy.createdAt = -1;
       }
     }
-
     // Fetch products with applied filters, sorting, and pagination
     const [products, totalProductsCount] = await Promise.all([
       Product.find(baseQuery)

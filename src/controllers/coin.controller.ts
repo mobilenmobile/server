@@ -29,28 +29,24 @@ const createNewCoinAccount = async (userId: any) => {
 //-----------------Api to get all brand---------------------------------------------
 export const getCoinAccount = asyncErrorHandler(
     async (req: Request, res, next) => {
-        const coinAccountData = await CoinAccount.find({ userId: req.user._id })
-        const coinAccountTransaction = await CoinTransaction.find({ userId: req.user._id }).populate("orderId")
+        // Fetch coin account data and transactions
+        const coinAccountData = await CoinAccount.find({ userId: req.user._id });
+        const coinAccountTransaction = await CoinTransaction.find({ userId: req.user._id }).populate("orderId").sort({ timestamp: -1 });
 
+        // Check if coin account data exists
         if (!coinAccountData) {
             return res.status(404).json({ message: "Coin account not found" });
         }
 
-        console.log("-------------------------------- coin account transaction-------------------------", coinAccountTransaction)
-
+        // Map transactions to include order data if available
         const transactionData = coinAccountTransaction?.map((transaction: any) => {
             if (transaction.orderId) {
-                console.log("----------------------------------------entering orderid----------------------------------------------")
-                console.log(transaction.orderId.orderItems)
-                console.log("----------------------------------------entering orderid----------------------------------------------")
-
                 const orderData = transaction.orderId?.orderItems?.map((productData: any) => {
                     return {
                         title: productData.productTitle,
                         thumbnail: productData.thumbnail
-                    }
-                })
-
+                    };
+                });
 
                 return {
                     _id: transaction._id,
@@ -60,26 +56,83 @@ export const getCoinAccount = asyncErrorHandler(
                     amountReceived: transaction.amountReceived,
                     timestamp: transaction.timestamp,
                     orderData
-                }
-
+                };
             }
-            return transaction
-        })
+            return transaction;
+        });
 
-        console.log("-------coinaccount-----", transactionData)
-        const coinAccountCreditTransaction = transactionData.filter((Transaction: { amountReceived: number }) => Transaction.amountReceived > 0)
-        const coinAccountRedeemedTransaction = transactionData.filter((Transaction: { amountSpent: number }) => Transaction.amountSpent > 0)
+        // Calculate credit and redeemed transactions
+        const coinAccountCreditTransaction = transactionData.filter((transaction: { amountReceived: number }) => transaction.amountReceived > 0);
+        const coinAccountRedeemedTransaction = transactionData.filter((transaction: { amountSpent: number }) => transaction.amountSpent > 0);
 
+        // Calculate total redeemed coins
+        const totalRedeemedCoins = coinAccountRedeemedTransaction.reduce((total: number, transaction: { amountSpent: number }) => total + (transaction.amountSpent || 0), 0);
+
+        // Respond with data and total redeemed coins
         return res.status(200).json({
             success: true,
-            message: "coin Account feteced successfully",
+            message: "Coin account fetched successfully",
             coinAccountData,
             coinAccountCreditTransaction,
-            coinAccountRedeemedTransaction
-            // coinAccountTransaction
+            coinAccountRedeemedTransaction,
+            totalRedeemedCoins // Include total redeemed coins in the response
         });
     }
 );
+
+// export const getCoinAccount = asyncErrorHandler(
+//     async (req: Request, res, next) => {
+//         const coinAccountData = await CoinAccount.find({ userId: req.user._id })
+//         const coinAccountTransaction = await CoinTransaction.find({ userId: req.user._id }).populate("orderId")
+
+//         if (!coinAccountData) {
+//             return res.status(404).json({ message: "Coin account not found" });
+//         }
+
+//         console.log("-------------------------------- coin account transaction-------------------------", coinAccountTransaction)
+
+//         const transactionData = coinAccountTransaction?.map((transaction: any) => {
+//             if (transaction.orderId) {
+//                 console.log("----------------------------------------entering orderid----------------------------------------------")
+//                 console.log(transaction.orderId.orderItems)
+//                 console.log("----------------------------------------entering orderid----------------------------------------------")
+
+//                 const orderData = transaction.orderId?.orderItems?.map((productData: any) => {
+//                     return {
+//                         title: productData.productTitle,
+//                         thumbnail: productData.thumbnail
+//                     }
+//                 })
+
+
+//                 return {
+//                     _id: transaction._id,
+//                     notes: transaction.notes,
+//                     rewardType: transaction.rewardType,
+//                     amountSpent: transaction.amountSpent,
+//                     amountReceived: transaction.amountReceived,
+//                     timestamp: transaction.timestamp,
+//                     orderData
+//                 }
+
+//             }
+//             return transaction
+//         })
+
+//         console.log("-------coinaccount-----", transactionData)
+//         const coinAccountCreditTransaction = transactionData.filter((Transaction: { amountReceived: number }) => Transaction.amountReceived > 0)
+//         const coinAccountRedeemedTransaction = transactionData.filter((Transaction: { amountSpent: number }) => Transaction.amountSpent > 0)
+
+//         return res.status(200).json({
+//             success: true,
+//             message: "coin Account feteced successfully",
+//             coinAccountData,
+//             coinAccountCreditTransaction,
+//             coinAccountRedeemedTransaction
+//             // coinAccountTransaction
+//         });
+//     }
+// );
 //-----------------Api to get all brand---------------------------------------------
 export const setUseCoinBalance = asyncErrorHandler(
     async (req: Request, res, next) => {

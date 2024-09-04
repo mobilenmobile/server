@@ -1,1 +1,3 @@
 in getfilterandsort product we can filter category dirctly in mongodb to reduce load
+
+fix unsync profile details from firebase

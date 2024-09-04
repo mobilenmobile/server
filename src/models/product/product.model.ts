@@ -52,6 +52,10 @@ const varianceType = new Schema({
     type: String,
     required: true,
   },
+  comboPrice: {
+    type: String,
+    // required: true,
+  },
   quantity: {
     type: String,
     required: true,
@@ -114,7 +118,7 @@ const productSchema = new Schema(
     productSubCategory: {
       type: Schema.Types.ObjectId,
       ref: "subCategory",
-     
+
     },
     productBrand: {
       type: Schema.Types.ObjectId,
@@ -158,6 +162,18 @@ const productSchema = new Schema(
     },
     productFreeProducts: {
       type: [ComboProducts],
+      default: []
+    },
+    productSelectedComboCategory: {
+      type: [String],
+      default: []
+    },
+    productSelectedFreeCategory: {
+      type: [String],
+      default: []
+    },
+    productVideoUrls: {
+      type: [String],
       default: []
     }
   },

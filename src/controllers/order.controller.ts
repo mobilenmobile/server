@@ -27,7 +27,9 @@ import mongoose from "mongoose";
 export const newOrder = asyncErrorHandler(
   async (req: Request, res, next) => {
 
+    console.log("new order--------------->----------------------------------------------------------")
     console.log(req.body)
+    console.log("new order--------------->----------------------------------------------------------")
 
     const {
       orderItems,
@@ -39,7 +41,9 @@ export const newOrder = asyncErrorHandler(
       deliveryAddress,
       discount,
       discountedTotal,
-      finalAmount
+      finalAmount,
+      usableCoins,
+      deliveryCharges
     } = req.body;
 
     if (!deliveryAddress || !orderItems || !total || !finalAmount) {
@@ -68,6 +72,8 @@ export const newOrder = asyncErrorHandler(
         discount,
         discountedTotal,
         finalAmount,
+        usableCoins,
+        deliveryCharges,
       });
 
 
@@ -75,7 +81,7 @@ export const newOrder = asyncErrorHandler(
       const ItemCategory = newOrder.orderItems.some((item: { category: string }) => item.category === "smartphone") ? "smartphone" : "accessories";
 
       const coinAccountData = await CoinAccount.findOne({ userId: req.user._id })
-      const deductCoins = await coinAccountData.coinAccountBalance
+      const deductCoins = usableCoins | 0
       coinAccountData.coinAccountBalance -= coinAccountData.useCoinForPayment ? deductCoins : 0
 
       // Find the existing coin account or create a new one if not found
@@ -138,7 +144,10 @@ export const newOrder = asyncErrorHandler(
       await addtransaction.save({ session });
 
       newOrder.coinsCredited = coinsTobeAdded
-      newOrder.coinsDebited = deductCoins
+      newOrder.coinsDebited = coinAccountData.useCoinForPayment ? deductCoins : 0
+      coinAccountData.useCoinForPayment = false
+
+      await coinAccountData.save({ session })
       await newOrder.save({ session })
       console.log("new order--------------->", newOrder)
       //also give coin for purchase
@@ -200,6 +209,9 @@ export const getSingleOrderDetails = asyncErrorHandler(async (req, res, next) =>
     paymentStatus: order.paymentStatus,
     discountedTotal: order.discountedTotal,
     finalAmount: order.finalAmount,
+    deliveryCharges: order.deliveryCharges,
+    coinsCredited: order.coinsCredited,
+    coinsDebited: order.coinsDebited,
     orderItems: orderItemsWithReviews
   }
   console.log("orderItemwithreviews", orderItemsWithReviews)

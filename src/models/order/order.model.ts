@@ -36,7 +36,7 @@ const addressSchema = new Schema({
   city: { type: String, required: true },
   place: {
     type: String,
-    enum: ['home', 'office'],
+    enum: ['home', 'work'],
     required: true
   },
   default: { type: Boolean, default: false },
@@ -64,6 +64,7 @@ const orderSchema = new Schema({
     required: true
   },
   deliveryAddress: { type: addressSchema, required: true },
+  deliveryCharges: { type: Number, default: 0 },
   orderStatuses: {
     type: [Object],
   },
@@ -90,6 +91,10 @@ const orderSchema = new Schema({
   },
   finalAmount: {
     type: Number
+  },
+  usableCoins: {
+    type: Number,
+    default: 0,
   },
   coinsCredited: {
     type: Number,

@@ -12,6 +12,7 @@ import { deleteUser } from "../db/firebase";
 import { IncreaseCoins } from "./coin.controller";
 import mongoose, { ObjectId } from "mongoose";
 import { CoinAccount } from "../models/coins/coinAccount";
+import { profile } from "console";
 
 
 
@@ -42,10 +43,10 @@ import { CoinAccount } from "../models/coins/coinAccount";
 //------------------------api to create new user----------------------------------
 export const newUser = asyncErrorHandler(
   async (req: Request<{}, {}, NewUserRequestBody>, res, next) => {
-    const { name, uid, email } = req.body;
+    const { name, uid, email, phoneNumber } = req.body;
 
     if (!email || !uid) {
-      return next(new ErrorHandler("please provide email or uid", 400));
+      return next(new ErrorHandler("please provide email and uid", 400));
     }
 
     const userExist = await User.findOne({ email });
@@ -56,10 +57,21 @@ export const newUser = asyncErrorHandler(
         .json({ success: true, message: `welcome back ${name}` });
     }
 
+    const profileData = {
+      profileImageUrl: "/defaultprofileimage.png",
+      profileName: name,
+      profileEmailId: email,
+      profilePhoneNo: phoneNumber,
+      profileGender: "",
+      profileLocation: "",
+      profileAlternateMobileNo: ""
+    }
+
     const userData = {
       name: name ? name : "",
       uid,
       email,
+      profile: profileData
     };
 
     const user = await User.create(userData);
@@ -75,7 +87,7 @@ export const newUser = asyncErrorHandler(
     }
     // userId: string, rewardType: string, orderId: string, coinsTobeAdded: number
 
-    await IncreaseCoins(user._id, "signupBonus", "signup", 100)
+    await IncreaseCoins(user._id, "signupBonus", "signup", 200)
 
     return res.status(200).json({
       success: true,
@@ -544,16 +556,30 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
 
 
   const availableCoins = coinAccountData.length > 0 && coinAccountData[0]?.coinAccountBalance || 0
-  const usableCoins = coinAccountData.length > 0 && coinAccountData[0].useCoinForPayment ? coinAccountData[0].coinAccountBalance : 0
+
+  const finalCartTotalBeforeCoins = totals.DiscountedTotal - (couponDiscount)
+  const fiftyPercentOfFinalCartTotal = finalCartTotalBeforeCoins * 0.5;
 
 
-  const finalCartTotal = totals.DiscountedTotal - (couponDiscount) - usableCoins
+  const usableCoins = availableCoins > fiftyPercentOfFinalCartTotal ? fiftyPercentOfFinalCartTotal : availableCoins
+
+  let deductCoinsForCart = coinAccountData[0].useCoinForPayment ? usableCoins : 0
+
+  let finalCartTotal = totals.DiscountedTotal - (couponDiscount) - deductCoinsForCart
+
+  let deliveryCharges = 0
+
+  if (finalCartTotal < 500) {
+    deliveryCharges = 150
+  }
+
+  finalCartTotal = finalCartTotal + deliveryCharges
 
   return res.status(200).json({
     success: true,
     message: "Cart details fetched successfully",
     cartItemsData,
-    cartDetails: { ...totals, finalCartTotal, couponDiscount, availableCoins },
+    cartDetails: { ...totals, finalCartTotal, couponDiscount, availableCoins, usableCoins, deliveryCharges },
     offer: user?.coupon,
   });
 });
