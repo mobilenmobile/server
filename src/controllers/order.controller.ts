@@ -23,7 +23,7 @@ import mongoose from "mongoose";
 //----------------------xxxxxx List-Of-Apis-End xxxxxxxxx-------------------------
 
 
-//------------- api to create new order-----------------------------------------------------
+
 export const newOrder = asyncErrorHandler(
   async (req: Request, res, next) => {
 
@@ -55,6 +55,7 @@ export const newOrder = asyncErrorHandler(
     if (!req.user._id) {
       return next(new ErrorHandler("unauthenticated user", 400));
     }
+
     // Start a session for transaction management
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -76,13 +77,7 @@ export const newOrder = asyncErrorHandler(
         deliveryCharges,
       });
 
-
-
       const ItemCategory = newOrder.orderItems.some((item: { category: string }) => item.category === "smartphone") ? "smartphone" : "accessories";
-
-      const coinAccountData = await CoinAccount.findOne({ userId: req.user._id })
-      const deductCoins = usableCoins | 0
-      coinAccountData.coinAccountBalance -= coinAccountData.useCoinForPayment ? deductCoins : 0
 
       // Find the existing coin account or create a new one if not found
       let coinAccount = await CoinAccount.findOne({ userId: req.user._id }).session(session);
@@ -93,13 +88,10 @@ export const newOrder = asyncErrorHandler(
         await coinAccount.save({ session });
       }
 
-      // Update the coin account balance
+      const deductCoins = usableCoins | 0;
       coinAccount.coinAccountBalance -= deductCoins;
-      await coinAccount.save({ session });
 
-      // console.log("rewardType:----->", rewardType)
-
-      // Create a new transaction record
+      // Create a new transaction record for deducting coins
       const reducetransaction = new CoinTransaction({
         userId: req.user._id,
         orderId: newOrder._id,
@@ -109,29 +101,23 @@ export const newOrder = asyncErrorHandler(
         notes: 'Coins reduced for purchase'
       });
 
-      await reducetransaction.save({ session }); // Update the coin account balance
+      await reducetransaction.save({ session });
 
-
-      // give coins for new purchase
-      let coinPercentage = 0;
-      if (ItemCategory == "smartphone") {
-        coinPercentage = (1 / 100) * newOrder.finalAmount;
-        // await IncreaseCoins(req.user._id, "Purchase of Smartphone", newOrder._id, Math.floor(coinPercentage))
-      }
-
-      if (ItemCategory == "accessories") {
-        coinPercentage = (10 / 100) * newOrder.finalAmount;
-        // await IncreaseCoins(req.user._id, "Purchase of Accessories", newOrder._id, Math.floor(coinPercentage))
-      }
-
-
-      const coinsTobeAdded = Math.floor(coinPercentage)
-      coinAccount.coinAccountBalance += coinsTobeAdded;
+      // Update coin account balance after deduction
       await coinAccount.save({ session });
 
-      // console.log("rewardType:----->", rewardType)
+      // Calculate coins to be added based on item category
+      let coinPercentage = 0;
+      if (ItemCategory === "accessories") {
+        coinPercentage = (10 / 100) * newOrder.finalAmount;
+      } else {
+        coinPercentage = (1 / 100) * newOrder.finalAmount;
+      }
 
-      // Create a new transaction record
+      const coinsTobeAdded = Math.floor(coinPercentage);
+      coinAccount.coinAccountBalance += coinsTobeAdded;
+
+      // Create a new transaction record for adding coins
       const addtransaction = new CoinTransaction({
         userId: req.user._id,
         orderId: newOrder._id,
@@ -143,38 +129,192 @@ export const newOrder = asyncErrorHandler(
 
       await addtransaction.save({ session });
 
-      newOrder.coinsCredited = coinsTobeAdded
-      newOrder.coinsDebited = coinAccountData.useCoinForPayment ? deductCoins : 0
-      coinAccountData.useCoinForPayment = false
+      //       const coinAccountData = await CoinAccount.findOne({ userId: req.user._id })
+      newOrder.coinsCredited = coinsTobeAdded;
+      newOrder.coinsDebited = coinAccount.useCoinForPayment ? deductCoins : 0;
+      coinAccount.useCoinForPayment = false;
 
-      await coinAccountData.save({ session })
-      await newOrder.save({ session })
-      console.log("new order--------------->", newOrder)
-      //also give coin for purchase
+      await coinAccount.save({ session });
+      await newOrder.save({ session });
+
       // Commit the transaction
       await session.commitTransaction();
       session.endSession();
-      console.log(newOrder, "....................newOrder//////////")
+
+      console.log("Order created successfully:", newOrder);
 
       return res.status(201).json({
         success: true,
-        message: "Order cr successfully",
-        newMsg: "just checking",
+        message: "Order created successfully",
         order: newOrder,
       });
-      // console.log("Transaction successfully completed:", transaction);
+
     } catch (error) {
       // Abort the transaction in case of an error
       await session.abortTransaction();
       session.endSession();
 
       console.error("Error processing transaction:", error);
-      throw error
+      throw error;
     }
-
-
   }
 );
+
+
+// //------------- api to create new order-----------------------------------------------------
+// export const newOrder = asyncErrorHandler(
+//   async (req: Request, res, next) => {
+
+//     console.log("new order--------------->----------------------------------------------------------")
+//     console.log(req.body)
+//     console.log("new order--------------->----------------------------------------------------------")
+
+//     const {
+//       orderItems,
+//       orderStatuses,
+//       total,
+//       couponcode,
+//       paymentMethod,
+//       paymentStatus,
+//       deliveryAddress,
+//       discount,
+//       discountedTotal,
+//       finalAmount,
+//       usableCoins,
+//       deliveryCharges
+//     } = req.body;
+
+//     if (!deliveryAddress || !orderItems || !total || !finalAmount) {
+//       return next(new ErrorHandler("Please Enter all Fields", 400));
+//     }
+
+//     console.log(JSON.parse(deliveryAddress))
+
+//     if (!req.user._id) {
+//       return next(new ErrorHandler("unauthenticated user", 400));
+//     }
+//     // Start a session for transaction management
+//     const session = await mongoose.startSession();
+//     session.startTransaction();
+//     try {
+
+//       const newOrder = new Order({
+//         user: req.user._id,
+//         orderItems: JSON.parse(orderItems),
+//         orderStatuses: JSON.parse(orderStatuses),
+//         total,
+//         couponcode,
+//         paymentMethod: JSON.parse(paymentMethod),
+//         paymentStatus,
+//         deliveryAddress: JSON.parse(deliveryAddress),
+//         discount,
+//         discountedTotal,
+//         finalAmount,
+//         usableCoins,
+//         deliveryCharges,
+//       });
+
+
+
+//       const ItemCategory = newOrder.orderItems.some((item: { category: string }) => item.category === "smartphone") ? "smartphone" : "accessories";
+
+//       const coinAccountData = await CoinAccount.findOne({ userId: req.user._id })
+//       const deductCoins = usableCoins | 0
+//       coinAccountData.coinAccountBalance -= coinAccountData.useCoinForPayment ? deductCoins : 0
+
+//       // Find the existing coin account or create a new one if not found
+//       let coinAccount = await CoinAccount.findOne({ userId: req.user._id }).session(session);
+
+//       if (!coinAccount) {
+//         // Create a new coin account if it doesn't exist
+//         coinAccount = new CoinAccount({ userId: req.user._id, coinAccountBalance: 0 });
+//         await coinAccount.save({ session });
+//       }
+
+//       // Update the coin account balance
+//       coinAccount.coinAccountBalance -= deductCoins;
+//       // await coinAccount.save({ session });
+
+//       // console.log("rewardType:----->", rewardType)
+
+//       // Create a new transaction record
+//       const reducetransaction = new CoinTransaction({
+//         userId: req.user._id,
+//         orderId: newOrder._id,
+//         rewardType: `purchase of ${ItemCategory}`,
+//         amountSpent: deductCoins,
+//         amountReceived: 0,
+//         notes: 'Coins reduced for purchase'
+//       });
+
+//       await reducetransaction.save({ session }); // Update the coin account balance
+
+
+//       // give coins for new purchase
+//       let coinPercentage = 0;
+//       // if (ItemCategory == "smartphone") {
+//       //   coinPercentage = (1 / 100) * newOrder.finalAmount;
+//       //   // await IncreaseCoins(req.user._id, "Purchase of Smartphone", newOrder._id, Math.floor(coinPercentage))
+//       // }
+
+//       if (ItemCategory == "accessories") {
+//         coinPercentage = (10 / 100) * newOrder.finalAmount;
+//         // await IncreaseCoins(req.user._id, "Purchase of Accessories", newOrder._id, Math.floor(coinPercentage))
+//       } else {
+//         coinPercentage = (1 / 100) * newOrder.finalAmount;
+//       }
+
+
+//       const coinsTobeAdded = Math.floor(coinPercentage)
+//       coinAccount.coinAccountBalance = coinAccount.coinAccountBalance + coinsTobeAdded;
+//       await coinAccount.save({ session });
+
+//       // console.log("rewardType:----->", rewardType)
+
+//       // Create a new transaction record
+//       const addtransaction = new CoinTransaction({
+//         userId: req.user._id,
+//         orderId: newOrder._id,
+//         rewardType: `purchase of ${ItemCategory}`,
+//         amountSpent: 0,
+//         amountReceived: coinsTobeAdded,
+//         notes: 'Coins added for purchase'
+//       });
+
+//       await addtransaction.save({ session });
+
+//       newOrder.coinsCredited = coinsTobeAdded
+//       newOrder.coinsDebited = coinAccountData.useCoinForPayment ? deductCoins : 0
+//       coinAccountData.useCoinForPayment = false
+
+//       await coinAccountData.save({ session })
+//       await newOrder.save({ session })
+//       console.log("new order--------------->", newOrder)
+//       //also give coin for purchase
+//       // Commit the transaction
+//       await session.commitTransaction();
+//       session.endSession();
+//       console.log(newOrder, "....................newOrder//////////")
+
+//       return res.status(201).json({
+//         success: true,
+//         message: "Order cr successfully",
+//         newMsg: "just checking",
+//         order: newOrder,
+//       });
+//       // console.log("Transaction successfully completed:", transaction);
+//     } catch (error) {
+//       // Abort the transaction in case of an error
+//       await session.abortTransaction();
+//       session.endSession();
+
+//       console.error("Error processing transaction:", error);
+//       throw error
+//     }
+
+
+//   }
+// );
 
 //--------------------api to get single order details---------------------------------------
 export const getSingleOrderDetails = asyncErrorHandler(async (req, res, next) => {
