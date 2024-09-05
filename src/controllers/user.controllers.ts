@@ -507,7 +507,16 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
   const coinAccountData = await CoinAccount.find({ userId: req.user._id })
 
 
+<<<<<<< HEAD
   console.log(coinAccountData, "coin account data......................")
+=======
+
+  //if combo 
+  const ComboAccumulator = {
+    Total: 0,
+    DiscountedTotal: 0
+  }
+>>>>>>> c58c6982e79830c934cd0df86fdc13bad40b51bf
   //mapping through cartItems to structure the data
   const cartItemsData = cartItems.map((item) => {
     if (item.productId.productVariance) {
@@ -522,11 +531,15 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
 
       let productComboProducts = [];
       if (item.isCombo) {
+
+
         productComboProducts = item?.productId?.productComboProducts.map((item: any) => {
           if (item.productId.productVariance) {
 
             const variantData = item.productId.productVariance[0]
             const productDiscount = calculateDiscount(variantData?.boxPrice, variantData?.sellingPrice)
+            const Total = ComboAccumulator.Total + (item?.quantity * item?.boxPrice);
+            const DiscountedTotal = ComboAccumulator.DiscountedTotal + (item?.quantity * item?.sellingPrice);
 
             return {
               _id: item._id,
@@ -537,6 +550,7 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
               thumbnail: variantData?.thumbnail,
               boxPrice: variantData?.boxPrice,
               sellingPrice: variantData?.sellingPrice,
+              comboPrice: variantData.comboPrice,
               // color: variantData?.color,
               // ramAndStorage: variantData?.ramAndStorage[0],
               productRating: item.productId.productRating,
@@ -562,6 +576,7 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
         thumbnail: variantData?.thumbnail,
         boxPrice: variantData?.boxPrice,
         sellingPrice: variantData?.sellingPrice,
+        comboPrice: variantData?.comboPrice,
         color: variantData?.color,
         ramAndStorage: variantData?.ramAndStorage[0],
         productRating: item.productId.productRating,
@@ -599,6 +614,12 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
     Total: 0,
     DiscountedTotal: 0,
   })
+
+
+  //Add combo price 
+  totals.Total += ComboAccumulator.Total
+  totals.DiscountedTotal += ComboAccumulator.DiscountedTotal
+
   let couponDiscount = 0
   if (appliedCoupon && appliedCoupon.offerCouponDiscount) {
     couponDiscount = Math.round((Number(appliedCoupon.offerCouponDiscount) * totals.DiscountedTotal) / 100)
