@@ -494,6 +494,8 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
   const appliedCoupon = await Offer.findOne({ _id: user?.coupon })
   const coinAccountData = await CoinAccount.find({ userId: req.user._id })
 
+
+  console.log(coinAccountData, "coin account data......................")
   //mapping through cartItems to structure the data
   const cartItemsData = cartItems.map((item) => {
     if (item.productId.productVariance) {
@@ -560,10 +562,23 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
   const finalCartTotalBeforeCoins = totals.DiscountedTotal - (couponDiscount)
   const fiftyPercentOfFinalCartTotal = finalCartTotalBeforeCoins * 0.5;
 
+  console.log(availableCoins, "available coin ............")
+  console.log("hey som val")
+  console.log("totals", totals)
+  console.log(couponDiscount, "couponDiscount")
+  console.log(finalCartTotalBeforeCoins, "final cart total before coins ................")
+  console.log(fiftyPercentOfFinalCartTotal, "fifty percent of cart total ..................")
+
+
 
   const usableCoins = availableCoins > fiftyPercentOfFinalCartTotal ? fiftyPercentOfFinalCartTotal : availableCoins
 
+  console.log(usableCoins, "usable coin ............")
+
+
   let deductCoinsForCart = coinAccountData[0].useCoinForPayment ? usableCoins : 0
+
+  console.log(deductCoinsForCart, "deduc fomr cart ..................")
 
   let finalCartTotal = totals.DiscountedTotal - (couponDiscount) - deductCoinsForCart
 
@@ -776,6 +791,8 @@ export const getBuyNowCartDetails = asyncErrorHandler(async (req: Request, res, 
 
   const { productId, selectedVarianceId, quantity, customSkin, skinProductDetails } = req.body
 
+  console.log(productId, "product id")
+  console.log(selectedVarianceId, "selectedVariance id")
 
   if (!productId || !selectedVarianceId) {
     return next(new ErrorHandler("please enter all fields", 404));
@@ -818,7 +835,7 @@ export const getBuyNowCartDetails = asyncErrorHandler(async (req: Request, res, 
     productRating: product.productRating,
     quantity: quantity,
     productId: product._id,
-    selectedVarianceId: product?.selectedVarianceId,
+    selectedVarianceId: selectedVarianceId,
     discount: productDiscount,
     customSkin: customSkin || false,
     skinProductDetails: skinProductDetails || []
@@ -876,7 +893,7 @@ export const getBuyNowCartDetails = asyncErrorHandler(async (req: Request, res, 
     success: true,
     message: "buy now cart details fetched successfully",
     cartItemsData,
-    cartDetails: { ...totals, finalCartTotal, couponDiscount, availableCoins,usableCoins,deliveryCharges },
+    cartDetails: { ...totals, finalCartTotal, couponDiscount, availableCoins, usableCoins, deliveryCharges },
     offer: user?.coupon,
   });
 });
