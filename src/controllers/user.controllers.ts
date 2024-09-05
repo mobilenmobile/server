@@ -514,16 +514,12 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
   const coinAccountData = await CoinAccount.find({ userId: req.user._id })
 
 
-<<<<<<< HEAD
-  console.log(coinAccountData, "coin account data......................")
-=======
 
   //if combo 
   let ComboAccumulator = {
     Total: 0,
     DiscountedTotal: 0
   }
->>>>>>> c58c6982e79830c934cd0df86fdc13bad40b51bf
   //mapping through cartItems to structure the data
   const cartItemsData = cartItems.map((item) => {
     if (item.productId.productVariance) {
