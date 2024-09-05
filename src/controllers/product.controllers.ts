@@ -278,6 +278,7 @@ export const getSingleProductDetails = asyncErrorHandler(async (req, res, next) 
   //   };
   // });
   let transformedComboProducts: any = []
+  let transformedFreeProducts: any = []
 
   if (product?.productComboProducts.length > 0) {
     console.log("product combo products ==> ", product.productComboProducts)
@@ -323,6 +324,50 @@ export const getSingleProductDetails = asyncErrorHandler(async (req, res, next) 
       });
     });
   }
+  if (product?.productFreeProducts.length > 0) {
+    console.log("product Freeroducts ==> ", product.productFreeProducts)
+    product.productComboProducts?.forEach((FreeProduct: any) => {
+      const product = FreeProduct.productId
+      product.productVariance.forEach((variant: ProductVariance) => {
+        const productDiscount = calculateDiscount(variant.boxPrice, variant.sellingPrice)
+        // console.log(variant)
+        if (Number(variant.quantity) > 0) {
+          // console.log("--------------------------------ram---------------------", variant.ramAndStorage[0])
+
+          //dynamically creating title of product
+          let title = product.productTitle
+
+          if (variant['ramAndStorage'].length > 0 && variant.ramAndStorage[0]?.ram) {
+            // title = `${product.productTitle} ${variant.ramAndStorage
+            //   && `(${variant.ramAndStorage[0].ram != '0' ? `${variant.color} ${variant.ramAndStorage[0].ram}GB` : ''} ${variant.ramAndStorage[0].storage != '0' ? `${variant.ramAndStorage[0].storage}GB` : ''})`
+            //   }`
+            title = `${product.productTitle} ${variant.ramAndStorage
+              && `(${variant.color} ${variant.ramAndStorage[0].storage != '0' ? `${variant.ramAndStorage[0].storage}GB` : ''})`
+              }`
+          } else {
+            title = `${product.productTitle} (${variant.color})`
+          }
+          //creating different product based on variance
+          const newProduct = {
+            productid: `${product._id}`,
+            keyid: `${product._id}${variant.id.replace(/\s+/g, "")}`,
+            variantid: `${variant.id.replace(/\s+/g, "")}`,
+            title: title.toLowerCase(),
+            category: product?.productCategory?.categoryName,
+            thumbnail: variant.thumbnail,
+            boxPrice: variant.boxPrice,
+            sellingPrice: variant.sellingPrice,
+            comboPrice: variant.comboPrice,
+            discount: productDiscount,
+            rating: product.productRating,
+            color: variant.color, // Replace with actual rating if available
+            brand: product.productBrand?.brandName || 'nobrand'
+          };
+          transformedFreeProducts.push(newProduct)
+        }
+      });
+    });
+  }
   // Modify `productRamAndStorage` if necessary
   if (product?.productRamAndStorage && product?.productBrand?.brandName === 'apple') {
     product.productRamAndStorage = product.productRamAndStorage.map((item: { id: string; }) => {
@@ -339,7 +384,8 @@ export const getSingleProductDetails = asyncErrorHandler(async (req, res, next) 
     message: "Product fetched successfully",
     product: {
       ...product.toObject(), // Convert product to a plain object
-      productComboProducts: transformedComboProducts
+      productComboProducts: transformedComboProducts,
+      productFreeProducts: transformedFreeProducts
     }
   });
 });
