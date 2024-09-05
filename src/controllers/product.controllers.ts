@@ -281,7 +281,7 @@ export const getSingleProductDetails = asyncErrorHandler(async (req, res, next) 
 
   if (product?.productComboProducts.length > 0) {
     console.log("product combo products ==> ", product.productComboProducts)
-    product.productComboProducts.forEach((comboProduct: any) => {
+    product.productComboProducts?.forEach((comboProduct: any) => {
       const product = comboProduct.productId
       product.productVariance.forEach((variant: ProductVariance) => {
         const productDiscount = calculateDiscount(variant.boxPrice, variant.sellingPrice)
@@ -312,6 +312,7 @@ export const getSingleProductDetails = asyncErrorHandler(async (req, res, next) 
             thumbnail: variant.thumbnail,
             boxPrice: variant.boxPrice,
             sellingPrice: variant.sellingPrice,
+            comboPrice: variant.comboPrice,
             discount: productDiscount,
             rating: product.productRating,
             color: variant.color, // Replace with actual rating if available
@@ -997,6 +998,7 @@ interface Product {
 }
 
 interface ProductVariance {
+  comboPrice: any;
   quantity: any;
   _id: string;
   id: string;
