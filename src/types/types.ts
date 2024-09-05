@@ -58,6 +58,7 @@ export interface NewProductRequestBody {
   selectedComboCategory: string,
   selectedFreeCategory: string,
   productVideoUrls: string,
+  skinSelectedItems: string,
   // productType: string;
 }
 
@@ -92,7 +93,8 @@ export interface UpdateProductRequestBody {
   freeOfferProducts: string,
   selectedComboCategory: string,
   selectedFreeCategory: string,
-  productVideoUrls: string
+  productVideoUrls: string,
+  skinSelectedItems: string,
 }
 
 export interface updateId {

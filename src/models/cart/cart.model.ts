@@ -38,6 +38,11 @@ const cartSchema = new Schema(
         },
         customSkin: {
             type: Boolean,
+            default: false,
+        },
+        isCombo: {
+            type: Boolean,
+            default: false,
         },
         skinProductDetails: {
             type: skinProductDetails
