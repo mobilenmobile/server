@@ -357,7 +357,7 @@ export const updateProduct = asyncErrorHandler(
       skinSelectedItems,
     } = req.body;
 
-    // console.log("req-body", req.body);
+    console.log("update-req-body", req.body);
 
     const product = await Product.findById(id);
     if (!product) {
@@ -385,7 +385,7 @@ export const updateProduct = asyncErrorHandler(
     if (selectedFreeCategory) product.productSelectedFreeCategory = selectedFreeCategory ? JSON.parse(selectedFreeCategory) : null
     if (productVideoUrls) product.productVideoUrls = productVideoUrls ? JSON.parse(productVideoUrls) : null
     if (skinSelectedItems) product.ProductSkinSelectedItems = skinSelectedItems ? JSON.parse(skinSelectedItems) : null
-    
+
     console.log(JSON.parse(comboOfferProducts))
 
     const prod = await product.save();

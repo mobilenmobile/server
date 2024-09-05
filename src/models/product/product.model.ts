@@ -54,7 +54,7 @@ const varianceType = new Schema({
   },
   comboPrice: {
     type: String,
-    // required: true,
+    required: true,
   },
   quantity: {
     type: String,
