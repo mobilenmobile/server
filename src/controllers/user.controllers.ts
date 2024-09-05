@@ -13,6 +13,7 @@ import { IncreaseCoins } from "./coin.controller";
 import mongoose, { ObjectId } from "mongoose";
 import { CoinAccount } from "../models/coins/coinAccount";
 import { profile } from "console";
+import { populate } from "dotenv";
 
 
 
@@ -326,8 +327,8 @@ export const removeWishlistItem = asyncErrorHandler(async (req: Request, res, ne
 //---------------------api to update cart----------------------------------------------------------
 export const updateCart = asyncErrorHandler(async (req, res, next) => {
 
-  const { productId, selectedVarianceId, quantity, customSkin, skinProductDetails } = req.body
-
+  const { productId, selectedVarianceId, quantity, customSkin, isCombo, skinProductDetails } = req.body
+  console.log("-------------------- update cart------------------------", req.body)
   if (!customSkin) {
     if (!productId || !selectedVarianceId) {
       return next(new ErrorHandler("please enter all fields", 404));
@@ -364,6 +365,7 @@ export const updateCart = asyncErrorHandler(async (req, res, next) => {
       productId,
       selectedVarianceId,
       customSkin,
+      isCombo,
       skinProductDetails: skinProductDetails ? JSON.parse(skinProductDetails) : null,
       quantity
     })
@@ -476,6 +478,8 @@ export const removeCartItem = asyncErrorHandler(async (req: Request, res, next) 
 
 // ------------------ api to get cart details -------------------------------------------------------
 // ------------------ api to get cart details -------------------------------------------------------
+
+
 export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) => {
 
   if (!req.user._id) {
@@ -484,9 +488,17 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
   // const cartItems = await cart.find({ user: req.user._id }).populate("productId");
   const cartItems = await cart.find({ user: req.user._id }).populate({
     path: 'productId',
-    populate: {
+    populate: [{
       path: 'productCategory',
-    }
+
+    },
+    {
+      path: 'productComboProducts',
+      populate: {
+        path: 'productId'
+      }
+
+    }],
   });
 
   // console.log("categorynew----------------->", cartItemsnew)
@@ -504,8 +516,43 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
         if ((variant.id.replace(/\s+/g, "")) == (item.selectedVarianceId.replace(/\s+/g, ""))) {
           return variant
         }
+
       })
       const productDiscount = calculateDiscount(variantData?.boxPrice, variantData?.sellingPrice)
+
+      let productComboProducts = [];
+      if (item.isCombo) {
+        productComboProducts = item?.productId?.productComboProducts.map((item: any) => {
+          if (item.productId.productVariance) {
+
+            const variantData = item.productId.productVariance[0]
+            const productDiscount = calculateDiscount(variantData?.boxPrice, variantData?.sellingPrice)
+
+            return {
+              _id: item._id,
+              keyid: `${item._id}${variantData?.id.replace(/\s+/g, "")}`,
+              categoryId: item.productId?.productCategory?._id,
+              category: item.productId?.productCategory?.categoryName,
+              productTitle: item.productId.productTitle,
+              thumbnail: variantData?.thumbnail,
+              boxPrice: variantData?.boxPrice,
+              sellingPrice: variantData?.sellingPrice,
+              // color: variantData?.color,
+              // ramAndStorage: variantData?.ramAndStorage[0],
+              productRating: item.productId.productRating,
+              quantity: item.quantity,
+              productId: item.productId._id,
+              // selectedVarianceId: item.selectedVarianceId,
+              discount: productDiscount,
+              customSkin: item?.customSkin || false,
+              // isCombo: item?.isCombo || false,
+              // productComboProducts: item?.productId?.productComboProducts ? item?.productId?.productComboProducts : [],
+              skinProductDetails: item?.skinProductDetails || [],
+            }
+          }
+        })
+      }
+
       return {
         _id: item._id,
         keyid: `${item._id}${variantData?.id.replace(/\s+/g, "")}`,
@@ -523,7 +570,10 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
         selectedVarianceId: item.selectedVarianceId,
         discount: productDiscount,
         customSkin: item?.customSkin || false,
-        skinProductDetails: item?.skinProductDetails || []
+        isCombo: item?.isCombo || false,
+        // productComboProducts: item?.productId?.productComboProducts ? item?.productId?.productComboProducts : [],
+        productComboProducts: productComboProducts ? productComboProducts : [],
+        skinProductDetails: item?.skinProductDetails || [],
       }
     }
   })
@@ -600,6 +650,175 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
 });
 
 
+// export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) => {
+//   if (!req.user._id) {
+//     return next(new ErrorHandler("unauthenticated", 400));
+//   }
+
+//   // Aggregation pipeline to retrieve and populate data
+//   const pipeline = [
+//     // Match documents by user ID
+//     {
+//       $match: {
+//         user: new mongoose.Types.ObjectId(req.user._id)
+//       }
+//     },
+//     // Lookup to populate the `productId` field
+//     {
+//       $lookup: {
+//         from: 'products',
+//         localField: 'productId',
+//         foreignField: '_id',
+//         as: 'product'
+//       }
+//     },
+//     {
+//       $unwind: '$product'
+//     },
+//     // Lookup to populate `productCategory` in `product`
+//     {
+//       $lookup: {
+//         from: 'productCategories',
+//         localField: 'product.productCategory',
+//         foreignField: '_id',
+//         as: 'product.productCategory'
+//       }
+//     },
+//     {
+//       $unwind: '$product.productCategory'
+//     },
+//     // Lookup to populate `productComboProducts` in `product`
+//     {
+//       $lookup: {
+//         from: 'products',
+//         localField: 'product.productComboProducts',
+//         foreignField: '_id',
+//         as: 'product.productComboProducts'
+//       }
+//     },
+//     // Unwind `productComboProducts` array to get each combo product
+//     {
+//       $unwind: {
+//         path: '$product.productComboProducts',
+//         preserveNullAndEmptyArrays: true
+//       }
+//     },
+//     // Lookup to populate `productCategory` in `productComboProducts`
+//     {
+//       $lookup: {
+//         from: 'productCategories',
+//         localField: 'product.productComboProducts.productCategory',
+//         foreignField: '_id',
+//         as: 'product.productComboProducts.productCategory'
+//       }
+//     },
+//     // Unwind `productComboProducts.productCategory` array
+//     {
+//       $unwind: {
+//         path: '$product.productComboProducts.productCategory',
+//         preserveNullAndEmptyArrays: true
+//       }
+//     },
+//     // Project fields and calculate additional fields
+//     {
+//       $project: {
+//         _id: 1,
+//         keyid: {
+//           $concat: [
+//             { $toString: '$_id' },
+//             { $replaceAll: { input: { $toString: { $arrayElemAt: ['$product.productComboProducts._id', 0] } }, find: ' ', replacement: '' } }
+//           ]
+//         },
+//         categoryId: '$product.productCategory._id',
+//         category: '$product.productCategory.categoryName',
+//         productTitle: '$product.productTitle',
+//         thumbnail: { $arrayElemAt: ['$product.productComboProducts.productVariance.thumbnail', 0] },
+//         boxPrice: { $arrayElemAt: ['$product.productComboProducts.productVariance.boxPrice', 0] },
+//         sellingPrice: { $arrayElemAt: ['$product.productComboProducts.productVariance.sellingPrice', 0] },
+//         color: {
+//           $arrayElemAt: ['$product.productComboProducts.productVariance.color',
+//             0]
+//         },
+//         ramAndStorage: { $arrayElemAt: ['$product.productComboProducts.productVariance.ramAndStorage', 0] },
+//         productRating: '$product.productRating',
+//         quantity: '$quantity',
+//         productId: '$product._id',
+//         selectedVarianceId: '$selectedVarianceId',
+//         discount: {
+//           $subtract: [
+//             { $arrayElemAt: ['$product.productComboProducts.productVariance.boxPrice', 0] },
+//             { $arrayElemAt: ['$product.productComboProducts.productVariance.sellingPrice', 0] }
+//           ]
+//         },
+//         customSkin: { $ifNull: ['$customSkin', false] },
+//         isCombo: { $ifNull: ['$isCombo', false] },
+//         productComboProducts: {
+//           _id: '$product.productComboProducts._id',
+//           productTitle: '$product.productComboProducts.productTitle',
+//           thumbnail: { $arrayElemAt: ['$product.productComboProducts.productVariance.thumbnail', 0] },
+//           boxPrice: { $arrayElemAt: ['$product.productComboProducts.productVariance.boxPrice', 0] },
+//           sellingPrice: { $arrayElemAt: ['$product.productComboProducts.productVariance.sellingPrice', 0] },
+//           color: { $arrayElemAt: ['$product.productComboProducts.productVariance.color', 0] },
+//           ramAndStorage: { $arrayElemAt: ['$product.productComboProducts.productVariance.ramAndStorage', 0] },
+//           productRating: '$product.productComboProducts.productRating',
+//         },
+//         skinProductDetails: { $ifNull: ['$skinProductDetails', []] }
+//       }
+//     }
+//   ];
+
+//   // Execute the aggregation pipeline
+//   const cartItems = await cart.aggregate(pipeline);
+
+//   // Retrieve user, applied coupon, and coin account data
+//   const user = await User.findById(req.user._id);
+//   const appliedCoupon = await Offer.findById(user?.coupon);
+//   const coinAccountData = await CoinAccount.find({ userId: req.user._id });
+
+//   // Calculate totals and discounts
+//   const totals = cartItems.reduce((accumulator: { Total: number; DiscountedTotal: number; }, item: { quantity: number; boxPrice: number; sellingPrice: number; }) => {
+//     const Total = accumulator.Total + (item.quantity * item.boxPrice);
+//     const DiscountedTotal = accumulator.DiscountedTotal + (item.quantity * item.sellingPrice);
+
+//     return {
+//       Total,
+//       DiscountedTotal
+//     };
+//   }, {
+//     Total: 0,
+//     DiscountedTotal: 0,
+//   });
+
+//   let couponDiscount = 0;
+//   if (appliedCoupon && appliedCoupon.offerCouponDiscount) {
+//     couponDiscount = Math.round((Number(appliedCoupon.offerCouponDiscount) * totals.DiscountedTotal) / 100);
+//     couponDiscount = couponDiscount > 500 ? 499 : couponDiscount;
+//   }
+
+//   const availableCoins = coinAccountData.length > 0 ? coinAccountData[0]?.coinAccountBalance || 0 : 0;
+//   const finalCartTotalBeforeCoins = totals.DiscountedTotal - couponDiscount;
+//   const fiftyPercentOfFinalCartTotal = finalCartTotalBeforeCoins * 0.5;
+//   const usableCoins = availableCoins > fiftyPercentOfFinalCartTotal ? Math.floor(fiftyPercentOfFinalCartTotal) : availableCoins;
+//   const deductCoinsForCart = coinAccountData[0]?.useCoinForPayment ? usableCoins : 0;
+
+//   let finalCartTotal = finalCartTotalBeforeCoins - deductCoinsForCart;
+//   let deliveryCharges = 0;
+
+//   if (finalCartTotal < 500) {
+//     deliveryCharges = 150;
+//   }
+
+//   finalCartTotal += deliveryCharges;
+
+//   return res.status(200).json({
+//     success: true,
+//     message: "Cart details fetched successfully",
+//     cartItemsData: cartItems,
+//     cartDetails: { ...totals, finalCartTotal, couponDiscount, availableCoins, usableCoins, deliveryCharges },
+//     offer: user?.coupon,
+//   });
+// });
+
 
 
 // ------------------ api to get cart details -------------------------------------------------------
@@ -653,7 +872,8 @@ export const getUnAuthenticatedCartDetails = asyncErrorHandler(async (req: Reque
         selectedVarianceId: item.selectedVarianceId,
         discount: productDiscount,
         customSkin: item?.customSkin || false,
-        skinProductDetails: item?.skinProductDetails || []
+        skinProductDetails: item?.skinProductDetails || [],
+        isCombo: item?.isCombo || false,
       }
     }
   })

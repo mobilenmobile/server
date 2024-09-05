@@ -175,6 +175,10 @@ const productSchema = new Schema(
     productVideoUrls: {
       type: [String],
       default: []
+    },
+    ProductSkinSelectedItems: {
+      type: [String],
+      default: []
     }
   },
   {
