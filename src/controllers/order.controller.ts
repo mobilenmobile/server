@@ -89,7 +89,7 @@ export const newOrder = asyncErrorHandler(
       }
 
       const deductCoins = usableCoins | 0;
-      coinAccount.coinAccountBalance -= deductCoins;
+      coinAccount.coinAccountBalance -= coinAccount.useCoinForPayment ? deductCoins : 0
 
       // Create a new transaction record for deducting coins
       const reducetransaction = new CoinTransaction({
