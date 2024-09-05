@@ -498,7 +498,14 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
         path: 'productId'
       }
 
-    }],
+    },
+    {
+      path: 'productFreeProducts',
+      populate: {
+        path: 'productId'
+      }
+    }
+    ],
   });
 
   // console.log("categorynew----------------->", cartItemsnew)
@@ -509,7 +516,7 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
 
 
   //if combo 
-  const ComboAccumulator = {
+  let ComboAccumulator = {
     Total: 0,
     DiscountedTotal: 0
   }
@@ -526,7 +533,9 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
       const productDiscount = calculateDiscount(variantData?.boxPrice, variantData?.sellingPrice)
 
       let productComboProducts = [];
+      let productFreeProducts = []
       if (item.isCombo) {
+
 
 
         productComboProducts = item?.productId?.productComboProducts.map((item: any) => {
@@ -534,8 +543,58 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
 
             const variantData = item.productId.productVariance[0]
             const productDiscount = calculateDiscount(variantData?.boxPrice, variantData?.sellingPrice)
-            const Total = ComboAccumulator.Total + (item?.quantity * item?.boxPrice);
-            const DiscountedTotal = ComboAccumulator.DiscountedTotal + (item?.quantity * item?.sellingPrice);
+
+            // console.log("type of ------------->", variantData.quantity, variantData.boxPrice, variantData.sellingPrice)
+
+            // ComboAccumulator.Total = Number(ComboAccumulator.Total + (Number(variantData?.quantity) * Number(variantData?.boxPrice)));
+
+            // ComboAccumulator.DiscountedTotal = Number(ComboAccumulator.DiscountedTotal + (Number(variantData?.quantity) * Number(variantData?.sellingPrice)));
+
+            return {
+              _id: item._id,
+              keyid: `${item._id}${variantData?.id.replace(/\s+/g, "")}`,
+              categoryId: item.productId?.productCategory?._id,
+              category: item.productId?.productCategory?.categoryName,
+              productTitle: item.productId.productTitle,
+              thumbnail: variantData?.thumbnail,
+              boxPrice: variantData?.boxPrice,
+              sellingPrice: variantData?.sellingPrice,
+              comboPrice: variantData.comboPrice,
+              // color: variantData?.color,
+              // ramAndStorage: variantData?.ramAndStorage[0],
+              productRating: item.productId.productRating,
+              quantity: item.quantity,
+              productId: item.productId._id,
+              // selectedVarianceId: item.selectedVarianceId,
+              discount: productDiscount,
+              customSkin: item?.customSkin || false,
+              // isCombo: item?.isCombo || false,
+              // productComboProducts: item?.productId?.productComboProducts ? item?.productId?.productComboProducts : [],
+              skinProductDetails: item?.skinProductDetails || [],
+            }
+          }
+        })
+
+        console.log("comboproducts ----------------------- > ", productComboProducts)
+        ComboAccumulator = productComboProducts?.reduce((accumulator: any, item: any) => {
+          const Total = accumulator.Total + (item?.quantity * item?.boxPrice);
+          const DiscountedTotal = accumulator.DiscountedTotal + (item?.quantity * item?.sellingPrice);
+
+          return {
+            Total,
+            DiscountedTotal
+          };
+        }, {
+          Total: 0,
+          DiscountedTotal: 0,
+        })
+
+      }
+      if (item.productId.productFreeProducts.length > 0) {
+        productFreeProducts = item?.productId?.productFreeProducts?.map((item: any) => {
+          if (item.productId.productVariance) {
+
+            const variantData = item.productId.productVariance[0]
 
             return {
               _id: item._id,
@@ -584,6 +643,7 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
         isCombo: item?.isCombo || false,
         // productComboProducts: item?.productId?.productComboProducts ? item?.productId?.productComboProducts : [],
         productComboProducts: productComboProducts ? productComboProducts : [],
+        productFreeProducts: productFreeProducts ? productFreeProducts : [],
         skinProductDetails: item?.skinProductDetails || [],
       }
     }
@@ -611,7 +671,7 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
     DiscountedTotal: 0,
   })
 
-
+  console.log("comboaccumulator=====>", ComboAccumulator)
   //Add combo price 
   totals.Total += ComboAccumulator.Total
   totals.DiscountedTotal += ComboAccumulator.DiscountedTotal
@@ -648,7 +708,7 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
     success: true,
     message: "Cart details fetched successfully",
     cartItemsData,
-    cartDetails: { ...totals, finalCartTotal, couponDiscount, availableCoins, usableCoins, deliveryCharges },
+    cartDetails: { ...totals, finalCartTotal, comboTotal: ComboAccumulator, couponDiscount, availableCoins, usableCoins, deliveryCharges },
     offer: user?.coupon,
   });
 });
@@ -1038,8 +1098,6 @@ export const getBuyNowCartDetails = asyncErrorHandler(async (req: Request, res, 
   const coinAccountData = await CoinAccount.find({ userId: req.user._id })
 
   //mapping through cartItems to structure the data
-
-
 
 
   const productDiscount = calculateDiscount(selectedVariantData?.boxPrice, selectedVariantData?.sellingPrice)
