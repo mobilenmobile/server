@@ -241,6 +241,13 @@ export const getSingleProductDetails = asyncErrorHandler(async (req, res, next) 
         model: 'product' // Ensure this matches the model name exactly
       }
     })
+    .populate({
+      path: 'productFreeProducts',
+      populate: {
+        path: 'productId',
+        model: 'product' // Ensure this matches the model name exactly
+      }
+    })
     .exec();
 
   console.log(product)
