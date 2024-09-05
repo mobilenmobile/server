@@ -571,7 +571,7 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
 
 
 
-  const usableCoins = availableCoins > fiftyPercentOfFinalCartTotal ? fiftyPercentOfFinalCartTotal : availableCoins
+  const usableCoins = availableCoins > fiftyPercentOfFinalCartTotal ? Math.floor(fiftyPercentOfFinalCartTotal) : availableCoins
 
   console.log(usableCoins, "usable coin ............")
 
