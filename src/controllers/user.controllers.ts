@@ -1220,7 +1220,7 @@ export const getBuyNowCartDetails = asyncErrorHandler(async (req: Request, res, 
     return next(new ErrorHandler("please enter all fields", 404));
 
   }
-  const product = await Product.findById(productId);
+  const product = await Product.findById(productId).populate('productCategory');
   if (!product) {
     return next(new ErrorHandler("No product found with this id", 404));
   }
@@ -1239,8 +1239,8 @@ export const getBuyNowCartDetails = asyncErrorHandler(async (req: Request, res, 
 
   //mapping through cartItems to structure the data
 
-
   const productDiscount = calculateDiscount(selectedVariantData?.boxPrice, selectedVariantData?.sellingPrice)
+  console.log("buy now---------->", product)
   const cartItemsData = [{
     _id: product._id,
     keyid: `${product._id}${selectedVariantData?.id.replace(/\s+/g, "")}`,
