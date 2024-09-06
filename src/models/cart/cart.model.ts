@@ -44,6 +44,10 @@ const cartSchema = new Schema(
             type: Boolean,
             default: false,
         },
+        selectedFreeProducts: {
+            type: [Object],
+            default: []
+        },
         skinProductDetails: {
             type: skinProductDetails
         },

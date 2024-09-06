@@ -87,7 +87,7 @@ export async function run(msg: string) {
     return result.response.text();
   } catch (error) {
     console.error("An error occurred while sending the message:", error);
-    return "I'm sorry, I'm currently unable to assist with that. Please reach out to us directly for further assistance. \n\nPhone Number: +91 12312-12312 \nEmail:support@purecordylife.com \n\nThank you!";
+    return "I'm sorry, I'm currently unable to assist with that. Please reach out to us directly for further assistance. \n\nPhone Number: +91 8890095095  \nEmail:mobilenmobilebjnr@gmail.com \n\nThank you!";
   }
 }
 
