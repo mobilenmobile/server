@@ -614,8 +614,8 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
 
         })
         console.log("combo item -=====>", item.productId)
-        ComboAccumulator.productTotal = variantData?.sellingPrice,
-          ComboAccumulator.finalTotal = Number(ComboAccumulator?.Total) + Number(variantData?.sellingPrice)
+        ComboAccumulator.productTotal = Number(ComboAccumulator?.Total) + Number(variantData?.sellingPrice)
+        ComboAccumulator.finalTotal = Number(ComboAccumulator?.DiscountedTotal) + Number(variantData?.sellingPrice)
       }
       if (item.productId.productFreeProducts.length > 0) {
         productFreeProducts = item?.productId?.productFreeProducts?.map((item: any) => {
