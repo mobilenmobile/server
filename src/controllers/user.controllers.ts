@@ -265,8 +265,8 @@ export const getWishlistItems = asyncErrorHandler(async (req: Request, res, next
 
   // console.log("-------------wishlistitems--------------", wishlistItems)
   const wishlistItemsData = wishlistItems.map((item) => {
-    if (item.productId.productVariance) {
-      const variantData = item.productId.productVariance.find((variant: any) => {
+    if (item?.productId?.productVariance) {
+      const variantData = item?.productId?.productVariance?.find((variant: any) => {
         if (variant.id.replace(/\s+/g, "") == item.selectedVarianceId) {
           return variant
         }
@@ -274,7 +274,6 @@ export const getWishlistItems = asyncErrorHandler(async (req: Request, res, next
       // console.log("variantData", variantData)
       const productDiscount = calculateDiscount(variantData?.boxPrice, variantData?.sellingPrice)
       return {
-
         _id: item._id,
         productId: item.productId._id,
         selectedVarianceId: item.selectedVarianceId,
@@ -476,6 +475,31 @@ export const removeCartItem = asyncErrorHandler(async (req: Request, res, next) 
 
 });
 
+// -------------------------- api to remove combo item --------------------------------------
+export const removeComboItem = asyncErrorHandler(async (req: Request, res, next) => {
+  if (!req.user._id) {
+    return next(new ErrorHandler("unauthenticated", 400));
+  }
+  if (!req.params.id) {
+    return next(new ErrorHandler("no id", 400));
+  }
+  const { productId, selectedVarianceId } = req.body
+  if (!productId || !selectedVarianceId) {
+    return next(new ErrorHandler("provide all the fields", 400))
+  }
+
+  const cartItem = await cart.findOne({ productId, selectedVarianceId, user: req.user._id });
+  if (!cartItem) {
+    return next(new ErrorHandler("cart not found", 400));
+  }
+
+  cartItem.isCombo = false
+
+  await cartItem.save()
+  return res.status(200).json({ success: true, message: "successfully removed combo from item" });
+
+});
+
 // ------------------ api to get cart details -------------------------------------------------------
 // ------------------ api to get cart details -------------------------------------------------------
 
@@ -518,7 +542,9 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
   //if combo 
   let ComboAccumulator = {
     Total: 0,
-    DiscountedTotal: 0
+    DiscountedTotal: 0,
+    finalTotal: 0,
+    productTotal: 0,
   }
   //mapping through cartItems to structure the data
   const cartItemsData = cartItems.map((item) => {
@@ -535,9 +561,6 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
       let productComboProducts = [];
       let productFreeProducts = []
       if (item.isCombo) {
-
-
-
         productComboProducts = item?.productId?.productComboProducts.map((item: any) => {
           if (item.productId.productVariance) {
 
@@ -579,17 +602,20 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
         ComboAccumulator = productComboProducts?.reduce((accumulator: any, item: any) => {
           console.log("accumlateor------------------>", item)
           const Total = accumulator.Total + (Number(item?.boxPrice));
-          const DiscountedTotal = accumulator.DiscountedTotal + (Number(item?.sellingPrice));
+          const DiscountedTotal = accumulator.DiscountedTotal + (Number(item?.comboPrice));
 
           return {
             Total,
-            DiscountedTotal
+            DiscountedTotal,
           };
         }, {
           Total: 0,
           DiscountedTotal: 0,
-        })
 
+        })
+        console.log("combo item -=====>", item.productId)
+        ComboAccumulator.productTotal = variantData?.sellingPrice,
+          ComboAccumulator.finalTotal = Number(ComboAccumulator?.Total) + Number(variantData?.sellingPrice)
       }
       if (item.productId.productFreeProducts.length > 0) {
         productFreeProducts = item?.productId?.productFreeProducts?.map((item: any) => {
@@ -1263,8 +1289,6 @@ export const getBuyNowCartDetails = asyncErrorHandler(async (req: Request, res, 
     couponDiscount = Math.round((Number(appliedCoupon.offerCouponDiscount) * totals.DiscountedTotal) / 100)
     couponDiscount = couponDiscount > 500 ? 499 : couponDiscount
   }
-
-
 
   const availableCoins = coinAccountData.length > 0 && coinAccountData[0]?.coinAccountBalance || 0
   const finalCartTotalBeforeCoins = totals.DiscountedTotal - (couponDiscount)
