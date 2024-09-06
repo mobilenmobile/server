@@ -64,12 +64,12 @@ export const newProduct = asyncErrorHandler(
 
     } = req.body;
 
-    console.log("new product req body=>", JSON.parse(colors))
+    // console.log("new product req body=>", JSON.parse(colors))
 
     if (!brand || !category || !productModel) {
       return next(new ErrorHandler("provide all product fields", 400));
     }
-    console.log(brand);
+    // console.log(brand);
     const refBrand = await Brand.findOne({ brandName: brand });
 
     if (!refBrand) {
@@ -250,7 +250,7 @@ export const getSingleProductDetails = asyncErrorHandler(async (req, res, next) 
     })
     .exec();
 
-  console.log(product)
+  // console.log(product)
 
   // Check if the product exists
   if (!product) {
@@ -440,7 +440,7 @@ export const updateProduct = asyncErrorHandler(
     if (productVideoUrls) product.productVideoUrls = productVideoUrls ? JSON.parse(productVideoUrls) : null
     if (skinSelectedItems) product.ProductSkinSelectedItems = skinSelectedItems ? JSON.parse(skinSelectedItems) : null
 
-    console.log(JSON.parse(comboOfferProducts))
+    // console.log(JSON.parse(comboOfferProducts))
 
     const prod = await product.save();
     console.log(prod)

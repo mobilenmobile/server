@@ -356,7 +356,7 @@ export const updateCart = asyncErrorHandler(async (req, res, next) => {
   }
 
   // console.log(skinProductDetails)
-  console.log(JSON.parse(selectedFreeProducts))
+  // console.log(JSON.parse(selectedFreeProducts))
 
   if (!cartItem) {
     await cart.create({
@@ -507,7 +507,7 @@ export const removeComboItem = asyncErrorHandler(async (req: Request, res, next)
 // ------------------------- remove free item--------------------------------------------------
 
 export const removeFreeItem = asyncErrorHandler(async (req: Request, res, next) => {
-  console.log("remove free item------------->", req.body)
+  // console.log("remove free item------------->", req.body)
   if (!req.user._id) {
     return next(new ErrorHandler("unauthenticated", 400));
   }
@@ -520,14 +520,14 @@ export const removeFreeItem = asyncErrorHandler(async (req: Request, res, next) 
   if (!cartItem) {
     return next(new ErrorHandler("cart not found", 400));
   }
-  console.log("remove ----- cart ---- item -=---->", cartItem)
+  // console.log("remove ----- cart ---- item -=---->", cartItem)
 
   const updatedFreeItems = cartItem.selectedFreeProducts.length > 0 && cartItem.selectedFreeProducts.filter((item: {
     productid: any 
 }) => item.productid !== freeProductId)
 
   cartItem.selectedFreeProducts = updatedFreeItems
-  console.log("after removing free product item ", cartItem)
+  // console.log("after removing free product item ", cartItem)
   await cartItem.save()
   return res.status(200).json({ success: true, message: "successfully removed free item" });
 
@@ -629,7 +629,7 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
           }
         })
 
-        console.log("comboproducts ----------------------- > ", productComboProducts)
+        // console.log("comboproducts ----------------------- > ", productComboProducts)
         ComboAccumulator = productComboProducts?.reduce((accumulator: any, item: any) => {
           console.log("accumlateor------------------>", item)
           const Total = accumulator.Total + (Number(item?.boxPrice));
@@ -644,7 +644,7 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
           DiscountedTotal: 0,
 
         })
-        console.log("combo item -=====>", item.productId)
+        // console.log("combo item -=====>", item.productId)
         ComboAccumulator.productTotal = Number(ComboAccumulator?.Total) + Number(variantData?.sellingPrice)
         ComboAccumulator.finalTotal = Number(ComboAccumulator?.DiscountedTotal) + Number(variantData?.sellingPrice)
       }
@@ -730,7 +730,7 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
     DiscountedTotal: 0,
   })
 
-  console.log("comboaccumulator=====>", ComboAccumulator)
+  // console.log("comboaccumulator=====>", ComboAccumulator)
   //Add combo price 
   totals.Total += ComboAccumulator.Total
   totals.DiscountedTotal += ComboAccumulator.DiscountedTotal
@@ -947,7 +947,7 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
 // ------------------ api to get cart details -------------------------------------------------------
 export const getUnAuthenticatedCartDetails = asyncErrorHandler(async (req: Request, res, next) => {
 
-  console.log("-------------------? unauthenticated cart details", req.body)
+  // console.log("-------------------? unauthenticated cart details", req.body)
   const { cart } = req.body
 
 
@@ -987,7 +987,7 @@ export const getUnAuthenticatedCartDetails = asyncErrorHandler(async (req: Reque
   // console.log("---------cart------------", filteredCartItemsData);
   // //mapping through cartItems to structure the data
   const cartItemsData = filteredCartItemsData.map((item) => {
-    console.log("------------- item-------------------", item)
+    // console.log("------------- item-------------------", item)
     if (item.productId.productVariance) {
       let productComboProducts = [];
       let productFreeProducts = []
@@ -1029,9 +1029,9 @@ export const getUnAuthenticatedCartDetails = asyncErrorHandler(async (req: Reque
           }
         })
 
-        console.log("comboproducts ----------------------- > ", productComboProducts)
+        // console.log("comboproducts ----------------------- > ", productComboProducts)
         ComboAccumulator = productComboProducts?.reduce((accumulator: any, item: any) => {
-          console.log("accumlateor------------------>", item)
+          // console.log("accumlateor------------------>", item)
           const Total = accumulator.Total + (Number(item?.boxPrice));
           const DiscountedTotal = accumulator.DiscountedTotal + (Number(item?.sellingPrice));
 
