@@ -326,7 +326,7 @@ export const getSingleProductDetails = asyncErrorHandler(async (req, res, next) 
   }
   if (product?.productFreeProducts.length > 0) {
     console.log("product Freeroducts ==> ", product.productFreeProducts)
-    product.productComboProducts?.forEach((FreeProduct: any) => {
+    product.productFreeProducts?.forEach((FreeProduct: any) => {
       const product = FreeProduct.productId
       product.productVariance.forEach((variant: ProductVariance) => {
         const productDiscount = calculateDiscount(variant.boxPrice, variant.sellingPrice)
