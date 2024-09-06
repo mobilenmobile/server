@@ -327,7 +327,7 @@ export const removeWishlistItem = asyncErrorHandler(async (req: Request, res, ne
 export const updateCart = asyncErrorHandler(async (req, res, next) => {
 
   const { productId, selectedVarianceId, quantity, customSkin, isCombo, skinProductDetails, selectedFreeProducts } = req.body
-  console.log("-------------------- update cart------------------------", req.body)
+  // console.log("-------------------- update cart------------------------", req.body)
   if (!customSkin) {
     if (!productId || !selectedVarianceId) {
       return next(new ErrorHandler("please enter all fields", 404));
@@ -1154,9 +1154,9 @@ export const getUnAuthenticatedCartDetails = asyncErrorHandler(async (req: Reque
 // ------------------ api to get cart details -------------------------------------------------------
 export const storeCartItemsInDb = asyncErrorHandler(async (req: Request, res, next) => {
 
-  console.log("-------------------? save cart item in db", req.body)
+  // console.log("-------------------? save cart item in db", req.body)
   const { cartData } = req.body
-  console.log("-----cartData----", cartData)
+  // console.log("-----cartData----", cartData)
   for (const item of cartData) {
     const cartItem = new cart({
       ...item,
