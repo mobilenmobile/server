@@ -326,7 +326,7 @@ export const removeWishlistItem = asyncErrorHandler(async (req: Request, res, ne
 //---------------------api to update cart----------------------------------------------------------
 export const updateCart = asyncErrorHandler(async (req, res, next) => {
 
-  const { productId, selectedVarianceId, quantity, customSkin, isCombo, skinProductDetails } = req.body
+  const { productId, selectedVarianceId, quantity, customSkin, isCombo, skinProductDetails, selectedFreeProducts } = req.body
   console.log("-------------------- update cart------------------------", req.body)
   if (!customSkin) {
     if (!productId || !selectedVarianceId) {
@@ -356,7 +356,7 @@ export const updateCart = asyncErrorHandler(async (req, res, next) => {
   }
 
   // console.log(skinProductDetails)
-  // console.log(JSON.parse(skinProductDetails))
+  console.log(JSON.parse(selectedFreeProducts))
 
   if (!cartItem) {
     await cart.create({
@@ -366,6 +366,7 @@ export const updateCart = asyncErrorHandler(async (req, res, next) => {
       customSkin,
       isCombo,
       skinProductDetails: skinProductDetails ? JSON.parse(skinProductDetails) : null,
+      selectedFreeProducts: selectedFreeProducts ? JSON.parse(selectedFreeProducts) : null,
       quantity
     })
   }
@@ -480,9 +481,7 @@ export const removeComboItem = asyncErrorHandler(async (req: Request, res, next)
   if (!req.user._id) {
     return next(new ErrorHandler("unauthenticated", 400));
   }
-  if (!req.params.id) {
-    return next(new ErrorHandler("no id", 400));
-  }
+
   const { productId, selectedVarianceId } = req.body
   if (!productId || !selectedVarianceId) {
     return next(new ErrorHandler("provide all the fields", 400))
@@ -497,6 +496,40 @@ export const removeComboItem = asyncErrorHandler(async (req: Request, res, next)
 
   await cartItem.save()
   return res.status(200).json({ success: true, message: "successfully removed combo from item" });
+
+});
+
+
+
+
+
+
+// ------------------------- remove free item--------------------------------------------------
+
+export const removeFreeItem = asyncErrorHandler(async (req: Request, res, next) => {
+  console.log("remove free item------------->", req.body)
+  if (!req.user._id) {
+    return next(new ErrorHandler("unauthenticated", 400));
+  }
+  const { productId, selectedVarianceId, freeProductId } = req.body
+  if (!productId || !selectedVarianceId || !freeProductId) {
+    return next(new ErrorHandler("provide all the fields", 400))
+  }
+
+  const cartItem = await cart.findOne({ productId, selectedVarianceId, user: req.user._id });
+  if (!cartItem) {
+    return next(new ErrorHandler("cart not found", 400));
+  }
+  console.log("remove ----- cart ---- item -=---->", cartItem)
+
+  const updatedFreeItems = cartItem.selectedFreeProducts.length > 0 && cartItem.selectedFreeProducts.filter((item: {
+    productid: any 
+}) => item.productid !== freeProductId)
+
+  cartItem.selectedFreeProducts = updatedFreeItems
+  console.log("after removing free product item ", cartItem)
+  await cartItem.save()
+  return res.status(200).json({ success: true, message: "successfully removed free item" });
 
 });
 
@@ -536,8 +569,6 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
   const user = await User.findOne({ _id: req.user._id })
   const appliedCoupon = await Offer.findOne({ _id: user?.coupon })
   const coinAccountData = await CoinAccount.find({ userId: req.user._id })
-
-
 
   //if combo 
   let ComboAccumulator = {
@@ -670,7 +701,8 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
         isCombo: item?.isCombo || false,
         // productComboProducts: item?.productId?.productComboProducts ? item?.productId?.productComboProducts : [],
         productComboProducts: productComboProducts ? productComboProducts : [],
-        productFreeProducts: productFreeProducts ? productFreeProducts : [],
+        productFreeProducts: item.selectedFreeProducts ? item.selectedFreeProducts : [],
+        // selectedFreeProducts: item.selectedFreeProducts ? item.selectedFreeProducts : [],
         skinProductDetails: item?.skinProductDetails || [],
       }
     }
@@ -1235,7 +1267,7 @@ export const getBuyNowCartDetails = asyncErrorHandler(async (req: Request, res, 
     return next(new ErrorHandler("please enter all fields", 404));
 
   }
-  const product = await Product.findById(productId);
+  const product = await Product.findById(productId).populate('productCategory');
   if (!product) {
     return next(new ErrorHandler("No product found with this id", 404));
   }
@@ -1254,8 +1286,8 @@ export const getBuyNowCartDetails = asyncErrorHandler(async (req: Request, res, 
 
   //mapping through cartItems to structure the data
 
-
   const productDiscount = calculateDiscount(selectedVariantData?.boxPrice, selectedVariantData?.sellingPrice)
+  console.log("buy now---------->", product)
   const cartItemsData = [{
     _id: product._id,
     keyid: `${product._id}${selectedVariantData?.id.replace(/\s+/g, "")}`,

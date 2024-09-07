@@ -13,6 +13,7 @@ import {
     removeCartItem,
     removeComboItem,
     removeCouponCode,
+    removeFreeItem,
     removeWishlistItem,
     storeCartItemsInDb,
     updateCart, updateCouponCode,
@@ -54,6 +55,9 @@ userRouter.post("/storeCartItemInDb", authenticated, storeCartItemsInDb)
 userRouter.get("/getcartitems", authenticated, getCartDetails)
 userRouter.post("/updateCart", authenticated, updateCart)
 userRouter.post("/removeComboItem", authenticated, removeComboItem)
+
+userRouter.post("/removeFreeItem", authenticated, removeFreeItem)
+
 userRouter.delete("/removecartitem/:id", authenticated, removeCartItem)
 userRouter.post("/decreasecartproductquantity", authenticated, decreaseCartProductQuantity)
 userRouter.delete("/clearcart", authenticated, clearCart)

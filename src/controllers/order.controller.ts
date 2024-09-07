@@ -77,7 +77,7 @@ export const newOrder = asyncErrorHandler(
         deliveryCharges,
       });
 
-      const ItemCategory = newOrder.orderItems.some((item: { category: string }) => item.category === "smartphone") ? "smartphone" : "accessories";
+      const ItemCategory = newOrder.orderItems.some((item: { category: string }) => item.category === "accessories") ? "accessories" : "smartphone";
 
       // Find the existing coin account or create a new one if not found
       let coinAccount = await CoinAccount.findOne({ userId: req.user._id }).session(session);

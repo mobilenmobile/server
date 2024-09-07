@@ -798,39 +798,40 @@ export const getAllProducts = asyncErrorHandler(
       product.productVariance.forEach((variant: ProductVariance) => {
         const productDiscount = calculateDiscount(variant.boxPrice, variant.sellingPrice)
         // console.log(variant)
-        if (Number(variant.quantity) > 0) {
-          // console.log("--------------------------------ram---------------------", variant.ramAndStorage[0])
+        // if (Number(variant.quantity) > 0) {
+        // console.log("--------------------------------ram---------------------", variant.ramAndStorage[0])
 
-          //dynamically creating title of product
-          let title = product.productTitle
+        //dynamically creating title of product
+        let title = product.productTitle
 
-          if (variant['ramAndStorage'].length > 0 && variant.ramAndStorage[0]?.ram) {
-            // title = `${product.productTitle} ${variant.ramAndStorage
-            //   && `(${variant.ramAndStorage[0].ram != '0' ? `${variant.color} ${variant.ramAndStorage[0].ram}GB` : ''} ${variant.ramAndStorage[0].storage != '0' ? `${variant.ramAndStorage[0].storage}GB` : ''})`
-            //   }`
-            title = `${product.productTitle} ${variant.ramAndStorage
-              && `(${variant.color} ${variant.ramAndStorage[0].storage != '0' ? `${variant.ramAndStorage[0].storage}GB` : ''})`
-              }`
-          } else {
-            title = `${product.productTitle} (${variant.color})`
-          }
-          //creating different product based on variance
-          const newProduct = {
-            productid: `${product._id}`,
-            keyid: `${product._id}${variant.id.replace(/\s+/g, "")}`,
-            variantid: `${variant.id.replace(/\s+/g, "")}`,
-            title: title.toLowerCase(),
-            category: product?.productCategory?.categoryName,
-            thumbnail: variant.thumbnail,
-            boxPrice: variant.boxPrice,
-            sellingPrice: variant.sellingPrice,
-            discount: productDiscount,
-            rating: product.productRating,
-            color: variant.color, // Replace with actual rating if available
-            brand: product.productBrand?.brandName || 'nobrand'
-          };
-          flatProducts.push(newProduct)
+        if (variant['ramAndStorage'].length > 0 && variant.ramAndStorage[0]?.ram) {
+          // title = `${product.productTitle} ${variant.ramAndStorage
+          //   && `(${variant.ramAndStorage[0].ram != '0' ? `${variant.color} ${variant.ramAndStorage[0].ram}GB` : ''} ${variant.ramAndStorage[0].storage != '0' ? `${variant.ramAndStorage[0].storage}GB` : ''})`
+          //   }`
+          title = `${product.productTitle} ${variant.ramAndStorage
+            && `(${variant.color} ${variant.ramAndStorage[0].storage != '0' ? `${variant.ramAndStorage[0].storage}GB` : ''})`
+            }`
+        } else {
+          title = `${product.productTitle} (${variant.color})`
         }
+        //creating different product based on variance
+        const newProduct = {
+          productid: `${product._id}`,
+          keyid: `${product._id}${variant.id.replace(/\s+/g, "")}`,
+          variantid: `${variant.id.replace(/\s+/g, "")}`,
+          title: title.toLowerCase(),
+          category: product?.productCategory?.categoryName,
+          thumbnail: variant.thumbnail,
+          boxPrice: variant.boxPrice,
+          sellingPrice: variant.sellingPrice,
+          discount: productDiscount,
+          rating: product.productRating,
+          color: variant.color, // Replace with actual rating if available
+          brand: product.productBrand?.brandName || 'nobrand',
+          outofstock: Number(variant?.quantity) == 0 ? true : false,
+        };
+        flatProducts.push(newProduct)
+        // }
       });
     });
     // console.log("----------flatProducts--------", flatProducts)
@@ -927,7 +928,8 @@ export const getSimilarProducts = asyncErrorHandler(
             rating: product.productRating,
             reviews: product.productNumReviews,
             color: variant.color, // Replace with actual rating if available
-            brand: product.productBrand?.brandName || 'nobrand'
+            brand: product.productBrand?.brandName || 'nobrand',
+            outofstock: Number(variant?.quantity) == 0 ? true : false,
           };
           flatProducts.push(newProduct)
         }
@@ -1113,39 +1115,40 @@ export const getFilterAndSortProducts = asyncErrorHandler(async (req, res, next)
   data.forEach(product => {
     product.productVariance.forEach((variant: ProductVariance) => {
 
-      if (Number(variant.quantity) > 0) {
-        const productDiscount = calculateDiscount(variant.boxPrice, variant.sellingPrice)
-        let title = product.productTitle
+      // if (Number(variant.quantity) > 0) {
+      const productDiscount = calculateDiscount(variant.boxPrice, variant.sellingPrice)
+      let title = product.productTitle
 
-        if (variant['ramAndStorage'].length > 0 && variant.ramAndStorage[0]?.ram) {
-          // title = `${product.productTitle} ${variant.ramAndStorage
-          //   && `(${variant.ramAndStorage[0].ram != '0' ? `${variant.color} ${variant.ramAndStorage[0].ram}GB` : ''} ${variant.ramAndStorage[0].storage != '0' ? `${variant.ramAndStorage[0].storage}GB` : ''})`
-          //   }`
-          title = `${product.productTitle} ${variant.ramAndStorage
-            && `(${variant.color} ${variant.ramAndStorage[0].storage != '0' ? `${variant.ramAndStorage[0].storage}GB` : ''})`
-            }`
-        } else {
-          title = `${product.productTitle} (${variant.color})`
-        }
-        const newProduct = {
-          productid: `${product._id}`,
-          keyid: `${product._id}${variant.id.replace(/\s+/g, "")}`,
-          variantid: `${variant.id.replace(/\s+/g, "")}`,
-          title: title.toLowerCase(),
-          category: product?.productCategory?.categoryName,
-          thumbnail: variant.thumbnail,
-          boxPrice: variant.boxPrice,
-          sellingPrice: variant.sellingPrice,
-          discount: productDiscount,
-          rating: product.productRating,
-          reviews: product.productNumReviews,
-          color: variant.color,
-          brand: product.productBrand?.brandName || 'nobrand',
-          memory: variant?.ramAndStorage[0]?.ram,
-          storage: variant?.ramAndStorage[0]?.storage
-        };
-        flatProducts.push(newProduct);
+      if (variant['ramAndStorage'].length > 0 && variant.ramAndStorage[0]?.ram) {
+        // title = `${product.productTitle} ${variant.ramAndStorage
+        //   && `(${variant.ramAndStorage[0].ram != '0' ? `${variant.color} ${variant.ramAndStorage[0].ram}GB` : ''} ${variant.ramAndStorage[0].storage != '0' ? `${variant.ramAndStorage[0].storage}GB` : ''})`
+        //   }`
+        title = `${product.productTitle} ${variant.ramAndStorage
+          && `(${variant.color} ${variant.ramAndStorage[0].storage != '0' ? `${variant.ramAndStorage[0].storage}GB` : ''})`
+          }`
+      } else {
+        title = `${product.productTitle} (${variant.color})`
       }
+      const newProduct = {
+        productid: `${product._id}`,
+        keyid: `${product._id}${variant.id.replace(/\s+/g, "")}`,
+        variantid: `${variant.id.replace(/\s+/g, "")}`,
+        title: title.toLowerCase(),
+        category: product?.productCategory?.categoryName,
+        thumbnail: variant.thumbnail,
+        boxPrice: variant.boxPrice,
+        sellingPrice: variant.sellingPrice,
+        discount: productDiscount,
+        rating: product.productRating,
+        reviews: product.productNumReviews,
+        color: variant.color,
+        brand: product.productBrand?.brandName || 'nobrand',
+        memory: variant?.ramAndStorage[0]?.ram,
+        storage: variant?.ramAndStorage[0]?.storage,
+        outofstock: Number(variant?.quantity) == 0 ? true : false,
+      };
+      flatProducts.push(newProduct);
+      // }
     });
   });
 
