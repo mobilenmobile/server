@@ -1331,7 +1331,7 @@ export const getBuyNowCartDetails = asyncErrorHandler(async (req: Request, res, 
   const usableCoins = availableCoins > fiftyPercentOfFinalCartTotal ? fiftyPercentOfFinalCartTotal : availableCoins
 
   let deductCoinsForCart = coinAccountData[0].useCoinForPayment ? usableCoins : 0
-
+  let isCoinUseChecked = coinAccountData[0].useCoinForPayment || false
   let finalCartTotal = totals.DiscountedTotal - (couponDiscount) - deductCoinsForCart
 
   let deliveryCharges = 0
@@ -1345,7 +1345,7 @@ export const getBuyNowCartDetails = asyncErrorHandler(async (req: Request, res, 
     success: true,
     message: "buy now cart details fetched successfully",
     cartItemsData,
-    cartDetails: { ...totals, finalCartTotal, couponDiscount, availableCoins, usableCoins, deliveryCharges },
+    cartDetails: { ...totals, finalCartTotal, couponDiscount, availableCoins, usableCoins, deliveryCharges,isCoinUseChecked },
     offer: user?.coupon,
   });
 });
