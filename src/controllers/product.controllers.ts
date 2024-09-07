@@ -42,7 +42,7 @@ import { subCategory } from "../models/subCategory/subCategory.model.js";
 //------------------api to create new product-----------
 export const newProduct = asyncErrorHandler(
   async (req: Request<{}, {}, NewProductRequestBody>, res, next) => {
-    console.log("----------------", req.body, "----------------");
+    // console.log("----------------", req.body, "----------------");
     const {
       category,
       subcategory,
@@ -325,7 +325,7 @@ export const getSingleProductDetails = asyncErrorHandler(async (req, res, next) 
     });
   }
   if (product?.productFreeProducts.length > 0) {
-    console.log("product Freeroducts ==> ", product.productFreeProducts)
+    // console.log("product Freeroducts ==> ", product.productFreeProducts)
     product.productFreeProducts?.forEach((FreeProduct: any) => {
       const product = FreeProduct.productId
       product.productVariance.forEach((variant: ProductVariance) => {
@@ -411,7 +411,7 @@ export const updateProduct = asyncErrorHandler(
       skinSelectedItems,
     } = req.body;
 
-    console.log("update-req-body", req.body);
+    // console.log("update-req-body", req.body);
 
     const product = await Product.findById(id);
     if (!product) {
@@ -443,7 +443,7 @@ export const updateProduct = asyncErrorHandler(
     // console.log(JSON.parse(comboOfferProducts))
 
     const prod = await product.save();
-    console.log(prod)
+    // console.log(prod)
     return res.status(200).json({
       success: true,
       message: "Product Updated Successfully",
@@ -1347,7 +1347,7 @@ export const getFilterAndSortSkinProducts = asyncErrorHandler(async (req, res, n
   if (device && device.length > 1) {
     filteredProducts = filteredProducts.filter((item) => {
       if (item.ProductSkinSelectedItems.includes(device)) {
-        console.log(item)
+        // console.log(item)
         return item
       }
     })

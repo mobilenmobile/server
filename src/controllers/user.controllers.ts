@@ -1132,7 +1132,7 @@ export const getUnAuthenticatedCartDetails = asyncErrorHandler(async (req: Reque
   })
   let couponDiscount = 0
 
-  console.log("comboaccumulator=====>", ComboAccumulator)
+  // console.log("comboaccumulator=====>", ComboAccumulator)
   //Add combo price 
   totals.Total += ComboAccumulator.Total
   totals.DiscountedTotal += ComboAccumulator.DiscountedTotal
@@ -1274,7 +1274,7 @@ export const getBuyNowCartDetails = asyncErrorHandler(async (req: Request, res, 
   //mapping through cartItems to structure the data
 
   const productDiscount = calculateDiscount(selectedVariantData?.boxPrice, selectedVariantData?.sellingPrice)
-  console.log("buy now---------->", product)
+  // console.log("buy now---------->", product)
   const cartItemsData = [{
     _id: product._id,
     keyid: `${product._id}${selectedVariantData?.id.replace(/\s+/g, "")}`,
