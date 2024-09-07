@@ -281,7 +281,7 @@ export const getSingleProductDetails = asyncErrorHandler(async (req, res, next) 
   let transformedFreeProducts: any = []
 
   if (product?.productComboProducts.length > 0) {
-    console.log("product combo products ==> ", product.productComboProducts)
+    // console.log("product combo products ==> ", product.productComboProducts)
     product.productComboProducts?.forEach((comboProduct: any) => {
       const product = comboProduct.productId
       product.productVariance.forEach((variant: ProductVariance) => {
@@ -1090,7 +1090,7 @@ export const getFilterAndSortProducts = asyncErrorHandler(async (req, res, next)
   } = req.body
 
 
-  // console.log("---------------------------->>>>>>>>", req.body, "<<<<<<<<<---------------------------------")
+  console.log("---------------------------->>>>>>>>", req.body, "<<<<<<<<<---------------------------------")
   const baseQuery: FilterQuery<BaseQuery> = {};
 
   if (searchText) {
@@ -1164,8 +1164,10 @@ export const getFilterAndSortProducts = asyncErrorHandler(async (req, res, next)
     filteredProducts = filteredProducts.filter(product => product.category === category);
   }
   const minPriceValue = minPrice.sort()[0]
-  const maxPriceValue = maxPrice.sort()[maxPrice.length - 1]
+  const maxPriceValue = maxPrice.sort((a: number, b: number) => b - a)[0];
 
+
+  console.log("max price value ", maxPrice.sort(), maxPriceValue)
   if (minPriceValue && maxPriceValue) {
     // console.log("---filtering based on minprice and maxprice")
     filteredProducts = filteredProducts.filter(product => {
@@ -1173,6 +1175,22 @@ export const getFilterAndSortProducts = asyncErrorHandler(async (req, res, next)
       // console.log("--------------selling price-------------", minPriceValue, ">", sellingPrice, "<=", maxPriceValue)
       // console.log(sellingPrice >= minPriceValue && sellingPrice <= maxPriceValue)
       return sellingPrice >= Number(minPriceValue) && sellingPrice <= Number(maxPriceValue);
+    });
+  } else if (maxPriceValue) {
+    // console.log("---filtering based on minprice and maxprice")
+    filteredProducts = filteredProducts.filter(product => {
+      const sellingPrice = Number(product.sellingPrice);
+      // console.log("--------------selling price-------------", minPriceValue, ">", sellingPrice, "<=", maxPriceValue)
+      // console.log(sellingPrice >= minPriceValue && sellingPrice <= maxPriceValue)
+      return sellingPrice <= Number(maxPriceValue);
+    });
+  } else if (minPriceValue) {
+    // console.log("---filtering based on minprice and maxprice")
+    filteredProducts = filteredProducts.filter(product => {
+      const sellingPrice = Number(product.sellingPrice);
+      // console.log("--------------selling price-------------", minPriceValue, ">", sellingPrice, "<=", maxPriceValue)
+      // console.log(sellingPrice >= minPriceValue && sellingPrice <= maxPriceValue)
+      return sellingPrice >= Number(minPriceValue)
     });
   }
 
@@ -1232,20 +1250,118 @@ export const getFilterAndSortProducts = asyncErrorHandler(async (req, res, next)
     filteredProducts = filteredProducts.filter(product => {
       return memory.includes(product.memory)
     });
+
   }
   if (storage && storage.length > 0) {
     // console.log("---filtering based on storage")
     filteredProducts = filteredProducts.filter(product => storage.includes(product.storage));
   }
 
-  // Apply sorting
-  if (sortBy.includes('priceLowToHigh')) {
+  const lastsortby = sortBy.length - 1
+  // Apply sorting  
+  if (sortBy[lastsortby] == 'priceLowToHigh') {
     // console.log("---filtering based pricelowtohigh")
     filteredProducts.sort((a, b) => Number(a.sellingPrice) - Number(b.sellingPrice));
-  } else if (sortBy.includes('priceHighToLow')) {
+  } else if (sortBy[lastsortby] == 'priceHighToLow') {
     // console.log("---filtering based hightolow")
     filteredProducts.sort((a, b) => Number(b.sellingPrice) - Number(a.sellingPrice));
-  } else if (sortBy.includes('topRated')) {
+  } else if (sortBy[lastsortby] == 'topRated') {
+    // console.log("---filtering based on toprated")
+    filteredProducts.sort((a, b) => b.rating - a.rating);
+  }
+  // console.log(flatProducts, "-----and---------", filteredProducts)
+  return res.status(200).json({
+    success: true,
+    products: filteredProducts,
+    message: "successfully filtered and sorted products",
+  });
+})
+// -------------------!!!!!!!!!!!!!!!! Api to filter and sort for skin products!!!!!!!!!!!!!!!-------------------------------------
+export const getFilterAndSortSkinProducts = asyncErrorHandler(async (req, res, next) => {
+
+  const {
+    device,
+    sortBy
+  } = req.body
+
+
+  console.log("---------------------------->>>>>>>>", req.body, "<<<<<<<<<---------------------------------")
+
+
+  let data = await Product.find({ productCategory: '66a74c5cfb2b27f7a4b87aa4' }).populate("productCategory")
+    .populate("productBrand")
+
+  // console.log("----------------------------------->>>>>",data,"<<<<<<<<<<<<<--------------------")
+
+  let flatProducts: any = []
+
+  data.forEach(product => {
+    product.productVariance.forEach((variant: ProductVariance) => {
+
+      // if (Number(variant.quantity) > 0) {
+      const productDiscount = calculateDiscount(variant.boxPrice, variant.sellingPrice)
+      let title = product.productTitle
+
+      if (variant['ramAndStorage'].length > 0 && variant.ramAndStorage[0]?.ram) {
+        // title = `${product.productTitle} ${variant.ramAndStorage
+        //   && `(${variant.ramAndStorage[0].ram != '0' ? `${variant.color} ${variant.ramAndStorage[0].ram}GB` : ''} ${variant.ramAndStorage[0].storage != '0' ? `${variant.ramAndStorage[0].storage}GB` : ''})`
+        //   }`
+        title = `${product.productTitle} ${variant.ramAndStorage
+          && `(${variant.color} ${variant.ramAndStorage[0].storage != '0' ? `${variant.ramAndStorage[0].storage}GB` : ''})`
+          }`
+      } else {
+        title = `${product.productTitle} (${variant.color})`
+      }
+      const newProduct = {
+        productid: `${product._id}`,
+        keyid: `${product._id}${variant.id.replace(/\s+/g, "")}`,
+        variantid: `${variant.id.replace(/\s+/g, "")}`,
+        title: title.toLowerCase(),
+        category: product?.productCategory?.categoryName,
+        thumbnail: variant.thumbnail,
+        boxPrice: variant.boxPrice,
+        sellingPrice: variant.sellingPrice,
+        discount: productDiscount,
+        rating: product.productRating,
+        reviews: product.productNumReviews,
+        color: variant.color,
+        brand: product.productBrand?.brandName || 'nobrand',
+        memory: variant?.ramAndStorage[0]?.ram,
+        storage: variant?.ramAndStorage[0]?.storage,
+        ProductSkinSelectedItems: product?.ProductSkinSelectedItems ? product?.ProductSkinSelectedItems : [],
+        outofstock: Number(variant?.quantity) == 0 ? true : false,
+      };
+      flatProducts.push(newProduct);
+      // }
+    });
+  });
+
+  let filteredProducts = [...flatProducts];
+
+
+  // "ProductSkinSelectedItems": [
+  //   "smartphone",
+  //   "laptop"
+  // ],
+
+  if (device && device.length > 1) {
+    filteredProducts = filteredProducts.filter((item) => {
+      if (item.ProductSkinSelectedItems.includes(device)) {
+        console.log(item)
+        return item
+      }
+    })
+  }
+
+  const lastsortby = sortBy.length - 1
+  // Apply sorting  
+  if (sortBy[lastsortby] == 'priceLowToHigh') {
+    // console.log("---filtering based pricelowtohigh")
+    filteredProducts.sort((a, b) => Number(a.sellingPrice) - Number(b.sellingPrice));
+  } else if (sortBy[lastsortby] == 'priceHighToLow') {
+    // console.log("---filtering based hightolow")
+    filteredProducts.sort((a, b) => Number(b.sellingPrice) - Number(a.sellingPrice));
+  } else if (sortBy[lastsortby] == 'topRated') {
     // console.log("---filtering based on toprated")
     filteredProducts.sort((a, b) => b.rating - a.rating);
   }

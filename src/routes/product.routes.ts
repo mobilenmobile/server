@@ -15,6 +15,7 @@ import {
   getAllAdminProducts,
   getSimilarProducts,
   getSingleProductDetails,
+  getFilterAndSortSkinProducts,
 } from "../controllers/product.controllers.js";
 
 import { adminOnly } from "../middleware/auth.middleware.js";
@@ -36,6 +37,7 @@ productRouter.get("/getsingleproduct/:id", getSingleProduct);
 productRouter.get("/getsingleproductdetails/:id", getSingleProductDetails);
 productRouter.get("/search", getAllProducts);
 productRouter.post("/searchfilterandsort", getFilterAndSortProducts);
+productRouter.post("/skinfilterandsort", getFilterAndSortSkinProducts);
 productRouter.get("/getlimitedproductsbybrand", getLimitedProductsByBrands);
 productRouter.post("/getsimilarproducts", getSimilarProducts);
 

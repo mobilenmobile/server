@@ -523,8 +523,8 @@ export const removeFreeItem = asyncErrorHandler(async (req: Request, res, next) 
   // console.log("remove ----- cart ---- item -=---->", cartItem)
 
   const updatedFreeItems = cartItem.selectedFreeProducts.length > 0 && cartItem.selectedFreeProducts.filter((item: {
-    productid: any 
-}) => item.productid !== freeProductId)
+    productid: any
+  }) => item.productid !== freeProductId)
 
   cartItem.selectedFreeProducts = updatedFreeItems
   // console.log("after removing free product item ", cartItem)
@@ -752,7 +752,7 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
   const usableCoins = availableCoins > fiftyPercentOfFinalCartTotal ? Math.floor(fiftyPercentOfFinalCartTotal) : availableCoins
 
   let deductCoinsForCart = coinAccountData[0].useCoinForPayment ? usableCoins : 0
-
+  let isCoinUseChecked = coinAccountData[0].useCoinForPayment || false
   let finalCartTotal = totals.DiscountedTotal - (couponDiscount) - deductCoinsForCart
 
   let deliveryCharges = 0
@@ -767,7 +767,7 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
     success: true,
     message: "Cart details fetched successfully",
     cartItemsData,
-    cartDetails: { ...totals, finalCartTotal, comboTotal: ComboAccumulator, couponDiscount, availableCoins, usableCoins, deliveryCharges },
+    cartDetails: { ...totals, finalCartTotal, comboTotal: ComboAccumulator, couponDiscount, availableCoins, usableCoins, deliveryCharges,isCoinUseChecked},
     offer: user?.coupon,
   });
 });
@@ -1140,9 +1140,11 @@ export const getUnAuthenticatedCartDetails = asyncErrorHandler(async (req: Reque
 
   let finalCartTotal = totals.DiscountedTotal
   let deliveryCharges = 150
+
   if (finalCartTotal > 500) {
     deliveryCharges = 0
   }
+
   finalCartTotal = finalCartTotal + deliveryCharges
   return res.status(200).json({
     success: true,
