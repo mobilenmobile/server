@@ -123,11 +123,12 @@ export const searchModelsv2 = asyncErrorHandler(
             const category = await Category.findOne({ categoryName: categoryName });
             if (!category) return next(new ErrorHandler("Category not found", 404));
             query.category = category._id; // Use the category ID in the query
+            console.log(query, "query...........")
         }
 
         if (brandName) {
             // Find brand by name
-            const brand = await Brand.findOne({ category: query.category, brandName: brandName });
+            const brand = await Brand.findOne({ category: query.category, brandName: new RegExp(`^${brandName as string}$`, 'i') });
             if (!brand) return next(new ErrorHandler("Brand not found", 404));
             query.brand = brand._id; // Use the brand ID in the query
         }
