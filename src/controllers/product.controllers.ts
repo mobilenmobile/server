@@ -411,7 +411,7 @@ export const updateProduct = asyncErrorHandler(
       skinSelectedItems,
     } = req.body;
 
-    // console.log("update-req-body", req.body);
+    console.log("update-req-body", req.body);
 
     const product = await Product.findById(id);
     if (!product) {
@@ -965,7 +965,7 @@ export const getLimitedProductsByBrands = asyncErrorHandler(async (req, res, nex
   const categoryID = smartphoneCategory._id;
 
   // Find the brand IDs for Apple, Vivo, and Samsung
-  const brands = await Brand.find({ brandName: { $in: ['apple', 'vivo', 'samsung'] } });
+  const brands = await Brand.find({ brandName: { $in: ['apple', 'vivo', 'Samsung'] } });
 
   if (brands.length === 0) {
     // console.log('Brands not found.');
@@ -1064,18 +1064,6 @@ interface ProductVariance {
 
 // -------------------Api to filter and sort products-------------------------------------
 export const getFilterAndSortProducts = asyncErrorHandler(async (req, res, next) => {
-  // Example filters object (adjust as per your UI or requirements)
-  // const filters = {
-  //   searchText: req.query.search || '',
-  //   minPrice: Number(req.query.minPrice) || 0,
-  //   maxPrice: Number(req.query.maxPrice) || 0,
-  //   rating: req.query.rating || 0,
-  //   brand: req.query.brand || '',
-  //   color: req.query.color || '',
-  //   memory: req.query.memory || '',
-  //   storage: req.query.storage || '',
-  //   sortBy: req.query.sortBy || 'priceLowToHigh' // Options: 'priceLowToHigh', 'priceHighToLow', 'topRated'
-  // };
   const {
     category,
     searchText,
@@ -1087,10 +1075,10 @@ export const getFilterAndSortProducts = asyncErrorHandler(async (req, res, next)
     memory,
     storage,
     sortBy
-  } = req.body
+  } = req.body;
 
+  console.log("---------------------------->>>>>>>>", req.body, "<<<<<<<<<---------------------------------");
 
-  console.log("---------------------------->>>>>>>>", req.body, "<<<<<<<<<---------------------------------")
   const baseQuery: FilterQuery<BaseQuery> = {};
 
   if (searchText) {
@@ -1101,34 +1089,28 @@ export const getFilterAndSortProducts = asyncErrorHandler(async (req, res, next)
   }
 
   let data = await Product.find(baseQuery).populate("productCategory")
-    .populate("productBrand")
+    .populate("productBrand");
 
-
-  if (searchText == 'smartphones') {
+  if (searchText === 'smartphones') {
     data = await Product.find({}).populate("productCategory")
-      .populate("productBrand")
+      .populate("productBrand");
   }
-  // console.log("----------------------------------->>>>>",data,"<<<<<<<<<<<<<--------------------")
 
-  let flatProducts: any = []
+  let flatProducts: any = [];
 
   data.forEach(product => {
     product.productVariance.forEach((variant: ProductVariance) => {
-
-      // if (Number(variant.quantity) > 0) {
-      const productDiscount = calculateDiscount(variant.boxPrice, variant.sellingPrice)
-      let title = product.productTitle
+      const productDiscount = calculateDiscount(variant.boxPrice, variant.sellingPrice);
+      let title = product.productTitle;
 
       if (variant['ramAndStorage'].length > 0 && variant.ramAndStorage[0]?.ram) {
-        // title = `${product.productTitle} ${variant.ramAndStorage
-        //   && `(${variant.ramAndStorage[0].ram != '0' ? `${variant.color} ${variant.ramAndStorage[0].ram}GB` : ''} ${variant.ramAndStorage[0].storage != '0' ? `${variant.ramAndStorage[0].storage}GB` : ''})`
-        //   }`
         title = `${product.productTitle} ${variant.ramAndStorage
           && `(${variant.color} ${variant.ramAndStorage[0].storage != '0' ? `${variant.ramAndStorage[0].storage}GB` : ''})`
-          }`
+          }`;
       } else {
-        title = `${product.productTitle} (${variant.color})`
+        title = `${product.productTitle} (${variant.color})`;
       }
+
       const newProduct = {
         productid: `${product._id}`,
         keyid: `${product._id}${variant.id.replace(/\s+/g, "")}`,
@@ -1145,137 +1127,312 @@ export const getFilterAndSortProducts = asyncErrorHandler(async (req, res, next)
         brand: product.productBrand?.brandName || 'nobrand',
         memory: variant?.ramAndStorage[0]?.ram,
         storage: variant?.ramAndStorage[0]?.storage,
-        outofstock: Number(variant?.quantity) == 0 ? true : false,
+        outofstock: Number(variant?.quantity) === 0 ? true : false,
       };
       flatProducts.push(newProduct);
-      // }
     });
   });
 
   let filteredProducts = [...flatProducts];
-  // Apply search text filter
-  // if (typeof searchText === 'string') {
-  //   const searchRegex = new RegExp(searchText.trim(), 'i'); // Case insensitive search
-  //   filteredProducts = filteredProducts.filter(product => searchRegex.test(product.title));
-  // }
-  // Apply filters
+
   if (category && category.length > 0) {
-    // console.log("---filtering based on category")
     filteredProducts = filteredProducts.filter(product => product.category === category);
   }
-  const minPriceValue = minPrice.sort()[0]
+
+  const minPriceValue = minPrice.sort()[0];
   const maxPriceValue = maxPrice.sort((a: number, b: number) => b - a)[0];
 
-
-  console.log("max price value ", maxPrice.sort(), maxPriceValue)
   if (minPriceValue && maxPriceValue) {
-    // console.log("---filtering based on minprice and maxprice")
     filteredProducts = filteredProducts.filter(product => {
       const sellingPrice = Number(product.sellingPrice);
-      // console.log("--------------selling price-------------", minPriceValue, ">", sellingPrice, "<=", maxPriceValue)
-      // console.log(sellingPrice >= minPriceValue && sellingPrice <= maxPriceValue)
       return sellingPrice >= Number(minPriceValue) && sellingPrice <= Number(maxPriceValue);
     });
   } else if (maxPriceValue) {
-    // console.log("---filtering based on minprice and maxprice")
     filteredProducts = filteredProducts.filter(product => {
       const sellingPrice = Number(product.sellingPrice);
-      // console.log("--------------selling price-------------", minPriceValue, ">", sellingPrice, "<=", maxPriceValue)
-      // console.log(sellingPrice >= minPriceValue && sellingPrice <= maxPriceValue)
       return sellingPrice <= Number(maxPriceValue);
     });
   } else if (minPriceValue) {
-    // console.log("---filtering based on minprice and maxprice")
     filteredProducts = filteredProducts.filter(product => {
       const sellingPrice = Number(product.sellingPrice);
-      // console.log("--------------selling price-------------", minPriceValue, ">", sellingPrice, "<=", maxPriceValue)
-      // console.log(sellingPrice >= minPriceValue && sellingPrice <= maxPriceValue)
-      return sellingPrice >= Number(minPriceValue)
+      return sellingPrice >= Number(minPriceValue);
     });
   }
 
   if (rating && rating.length > 0) {
-    // console.log("---filtering based on rating")
-    filteredProducts = filteredProducts.filter(product => {
-      // console.log(rating, product.rating)
-      if (rating.includes(product.rating)) {
-        return rating.includes(product.rating)
-      }
-      rating.includes[product.rating]
-    });
+    filteredProducts = filteredProducts.filter(product => rating.includes(product.rating));
   }
 
   if (brand && brand.length > 0) {
-    // console.log("---filtering based on brand")
     filteredProducts = filteredProducts.filter(product => brand.includes(product.brand));
   }
+
   if (color && color.length > 0) {
-    // filteredProducts = filteredProducts.filter(product => {
-    //   let matches = 0;
-
-    //   color.forEach((arrcolor: string) => {
-    //     const regex = new RegExp(arrcolor.toLowerCase().split(' ').join('\\s+'), 'i');
-    //     const match = product.color.toLowerCase().match(regex);
-    //     console.log("regex", regex, "match", match, "productcolor", product.color.toLowerCase())
-    //     if (match) {
-    //       const matchedWords = match[0].split(/\s+/);
-    //       matches = Math.max(matches, matchedWords.length);
-    //     }
-    //   });
-
-    //   return matches >= 3;
-    // });
     filteredProducts = filteredProducts.filter(product => {
       let matches = 0;
 
       color.forEach((arrcolor: string) => {
-        const arrColors = arrcolor.toLowerCase().split(/\s+/); // Split arrcolor into individual words
-        const productColors = product.color.toLowerCase().split(/\s+/); // Split product.color into individual words
+        const arrColors = arrcolor.toLowerCase().split(/\s+/);
+        const productColors = product.color.toLowerCase().split(/\s+/);
 
-        // Check for matches of any word from arrColors in productColors
         const foundMatches = arrColors.filter(colorWord => productColors.includes(colorWord));
 
         if (foundMatches.length > 0) {
-          matches += foundMatches.length; // Increase matches count by number of found matches
+          matches += foundMatches.length;
         }
       });
 
       return matches > 0;
     });
-
   }
 
   if (memory && memory.length > 0) {
-    // console.log("---filtering based on memory")
-    filteredProducts = filteredProducts.filter(product => {
-      return memory.includes(product.memory)
-    });
-
+    filteredProducts = filteredProducts.filter(product => memory.includes(product.memory));
   }
+
   if (storage && storage.length > 0) {
-    // console.log("---filtering based on storage")
     filteredProducts = filteredProducts.filter(product => storage.includes(product.storage));
   }
 
-  const lastsortby = sortBy.length - 1
-  // Apply sorting  
-  if (sortBy[lastsortby] == 'priceLowToHigh') {
-    // console.log("---filtering based pricelowtohigh")
-    filteredProducts.sort((a, b) => Number(a.sellingPrice) - Number(b.sellingPrice));
-  } else if (sortBy[lastsortby] == 'priceHighToLow') {
-    // console.log("---filtering based hightolow")
-    filteredProducts.sort((a, b) => Number(b.sellingPrice) - Number(a.sellingPrice));
-  } else if (sortBy[lastsortby] == 'topRated') {
-    // console.log("---filtering based on toprated")
-    filteredProducts.sort((a, b) => b.rating - a.rating);
-  }
-  // console.log(flatProducts, "-----and---------", filteredProducts)
+  // Sort products
+  filteredProducts.sort((a, b) => {
+    // Sort out-of-stock items last
+    if (a.outofstock !== b.outofstock) {
+      return a.outofstock ? 1 : -1;
+    }
+
+    // Apply sort by other criteria
+    if (sortBy === 'priceLowToHigh') {
+      return Number(a.sellingPrice) - Number(b.sellingPrice);
+    } else if (sortBy === 'priceHighToLow') {
+      return Number(b.sellingPrice) - Number(a.sellingPrice);
+    } else if (sortBy === 'topRated') {
+      return b.rating - a.rating;
+    } else {
+      return 0; // No sorting if sortBy is invalid or not provided
+    }
+  });
+
   return res.status(200).json({
     success: true,
     products: filteredProducts,
-    message: "successfully filtered and sorted products",
+    message: "Successfully filtered and sorted products",
   });
-})
+});
+
+// export const getFilterAndSortProducts = asyncErrorHandler(async (req, res, next) => {
+//   // Example filters object (adjust as per your UI or requirements)
+//   // const filters = {
+//   //   searchText: req.query.search || '',
+//   //   minPrice: Number(req.query.minPrice) || 0,
+//   //   maxPrice: Number(req.query.maxPrice) || 0,
+//   //   rating: req.query.rating || 0,
+//   //   brand: req.query.brand || '',
+//   //   color: req.query.color || '',
+//   //   memory: req.query.memory || '',
+//   //   storage: req.query.storage || '',
+//   //   sortBy: req.query.sortBy || 'priceLowToHigh' // Options: 'priceLowToHigh', 'priceHighToLow', 'topRated'
+//   // };
+//   const {
+//     category,
+//     searchText,
+//     minPrice,
+//     maxPrice,
+//     rating,
+//     brand,
+//     color,
+//     memory,
+//     storage,
+//     sortBy
+//   } = req.body
+
+
+//   console.log("---------------------------->>>>>>>>", req.body, "<<<<<<<<<---------------------------------")
+//   const baseQuery: FilterQuery<BaseQuery> = {};
+
+//   if (searchText) {
+//     baseQuery.productTitle = {
+//       $regex: searchText,
+//       $options: "i",
+//     };
+//   }
+
+//   let data = await Product.find(baseQuery).populate("productCategory")
+//     .populate("productBrand")
+
+
+//   if (searchText == 'smartphones') {
+//     data = await Product.find({}).populate("productCategory")
+//       .populate("productBrand")
+//   }
+//   // console.log("----------------------------------->>>>>",data,"<<<<<<<<<<<<<--------------------")
+
+//   let flatProducts: any = []
+
+//   data.forEach(product => {
+//     product.productVariance.forEach((variant: ProductVariance) => {
+
+//       // if (Number(variant.quantity) > 0) {
+//       const productDiscount = calculateDiscount(variant.boxPrice, variant.sellingPrice)
+//       let title = product.productTitle
+
+//       if (variant['ramAndStorage'].length > 0 && variant.ramAndStorage[0]?.ram) {
+//         // title = `${product.productTitle} ${variant.ramAndStorage
+//         //   && `(${variant.ramAndStorage[0].ram != '0' ? `${variant.color} ${variant.ramAndStorage[0].ram}GB` : ''} ${variant.ramAndStorage[0].storage != '0' ? `${variant.ramAndStorage[0].storage}GB` : ''})`
+//         //   }`
+//         title = `${product.productTitle} ${variant.ramAndStorage
+//           && `(${variant.color} ${variant.ramAndStorage[0].storage != '0' ? `${variant.ramAndStorage[0].storage}GB` : ''})`
+//           }`
+//       } else {
+//         title = `${product.productTitle} (${variant.color})`
+//       }
+//       const newProduct = {
+//         productid: `${product._id}`,
+//         keyid: `${product._id}${variant.id.replace(/\s+/g, "")}`,
+//         variantid: `${variant.id.replace(/\s+/g, "")}`,
+//         title: title.toLowerCase(),
+//         category: product?.productCategory?.categoryName,
+//         thumbnail: variant.thumbnail,
+//         boxPrice: variant.boxPrice,
+//         sellingPrice: variant.sellingPrice,
+//         discount: productDiscount,
+//         rating: product.productRating,
+//         reviews: product.productNumReviews,
+//         color: variant.color,
+//         brand: product.productBrand?.brandName || 'nobrand',
+//         memory: variant?.ramAndStorage[0]?.ram,
+//         storage: variant?.ramAndStorage[0]?.storage,
+//         outofstock: Number(variant?.quantity) == 0 ? true : false,
+//       };
+//       flatProducts.push(newProduct);
+//       // }
+//     });
+//   });
+
+//   let filteredProducts = [...flatProducts];
+//   // Apply search text filter
+//   // if (typeof searchText === 'string') {
+//   //   const searchRegex = new RegExp(searchText.trim(), 'i'); // Case insensitive search
+//   //   filteredProducts = filteredProducts.filter(product => searchRegex.test(product.title));
+//   // }
+//   // Apply filters
+//   if (category && category.length > 0) {
+//     // console.log("---filtering based on category")
+//     filteredProducts = filteredProducts.filter(product => product.category === category);
+//   }
+//   const minPriceValue = minPrice.sort()[0]
+//   const maxPriceValue = maxPrice.sort((a: number, b: number) => b - a)[0];
+
+
+//   console.log("max price value ", maxPrice.sort(), maxPriceValue)
+//   if (minPriceValue && maxPriceValue) {
+//     // console.log("---filtering based on minprice and maxprice")
+//     filteredProducts = filteredProducts.filter(product => {
+//       const sellingPrice = Number(product.sellingPrice);
+//       // console.log("--------------selling price-------------", minPriceValue, ">", sellingPrice, "<=", maxPriceValue)
+//       // console.log(sellingPrice >= minPriceValue && sellingPrice <= maxPriceValue)
+//       return sellingPrice >= Number(minPriceValue) && sellingPrice <= Number(maxPriceValue);
+//     });
+//   } else if (maxPriceValue) {
+//     // console.log("---filtering based on minprice and maxprice")
+//     filteredProducts = filteredProducts.filter(product => {
+//       const sellingPrice = Number(product.sellingPrice);
+//       // console.log("--------------selling price-------------", minPriceValue, ">", sellingPrice, "<=", maxPriceValue)
+//       // console.log(sellingPrice >= minPriceValue && sellingPrice <= maxPriceValue)
+//       return sellingPrice <= Number(maxPriceValue);
+//     });
+//   } else if (minPriceValue) {
+//     // console.log("---filtering based on minprice and maxprice")
+//     filteredProducts = filteredProducts.filter(product => {
+//       const sellingPrice = Number(product.sellingPrice);
+//       // console.log("--------------selling price-------------", minPriceValue, ">", sellingPrice, "<=", maxPriceValue)
+//       // console.log(sellingPrice >= minPriceValue && sellingPrice <= maxPriceValue)
+//       return sellingPrice >= Number(minPriceValue)
+//     });
+//   }
+
+//   if (rating && rating.length > 0) {
+//     // console.log("---filtering based on rating")
+//     filteredProducts = filteredProducts.filter(product => {
+//       // console.log(rating, product.rating)
+//       if (rating.includes(product.rating)) {
+//         return rating.includes(product.rating)
+//       }
+//       rating.includes[product.rating]
+//     });
+//   }
+
+//   if (brand && brand.length > 0) {
+//     // console.log("---filtering based on brand")
+//     filteredProducts = filteredProducts.filter(product => brand.includes(product.brand));
+//   }
+//   if (color && color.length > 0) {
+//     // filteredProducts = filteredProducts.filter(product => {
+//     //   let matches = 0;
+
+//     //   color.forEach((arrcolor: string) => {
+//     //     const regex = new RegExp(arrcolor.toLowerCase().split(' ').join('\\s+'), 'i');
+//     //     const match = product.color.toLowerCase().match(regex);
+//     //     console.log("regex", regex, "match", match, "productcolor", product.color.toLowerCase())
+//     //     if (match) {
+//     //       const matchedWords = match[0].split(/\s+/);
+//     //       matches = Math.max(matches, matchedWords.length);
+//     //     }
+//     //   });
+
+//     //   return matches >= 3;
+//     // });
+//     filteredProducts = filteredProducts.filter(product => {
+//       let matches = 0;
+
+//       color.forEach((arrcolor: string) => {
+//         const arrColors = arrcolor.toLowerCase().split(/\s+/); // Split arrcolor into individual words
+//         const productColors = product.color.toLowerCase().split(/\s+/); // Split product.color into individual words
+
+//         // Check for matches of any word from arrColors in productColors
+//         const foundMatches = arrColors.filter(colorWord => productColors.includes(colorWord));
+
+//         if (foundMatches.length > 0) {
+//           matches += foundMatches.length; // Increase matches count by number of found matches
+//         }
+//       });
+
+//       return matches > 0;
+//     });
+
+//   }
+
+//   if (memory && memory.length > 0) {
+//     // console.log("---filtering based on memory")
+//     filteredProducts = filteredProducts.filter(product => {
+//       return memory.includes(product.memory)
+//     });
+
+//   }
+//   if (storage && storage.length > 0) {
+//     // console.log("---filtering based on storage")
+//     filteredProducts = filteredProducts.filter(product => storage.includes(product.storage));
+//   }
+
+//   const lastsortby = sortBy.length - 1
+//   // Apply sorting  
+//   if (sortBy[lastsortby] == 'priceLowToHigh') {
+//     // console.log("---filtering based pricelowtohigh")
+//     filteredProducts.sort((a, b) => Number(a.sellingPrice) - Number(b.sellingPrice));
+//   } else if (sortBy[lastsortby] == 'priceHighToLow') {
+//     // console.log("---filtering based hightolow")
+//     filteredProducts.sort((a, b) => Number(b.sellingPrice) - Number(a.sellingPrice));
+//   } else if (sortBy[lastsortby] == 'topRated') {
+//     // console.log("---filtering based on toprated")
+//     filteredProducts.sort((a, b) => b.rating - a.rating);
+//   }
+//   // console.log(flatProducts, "-----and---------", filteredProducts)
+//   return res.status(200).json({
+//     success: true,
+//     products: filteredProducts,
+//     message: "successfully filtered and sorted products",
+//   });
+// })
 // -------------------!!!!!!!!!!!!!!!! Api to filter and sort for skin products!!!!!!!!!!!!!!!-------------------------------------
 export const getFilterAndSortSkinProducts = asyncErrorHandler(async (req, res, next) => {
 

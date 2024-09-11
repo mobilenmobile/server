@@ -38,6 +38,24 @@ export const deleteUser = async (uid: string) => {
   await admin.auth().deleteUser(uid);
 }
 
+
+export const updateFirebaseProfile = async (uid: string, name: string, imgurl?: string, mobileno?: string) => {
+  console.log("firebase!!!!!", uid, name, imgurl, mobileno)
+  getAuth()
+    .updateUser(uid, {
+      phoneNumber: `+91${mobileno}`,
+      displayName: name,
+      photoURL: imgurl,
+    })
+    .then((userRecord) => {
+      // See the UserRecord reference doc for the contents of userRecord.
+      // console.log('Successfully updated user', userRecord.toJSON());
+    })
+    .catch((error) => {
+      console.log('Error updating user:', error);
+    });
+}
+
 // ------------------- functions to get all users and delete them from firebase ----------------------
 
 // function getAllUsers(nextPageToken: string | undefined) {

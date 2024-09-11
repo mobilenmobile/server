@@ -8,7 +8,7 @@ import { Wishlist } from "../models/wishlist/wishlist.model";
 import { cart } from "../models/cart/cart.model";
 import { Offer } from "../models/offer/offer.model";
 import { calculateDiscount } from "./product.controllers";
-import { deleteUser } from "../db/firebase";
+import { deleteUser, updateFirebaseProfile } from "../db/firebase";
 import { IncreaseCoins } from "./coin.controller";
 import mongoose, { ObjectId } from "mongoose";
 import { CoinAccount } from "../models/coins/coinAccount";
@@ -123,14 +123,34 @@ export const updateProfile = asyncErrorHandler(async (req, res, next) => {
   }
 
   const profileData = JSON.parse(profile)
+  console.log(profileData)
+  const {
+    profileImageUrl,
+    profileName,
+    profilePhoneNo,
+    profileGender,
+    profileLocation,
+    profileAlternateMobileNo,
+  } = profileData
+
   user.name = profileData.profileName
-  user.profile = profileData
-  user.email = profileData.profileEmailId
+  user.profile = {
+    profileImageUrl,
+    profileName,
+    profilePhoneNo,
+    profileGender,
+    profileLocation,
+    profileAlternateMobileNo,
+    profileEmailId: user.profile.profileEmailId,
+  }
+
+  await updateFirebaseProfile(req.user.uid, profileData.profileName, profileData.profileImageUrl, profileData.profilePhoneNo)
+  // user.email = profileData.profileEmailId
   await user.save();
 
   return res.status(200).json({
     success: true,
-    message: "Successfully changed user previlege",
+    message: "Successfully updated profile",
 
   });
 });
@@ -778,7 +798,7 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
     success: true,
     message: "Cart details fetched successfully",
     cartItemsData,
-    cartDetails: { ...totals, finalCartTotal, comboTotal: ComboAccumulator, couponDiscount, availableCoins, usableCoins, deliveryCharges,isCoinUseChecked},
+    cartDetails: { ...totals, finalCartTotal, comboTotal: ComboAccumulator, couponDiscount, availableCoins, usableCoins, deliveryCharges, isCoinUseChecked },
     offer: user?.coupon,
   });
 });
@@ -1309,7 +1329,6 @@ export const getBuyNowCartDetails = asyncErrorHandler(async (req: Request, res, 
   }]
 
 
-
   let Total = 0
   let DiscountedTotal = 0
   const cartDetails = cartItemsData.map((item) => {
@@ -1358,7 +1377,7 @@ export const getBuyNowCartDetails = asyncErrorHandler(async (req: Request, res, 
     success: true,
     message: "buy now cart details fetched successfully",
     cartItemsData,
-    cartDetails: { ...totals, finalCartTotal, couponDiscount, availableCoins, usableCoins, deliveryCharges,isCoinUseChecked },
+    cartDetails: { ...totals, finalCartTotal, couponDiscount, availableCoins, usableCoins, deliveryCharges, isCoinUseChecked },
     offer: user?.coupon,
   });
 });

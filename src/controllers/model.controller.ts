@@ -18,7 +18,7 @@ export const newModel = asyncErrorHandler(
             return next(new ErrorHandler("Category not found", 404));
         }
         // Check if brand exists by name
-        const brand = await Brand.findOne({ category: category._id, brandName });
+        const brand = await Brand.findOne({ category: category._id, brandName:new RegExp(`^${brandName as string}$`, 'i') });
         if (!brand) {
             return next(new ErrorHandler("Brand not found", 404));
         }
