@@ -17,7 +17,10 @@ export const addressSchema = new Schema({
         required: true
     },
     default: { type: Boolean, default: false },
-
+    createdAt: {
+        type: Date,
+        default: Date.now
+    }
 });
 
 const Address = mongoose.models.address || mongoose.model("address", addressSchema);

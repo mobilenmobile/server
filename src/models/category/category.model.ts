@@ -13,6 +13,10 @@ const CategorySchema = new Schema({
     type: String,
     // required: [true, "Please provide category images"],
   },
+  createdAt: {
+    type: Date,
+    default: Date.now
+  },
   brands: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Brand' }]
 });
 

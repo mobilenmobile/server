@@ -12,6 +12,7 @@ import reviewRoute from "./routes/review.route.js"
 import dashboardRoute from "./routes/dashboard.routes.js";
 import chatbotRoute from "./routes/chatbot.routes.js";
 import addressRoute from "./routes/address.routes.js";
+import shipRocketRoute from "./routes/shiprocket.routes.js";
 import NodeCache from "node-cache";
 
 import brandRoute from "./routes/brand.routes.js";
@@ -56,6 +57,7 @@ app.use("/api/v1/subcategory", subCategoryRoute);
 app.use("/api/v1/brand", brandRoute);
 app.use("/api/v1/offer", offerRoute);
 app.use("/api/v1/chatbot", chatbotRoute);
+app.use("/api/v1/courier", shipRocketRoute);
 
 //Error middleware to be used below route
 //to cache err from routes

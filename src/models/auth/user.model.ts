@@ -59,6 +59,10 @@ const userSchema = new Schema(
       ref: "offer",
       // 6686618cc97c745ba57d72d0
     },
+    createdAt: {
+      type: Date,
+      default: Date.now
+    },
     address: [
       {
         type: Schema.Types.ObjectId,

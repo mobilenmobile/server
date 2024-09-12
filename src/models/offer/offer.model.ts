@@ -19,6 +19,10 @@ export interface CouponDocument extends Document {
     offerExpiry: {
       type: String,
     },
+    createdAt: {
+      type: Date,
+      default: Date.now
+    }
   },
   {
     timestamps: true,

@@ -1,3 +1,5 @@
+import { Timestamp } from "firebase-admin/firestore";
+
 const mongoose = require('mongoose');
 
 const coinAccountSchema = new mongoose.Schema({
@@ -7,14 +9,18 @@ const coinAccountSchema = new mongoose.Schema({
     required: true
   },
   coinAccountBalance: {
-    type:Number,
+    type: Number,
     required: true,
     default: 0
   },
-  useCoinForPayment:{
-    type:Boolean,
-    required:true,
-    default:false
+  useCoinForPayment: {
+    type: Boolean,
+    required: true,
+    default: false
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now
   }
 });
 

@@ -18,6 +18,10 @@ const brandSchema = new Schema({
     default: ''
   },
   category: { required: true, type: mongoose.Schema.Types.ObjectId, ref: 'Category' },
+  createdAt: {
+    type: Date,
+    default: Date.now
+  },
   models: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Model' }]
 });
 
