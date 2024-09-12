@@ -7,6 +7,9 @@ import { IncreaseCoins } from "./coin.controller.js";
 import { CoinAccount } from "../models/coins/coinAccount.js";
 import { CoinTransaction } from "../models/coins/coinTransaction.js";
 import mongoose from "mongoose";
+import { ShipRocket } from "../models/shiprocket/shiprocket.model.js";
+import { createOrderBody } from "./shiprocket.controller.js";
+import axios from "axios";
 
 
 
@@ -21,7 +24,6 @@ import mongoose from "mongoose";
 // 7.getAllAdminOrders
 
 //----------------------xxxxxx List-Of-Apis-End xxxxxxxxx-------------------------
-
 
 
 export const newOrder = asyncErrorHandler(
@@ -137,11 +139,41 @@ export const newOrder = asyncErrorHandler(
       await coinAccount.save({ session });
       await newOrder.save({ session });
 
+
+
+      console.log("Order created successfully:", newOrder);
+
+      // ----------------------------------- !!!! shiprocket order creation !!!!!-----------------------------------
+      const orderId = newOrder._id
+      const UserOrder = await Order.findOne({ _id: orderId }).populate("user")
+      const ShipRocketCredentials = await ShipRocket.findOne({ email: "mobilenmobilebjnr1@gmail.com" })
+      if (!ShipRocketCredentials) {
+        return res.status(404).json({ message: "ShipRocket credentials not found" })
+      }
+      const config = {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${ShipRocketCredentials.token}`
+        }
+      };
+      const createOrderUrl = "https://apiv2.shiprocket.in/v1/external/orders/create/adhoc"
+
+      const creatorderbodydata = createOrderBody(newOrder)
+
+      console.log("createorderbodydata------------>", creatorderbodydata)
+      try {
+        const response = await axios.post(createOrderUrl, creatorderbodydata, config)
+        console.log({ success: true, message: 'shipRocket Order Created', data: response.data })
+
+      } catch (error: any) {
+        console.log("error occured in creating shiprocket order------------>", error)
+      }
+
+
       // Commit the transaction
       await session.commitTransaction();
       session.endSession();
 
-      console.log("Order created successfully:", newOrder);
 
       return res.status(201).json({
         success: true,
@@ -356,6 +388,18 @@ export const getSingleOrderDetails = asyncErrorHandler(async (req, res, next) =>
     success: true,
     message: "Order details fetched Successfully",
     orderDetails,
+  });
+});
+export const getAdminSingleOrderDetails = asyncErrorHandler(async (req, res, next) => {
+  const { id } = req.params;
+  const order = await Order.findById(id).populate("user");
+  if (!order) {
+    return next(new ErrorHandler("Order Not Found", 404));
+  }
+  return res.status(200).json({
+    success: true,
+    message: "Order details fetched Successfully",
+    orderDetails: order,
   });
 });
 

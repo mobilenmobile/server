@@ -1,5 +1,5 @@
 import express from "express"
-import { cancellOrder, deleteOrder, getAllAdminOrders, getAllOrders, getSingleOrderDetails, newOrder, processOrder } from "../controllers/order.controller"
+import { cancellOrder, deleteOrder, getAdminSingleOrderDetails, getAllAdminOrders, getAllOrders, getSingleOrderDetails, newOrder, processOrder } from "../controllers/order.controller"
 import { adminOnly, authenticated } from "../middleware/auth.middleware"
 import { newInvoice } from "../controllers/Invoice.controller"
 
@@ -15,6 +15,7 @@ orderRouter.put("/cancellOrder/:id", authenticated, cancellOrder)
 orderRouter.put("/:id", adminOnly, processOrder)
 orderRouter.delete("/deleteOrder/:id", adminOnly, deleteOrder)
 orderRouter.get("/getAllAdminOrders", adminOnly, getAllAdminOrders)
+orderRouter.get("/getOrderDetails/:id", adminOnly, getAdminSingleOrderDetails)
 
 // -------------------------Invoice route-------------------------------
 orderRouter.post("/generateinvoice", newInvoice)

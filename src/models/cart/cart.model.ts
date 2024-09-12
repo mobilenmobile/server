@@ -56,6 +56,10 @@ const cartSchema = new Schema(
             default: 1,
             max: 10,
             min: 1
+        },
+        createdAt: {
+            type: Date,
+            default: Date.now
         }
     },
     {

@@ -104,6 +104,17 @@ const orderSchema = new Schema({
     type: Number,
     default: 0
   },
+  shippingId: {
+    type: String,
+    default: ""
+  }
+  ,
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
+}, {
+  timestamps: true,
 });
 
 const Order = mongoose.models.order || mongoose.model("order", orderSchema);
