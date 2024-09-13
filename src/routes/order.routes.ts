@@ -15,7 +15,7 @@ orderRouter.put("/cancellOrder/:id", authenticated, cancellOrder)
 orderRouter.put("/:id", adminOnly, processOrder)
 orderRouter.delete("/deleteOrder/:id", adminOnly, deleteOrder)
 orderRouter.get("/getAllAdminOrders", adminOnly, getAllAdminOrders)
-orderRouter.get("/getOrderDetails/:id", adminOnly, getAdminSingleOrderDetails)
+orderRouter.get("/getOrderDetails/:id",  getAdminSingleOrderDetails)
 
 // -------------------------Invoice route-------------------------------
 orderRouter.post("/generateinvoice", newInvoice)
