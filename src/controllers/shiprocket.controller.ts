@@ -3,7 +3,7 @@ import axios from 'axios';
 import cron from 'node-cron';
 import { ShipRocket } from "../models/shiprocket/shiprocket.model";
 import { Order } from "../models/order/order.model";
-import { credential } from "firebase-admin";
+
 
 // Store user credentials
 // export const SaveShiprocketCredentials = asyncErrorHandler(async (req, res, next) => {
@@ -30,6 +30,9 @@ import { credential } from "firebase-admin";
 //     }
 
 // });
+
+
+// -----------------!!!!!!!!!!!!!!!!!!!!!! save shiprocket credentials !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!--------------------------------------
 export const SaveShiprocketCredentials = asyncErrorHandler(async (req, res, next) => {
     const { email, password } = req.body;
 
@@ -73,24 +76,28 @@ export const GetShiprocketCredentials = asyncErrorHandler(async (req, res, next)
     return res.status(200).json({ credential: {} })
 });
 
-//shiprocket show Available delivery partners
+
+
+
+
+// -----------------!!!!!!!!!!!!!!!!!!!!!! list of available delivery partners !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!--------------------------------------
 export const shipRocketAvailableDeliveryPartner = asyncErrorHandler(async (req, res, next) => {
     const { deliveryPincode, productWeight, orderId } = req.body
     console.log("pincode servicable --------->")
     console.log(req.body)
 
-    // const params = {
-    //     "pickup_postcode": "305624",
-    //     "delivery_postcode": deliveryPincode,
-    //     "weight": productWeight,
-    //     "cod": 0
-    // }
     let params
     if (orderId) {
+        if (!orderId) {
+            return res.status(400).send({ message: 'orderId is required' })
+        }
         params = {
             "order_id": orderId
         }
     } else {
+        if (!deliveryPincode || !productWeight) {
+            return res.status(400).send({ message: 'delivery pincode and product weight  are required' })
+        }
         params = {
             "pickup_postcode": "305624",
             "delivery_postcode": deliveryPincode,
@@ -146,6 +153,8 @@ export const shipRocketAvailableDeliveryPartner = asyncErrorHandler(async (req, 
 
 });
 
+
+// -----------------!!!!!!!!!!!!!!!!!!!!!! create shiprocket order structure !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!--------------------------------------
 export function createOrderBody(orderData: any) {
     // To format the date as "Mon Sep 09 2024 12:46:58"
     const formatDate = (date: Date) => date.toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
@@ -209,10 +218,15 @@ export function createOrderBody(orderData: any) {
     return orderBodyData
 
 }
-// -----------------!!!!!!!!!!!!!!!!!!!!!! Step 1 of shiprocket !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!--------------------------------------
-//shiprocket create order
+
+
+
+// -----------------!!!!!!!!!!!!!!!!!!!!!! create shiprocket order !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!--------------------------------------
 export const shipRocketCreateOrder = asyncErrorHandler(async (req, res, next) => {
     const { orderId } = req.body
+    if (!orderId) {
+        return res.status(400).send({ message: 'orderId is required' })
+    }
     const UserOrder = await Order.findOne({ _id: orderId }).populate("user")
     const ShipRocketCredentials = await ShipRocket.findOne({ email: "mobilenmobilebjnr1@gmail.com" })
     if (!ShipRocketCredentials) {
@@ -236,19 +250,7 @@ export const shipRocketCreateOrder = asyncErrorHandler(async (req, res, next) =>
     }
 });
 
-//generate awb
-
-//schedule pickup
-
-//generate manifest
-
-//print manifest
-
-//generate label
-
-//generate invoice
-// -----------------!!!!!!!!!!!!!!!!!!!!!! Step 1 of shiprocket !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!--------------------------------------
-//shiprocket create order
+// -----------------!!!!!!!!!!!!!!!!!!!!!! Generate Awb !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!--------------------------------------
 export const shipRocketGenerateAwb = asyncErrorHandler(async (req, res, next) => {
     const { shipmentId, courierId } = req.body
     if (!shipmentId || !courierId) {
@@ -278,8 +280,8 @@ export const shipRocketGenerateAwb = asyncErrorHandler(async (req, res, next) =>
     console.log("awbdata------------>", generateAwbBodyData)
     try {
         const response = await axios.post(createAwbUrl, generateAwbBodyData, config)
-        console.log('Response data for create order:', response.data);
-        return res.status(500).json({ message: "successfully generated awb", data: response.data })
+        console.log('Response data for create awb:', response.data);
+        return res.status(200).json({ message: "successfully generated awb", data: response.data })
     } catch (error: any) {
         if (error.response) {
             // The request was made and the server responded with a status code
@@ -292,14 +294,19 @@ export const shipRocketGenerateAwb = asyncErrorHandler(async (req, res, next) =>
             // Something happened in setting up the request that triggered an Error
             console.error('Error message:', error.message);
         }
-        return res.status(500).json({ message: "Error in creating order" })
+        return res.status(400).json({ success: false, message: "Error in creating awb no" })
     }
 
 });
+
+
+
+// -----------------!!!!!!!!!!!!!!!!!!!!!! generate manifest !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!--------------------------------------
 export const shipRocketGenerateManifest = asyncErrorHandler(async (req, res, next) => {
-    const { shipmentId, courierId } = req.body
+    const { shipmentId } = req.body
+
     if (!shipmentId) {
-        return res.status(400).send({ message: 'shipmentId and courierId are required' })
+        return res.status(400).send({ message: 'shipmentId is required' })
     }
     // const UserOrder = await Order.findOne({ _id: orderId }).populate("user")
     const ShipRocketCredentials = await ShipRocket.findOne({ email: "mobilenmobilebjnr1@gmail.com" })
@@ -315,19 +322,17 @@ export const shipRocketGenerateManifest = asyncErrorHandler(async (req, res, nex
     };
 
     const createAwbUrl = "https://apiv2.shiprocket.in/v1/external/manifests/generate"
-    // const creatorderbodydata = createOrderBody(UserOrder)
-    // Make the Order POST request
-    // Make the Order POST request
-    const generateAwbBodyData = {
+
+    const generatemanifestBodyData = {
         "shipment_id": [
             shipmentId
         ]
     }
-    console.log("awbdata------------>", generateAwbBodyData)
+    console.log("generate manifest body data ------------>", generatemanifestBodyData)
     try {
-        const response = await axios.post(createAwbUrl, generateAwbBodyData, config)
-        console.log('Response data for create order:', response.data);
-        return res.status(500).json({ message: "successfully generated manifest", data: response.data })
+        const response = await axios.post(createAwbUrl, generatemanifestBodyData, config)
+        console.log('Response data for generate manifest:', response.data);
+        return res.status(200).json({ success: true, message: "successfully generated manifest", data: response.data })
     } catch (error: any) {
         if (error.response) {
             // The request was made and the server responded with a status code
@@ -340,16 +345,20 @@ export const shipRocketGenerateManifest = asyncErrorHandler(async (req, res, nex
             // Something happened in setting up the request that triggered an Error
             console.error('Error message:', error.message);
         }
-        return res.status(500).json({ message: "Error in creating order" })
+        return res.status(400).json({ success: false, message: "Error in generating manifest" })
     }
 
 });
+
+
+// -----------------!!!!!!!!!!!!!!!!!!!!!! print manifest !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!--------------------------------------
 export const shipRocketPrintManifest = asyncErrorHandler(async (req, res, next) => {
     const { orderId } = req.body
     if (!orderId) {
-        return res.status(400).send({ message: 'shipmentId and courierId are required' })
+        return res.status(400).send({ message: 'orderId is required' })
     }
-    // const UserOrder = await Order.findOne({ _id: orderId }).populate("user")
+
+
     const ShipRocketCredentials = await ShipRocket.findOne({ email: "mobilenmobilebjnr1@gmail.com" })
     if (!ShipRocketCredentials) {
         return res.status(404).json({ message: "ShipRocket credentials not found" })
@@ -362,20 +371,18 @@ export const shipRocketPrintManifest = asyncErrorHandler(async (req, res, next) 
         }
     };
 
-    const createAwbUrl = "https://apiv2.shiprocket.in/v1/external/manifests/print"
-    // const creatorderbodydata = createOrderBody(UserOrder)
-    // Make the Order POST request
-    // Make the Order POST request
-    const generateAwbBodyData = {
+    const printManifestUrl = "https://apiv2.shiprocket.in/v1/external/manifests/print"
+
+    const printManifestBodyData = {
         "order_ids": [
             orderId
         ]
     }
-    console.log("awbdata------------>", generateAwbBodyData)
+    console.log("print manifest body data ------------>", printManifestBodyData)
     try {
-        const response = await axios.post(createAwbUrl, generateAwbBodyData, config)
-        console.log('Response data for create order:', response.data);
-        return res.status(500).json({ message: "successfully generated awb", data: response.data })
+        const response = await axios.post(printManifestUrl, printManifestBodyData, config)
+        console.log('Response data for manifest:', response.data);
+        return res.status(200).json({ message: "successfully generated manifest", data: response.data })
     } catch (error: any) {
         if (error.response) {
             // The request was made and the server responded with a status code
@@ -388,21 +395,31 @@ export const shipRocketPrintManifest = asyncErrorHandler(async (req, res, next) 
             // Something happened in setting up the request that triggered an Error
             console.error('Error message:', error.message);
         }
-        return res.status(500).json({ message: "Error in creating order" })
+        return res.status(400).json({ success: false, message: "Error in printing manifest" })
     }
 
 });
+
+
+// -----------------!!!!!!!!!!!!!!!!!!!!!! Generate Label !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!--------------------------------------
 export const shipRocketGenerateLabel = asyncErrorHandler(async (req, res, next) => {
-    const { shipmentId, courierId } = req.body
+
+    const { shipmentId } = req.body
+
+    console.log(req.body)
+
     if (!shipmentId) {
-        return res.status(400).send({ message: 'shipmentId and courierId are required' })
+        return res.status(400).send({ message: 'shipmentId  are required' })
     }
-    // const UserOrder = await Order.findOne({ _id: orderId }).populate("user")
+
+    //shiprocket credentials
     const ShipRocketCredentials = await ShipRocket.findOne({ email: "mobilenmobilebjnr1@gmail.com" })
     if (!ShipRocketCredentials) {
         return res.status(404).json({ message: "ShipRocket credentials not found" })
     }
 
+
+    //configuration
     const config = {
         headers: {
             'Content-Type': 'application/json',
@@ -411,19 +428,17 @@ export const shipRocketGenerateLabel = asyncErrorHandler(async (req, res, next) 
     };
 
     const createAwbUrl = "https://apiv2.shiprocket.in/v1/external/courier/generate/label"
-    // const creatorderbodydata = createOrderBody(UserOrder)
-    // Make the Order POST request
-    // Make the Order POST request
-    const generateAwbBodyData = {
+
+    const generateLabelBodyData = {
         "shipment_id": [
             shipmentId
         ]
     }
-    console.log("awbdata------------>", generateAwbBodyData)
+    console.log("label body data ------------>", generateLabelBodyData)
     try {
-        const response = await axios.post(createAwbUrl, generateAwbBodyData, config)
-        console.log('Response data for create order:', response.data);
-        return res.status(500).json({ message: "successfully generated awb", data: response.data })
+        const response = await axios.post(createAwbUrl, generateLabelBodyData, config)
+        console.log('Response data for label:', response.data);
+        return res.status(200).json({ success: true, message: "successfully generated label", data: response.data })
     } catch (error: any) {
         if (error.response) {
             // The request was made and the server responded with a status code
@@ -436,14 +451,16 @@ export const shipRocketGenerateLabel = asyncErrorHandler(async (req, res, next) 
             // Something happened in setting up the request that triggered an Error
             console.error('Error message:', error.message);
         }
-        return res.status(500).json({ message: "Error in creating order" })
+        return res.status(500).json({ message: "Error in creating label" })
     }
 
 });
+
+// -----------------!!!!!!!!!!!!!!!!!!!!!! Generate Invoice !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!--------------------------------------
 export const shipRocketGenerateInvoice = asyncErrorHandler(async (req, res, next) => {
     const { orderId } = req.body
     if (!orderId) {
-        return res.status(400).send({ message: 'shipmentId and courierId are required' })
+        return res.status(400).send({ message: 'orderId are required' })
     }
     // const UserOrder = await Order.findOne({ _id: orderId }).populate("user")
     const ShipRocketCredentials = await ShipRocket.findOne({ email: "mobilenmobilebjnr1@gmail.com" })
@@ -458,20 +475,20 @@ export const shipRocketGenerateInvoice = asyncErrorHandler(async (req, res, next
         }
     };
 
-    const createAwbUrl = "https://apiv2.shiprocket.in/v1/external/orders/print/invoice"
+    const createInvoiceUrl = "https://apiv2.shiprocket.in/v1/external/orders/print/invoice"
     // const creatorderbodydata = createOrderBody(UserOrder)
     // Make the Order POST request
     // Make the Order POST request
-    const generateAwbBodyData = {
+    const generateInvoiceBodyData = {
         "ids": [
             orderId
         ]
     }
-    console.log("awbdata------------>", generateAwbBodyData)
+    console.log("invoice body data------------>", generateInvoiceBodyData)
     try {
-        const response = await axios.post(createAwbUrl, generateAwbBodyData, config)
-        console.log('Response data for create order:', response.data);
-        return res.status(500).json({ message: "successfully generated awb", data: response.data })
+        const response = await axios.post(createInvoiceUrl, generateInvoiceBodyData, config)
+        console.log('Response data for generate invoice:', response.data);
+        return res.status(200).json({ success: true, message: "successfully generated Invoice", data: response.data })
     } catch (error: any) {
         if (error.response) {
             // The request was made and the server responded with a status code
@@ -484,24 +501,15 @@ export const shipRocketGenerateInvoice = asyncErrorHandler(async (req, res, next
             // Something happened in setting up the request that triggered an Error
             console.error('Error message:', error.message);
         }
-        return res.status(500).json({ message: "Error in creating order" })
+        return res.status(500).json({ message: "Error in generating invoice" })
     }
 
 });
 
-
 // -----------------------!!!!!!!!!!!!! cancell shipment !!!!!!!!!!!--------------------------
 export const cancellShipment = asyncErrorHandler(async (req, res, next) => {
-    //create order 
-    //https://apiv2.shiprocket.in/v1/external/orders/cancel/shipment/awbs
-    // {
-    //     "awbs": [
-    //   19041633365341
-    //     ]
-    //   }
-
-    const { Awb } = req.body
-    if (!Awb) {
+    const { awb } = req.body
+    if (!awb) {
         return res.status(400).send({ message: 'Awb are required' })
     }
     const cancellShipmetUrl = "https://apiv2.shiprocket.in/v1/external/orders/cancel/shipment/awbs"
@@ -522,7 +530,7 @@ export const cancellShipment = asyncErrorHandler(async (req, res, next) => {
     const cancellShipmetBodyData = {
 
         "awbs": [
-            Awb
+            awb
         ]
 
     }
@@ -530,7 +538,7 @@ export const cancellShipment = asyncErrorHandler(async (req, res, next) => {
     try {
         const response = await axios.post(cancellShipmetUrl, cancellShipmetBodyData, config)
         console.log('Response data for cancell shipment:', response.data);
-        return res.status(500).json({ message: "successfully cancelled awb", data: response.data })
+        return res.status(200).json({ message: "successfully cancelled Shipment", data: response.data })
     } catch (error: any) {
         if (error.response) {
             // The request was made and the server responded with a status code
@@ -543,27 +551,163 @@ export const cancellShipment = asyncErrorHandler(async (req, res, next) => {
             // Something happened in setting up the request that triggered an Error
             console.error('Error message:', error.message);
         }
-        return res.status(500).json({ message: "Error in creating order" })
+        return res.status(500).json({ message: "Error in cancelling shipment" })
+    }
+
+});
+
+// -----------------------!!!!!!!!!!!!! cancell Shiprocket order!!!!!!!!!!!--------------------------
+export const cancellShiprocketOrder = asyncErrorHandler(async (req, res, next) => {
+
+    const { orderId } = req.body
+    if (!orderId) {
+        return res.status(400).send({ message: 'orderId is required' })
+    }
+    const cancellOrderUrl = "https://apiv2.shiprocket.in/v1/external/orders/cancel"
+
+    // const UserOrder = await Order.findOne({ _id: orderId }).populate("user")
+    const ShipRocketCredentials = await ShipRocket.findOne({ email: "mobilenmobilebjnr1@gmail.com" })
+    if (!ShipRocketCredentials) {
+        return res.status(404).json({ message: "ShipRocket credentials not found" })
+    }
+
+    const config = {
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${ShipRocketCredentials.token}`
+        }
+    };
+
+    const cancellOrderBodyData = {
+
+        "ids": [
+            orderId
+        ]
+
+    }
+    console.log("cancell shiprocket order ------------>", cancellOrderBodyData)
+
+    try {
+        const response = await axios.post(cancellOrderUrl, cancellOrderBodyData, config)
+        console.log('Response data for cancell order:', response.data);
+        return res.status(200).json({ message: "successfully cancelled shiprocket order", data: response.data })
+    } catch (error: any) {
+        if (error.response) {
+            // The request was made and the server responded with a status code
+            // that falls out of the range of 2xx
+            console.error('Error response data:', error.response.data.errors || error.response.data.message || error.response.data || 'No error message');
+        } else if (error.request) {
+            // The request was made but no response was received
+            console.error('Error request:', error.request);
+        } else {
+            // Something happened in setting up the request that triggered an Error
+            console.error('Error message:', error.message);
+        }
+        return res.status(500).json({ message: "Error in cancelling order" })
+    }
+});
+
+// -----------------------!!!!!!!!!!!!! Track shipment !!!!!!!!!!!--------------------------
+export const trackShiprocketOrder = asyncErrorHandler(async (req, res, next) => {
+
+    const { awb } = req.body
+    if (!awb) {
+        return res.status(400).send({ message: 'awb is required' })
+    }
+    const trackshipmentUrl = `https://apiv2.shiprocket.in/v1/external/courier/track/awb/${awb}`
+
+    // const UserOrder = await Order.findOne({ _id: orderId }).populate("user")
+    const ShipRocketCredentials = await ShipRocket.findOne({ email: "mobilenmobilebjnr1@gmail.com" })
+    if (!ShipRocketCredentials) {
+        return res.status(404).json({ message: "ShipRocket credentials not found" })
+    }
+
+    const config = {
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${ShipRocketCredentials.token}`
+        }
+    };
+    // console.log("awbdata------------>", cancellShipmetBodyData)
+    try {
+        const response = await axios.get(trackshipmentUrl, config)
+        console.log('Response data for track shipment:', response.data);
+        return res.status(200).json({ message: "successfully tracked shipment", data: response.data })
+    } catch (error: any) {
+        if (error.response) {
+            // The request was made and the server responded with a status code
+            // that falls out of the range of 2xx
+            console.error('Error response data:', error.response.data.errors || error.response.data.message || error.response.data || 'No error message');
+        } else if (error.request) {
+            // The request was made but no response was received
+            console.error('Error request:', error.request);
+        } else {
+            // Something happened in setting up the request that triggered an Error
+            console.error('Error message:', error.message);
+        }
+        return res.status(400).json({ message: "Error in tracking order" })
+    }
+
+});
+
+
+// -----------------------!!!!!!!!!!!!! Schedule Order Pickup !!!!!!!!!!!--------------------------
+export const scheduleOrderPickup = asyncErrorHandler(async (req, res, next) => {
+
+    const { shipmentId, pickupDate } = req.body
+    if (!shipmentId || !pickupDate) {
+        return res.status(400).send({ message: 'shipmentId and pickupDate is required' })
+    }
+    const schedulePickupUrl = "https://apiv2.shiprocket.in/v1/external/courier/generate/pickup"
+
+    //shiprocket credentials
+    const ShipRocketCredentials = await ShipRocket.findOne({ email: "mobilenmobilebjnr1@gmail.com" })
+    if (!ShipRocketCredentials) {
+        return res.status(404).json({ message: "ShipRocket credentials not found" })
+    }
+
+    //config
+    const config = {
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${ShipRocketCredentials.token}`
+        }
+    };
+
+    //body data
+    const SchedulePickupBodyData = {
+        "shipment_id": [
+            shipmentId
+        ],
+        "pickup_date": [
+            pickupDate
+        ]
+
     }
 
 
-    res.status(201).send('Shipment cancelled successfully');
+    console.log("schedule pickupdata------------>", SchedulePickupBodyData)
+
+    try {
+        const response = await axios.post(schedulePickupUrl, SchedulePickupBodyData, config)
+        console.log('Response data schedule pickup:', response.data);
+        return res.status(200).json({ success: true, message: "successfully scheduled pickup", data: response.data })
+    } catch (error: any) {
+        if (error.response) {
+            // The request was made and the server responded with a status code
+            // that falls out of the range of 2xx
+            console.error('Error response data:', error.response.data.errors || error.response.data.message || error.response.data || 'No error message');
+        } else if (error.request) {
+            // The request was made but no response was received
+            console.error('Error request:', error.request);
+        } else {
+            // Something happened in setting up the request that triggered an Error
+            console.error('Error message:', error.message);
+        }
+        return res.status(500).json({ success: false, message: "Error in Scheduling pickup" })
+    }
+
 });
-
-export const cancellOrder = asyncErrorHandler(async (req, res, next) => {
-    //create order 
-    // https://apiv2.shiprocket.in/v1/external/orders/cancel
-    // {
-    // {
-    //     "ids": [
-    //   634614506
-    //     ]
-    //   }
-    res.status(201).send('Order Cancelled successfully');
-});
-
-
-
 
 
 
