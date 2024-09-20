@@ -10,8 +10,8 @@ import { adminOnly } from "../middleware/auth.middleware";
 
 const router = Express.Router();
 
-router.get("/searchcategory", searchCategory);
-router.post("/newcategory", fileUpload.single("categoryImage"), addNewCategory);
-router.delete("/deletecategory",adminOnly, deleteCategory);
+router.get("/", searchCategory);
+router.post("/", fileUpload.single("categoryImage"), addNewCategory);
+router.delete("/deletecategory", adminOnly, deleteCategory);
 
 export default router;
