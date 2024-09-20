@@ -1063,18 +1063,23 @@ interface ProductVariance {
 }
 
 // -------------------Api to filter and sort products-------------------------------------
+
+
+
 export const getFilterAndSortProducts = asyncErrorHandler(async (req, res, next) => {
   const {
     category,
     searchText,
-    minPrice,
-    maxPrice,
+    minPrice=[0],
+    maxPrice=[1000000],
     rating,
     brand,
     color,
     memory,
     storage,
-    sortBy
+    sortBy='priceLowToHigh',
+    page = 1,  // Default to page 1 if not provided
+    limit = 6 // Default to 12 products per page
   } = req.body;
 
   console.log("---------------------------->>>>>>>>", req.body, "<<<<<<<<<---------------------------------");
@@ -1213,12 +1218,183 @@ export const getFilterAndSortProducts = asyncErrorHandler(async (req, res, next)
     }
   });
 
+  // Paginate
+  const startIndex = (Number(page) - 1) * Number(limit);
+  const endIndex = startIndex + Number(limit);
+  const paginatedProducts = filteredProducts.slice(startIndex, endIndex);
+
   return res.status(200).json({
     success: true,
-    products: filteredProducts,
-    message: "Successfully filtered and sorted products",
+    products: paginatedProducts,
+    totalProducts: filteredProducts.length,
+    totalPages: Math.ceil(filteredProducts.length / Number(limit)),
+    currentPage: Number(page),
+    message: "Successfully filtered, sorted, and paginated products",
   });
 });
+
+
+
+
+
+
+
+// export const getFilterAndSortProducts = asyncErrorHandler(async (req, res, next) => {
+//   const {
+//     category,
+//     searchText,
+//     minPrice,
+//     maxPrice,
+//     rating,
+//     brand,
+//     color,
+//     memory,
+//     storage,
+//     sortBy
+//   } = req.body;
+
+//   console.log("---------------------------->>>>>>>>", req.body, "<<<<<<<<<---------------------------------");
+
+//   const baseQuery: FilterQuery<BaseQuery> = {};
+
+//   if (searchText) {
+//     baseQuery.productTitle = {
+//       $regex: searchText,
+//       $options: "i",
+//     };
+//   }
+
+//   let data = await Product.find(baseQuery).populate("productCategory")
+//     .populate("productBrand");
+
+//   if (searchText === 'smartphones') {
+//     data = await Product.find({}).populate("productCategory")
+//       .populate("productBrand");
+//   }
+
+//   let flatProducts: any = [];
+
+//   data.forEach(product => {
+//     product.productVariance.forEach((variant: ProductVariance) => {
+//       const productDiscount = calculateDiscount(variant.boxPrice, variant.sellingPrice);
+//       let title = product.productTitle;
+
+//       if (variant['ramAndStorage'].length > 0 && variant.ramAndStorage[0]?.ram) {
+//         title = `${product.productTitle} ${variant.ramAndStorage
+//           && `(${variant.color} ${variant.ramAndStorage[0].storage != '0' ? `${variant.ramAndStorage[0].storage}GB` : ''})`
+//           }`;
+//       } else {
+//         title = `${product.productTitle} (${variant.color})`;
+//       }
+
+//       const newProduct = {
+//         productid: `${product._id}`,
+//         keyid: `${product._id}${variant.id.replace(/\s+/g, "")}`,
+//         variantid: `${variant.id.replace(/\s+/g, "")}`,
+//         title: title.toLowerCase(),
+//         category: product?.productCategory?.categoryName,
+//         thumbnail: variant.thumbnail,
+//         boxPrice: variant.boxPrice,
+//         sellingPrice: variant.sellingPrice,
+//         discount: productDiscount,
+//         rating: product.productRating,
+//         reviews: product.productNumReviews,
+//         color: variant.color,
+//         brand: product.productBrand?.brandName || 'nobrand',
+//         memory: variant?.ramAndStorage[0]?.ram,
+//         storage: variant?.ramAndStorage[0]?.storage,
+//         outofstock: Number(variant?.quantity) === 0 ? true : false,
+//       };
+//       flatProducts.push(newProduct);
+//     });
+//   });
+
+//   let filteredProducts = [...flatProducts];
+
+//   if (category && category.length > 0) {
+//     filteredProducts = filteredProducts.filter(product => product.category === category);
+//   }
+
+//   const minPriceValue = minPrice.sort()[0];
+//   const maxPriceValue = maxPrice.sort((a: number, b: number) => b - a)[0];
+
+//   if (minPriceValue && maxPriceValue) {
+//     filteredProducts = filteredProducts.filter(product => {
+//       const sellingPrice = Number(product.sellingPrice);
+//       return sellingPrice >= Number(minPriceValue) && sellingPrice <= Number(maxPriceValue);
+//     });
+//   } else if (maxPriceValue) {
+//     filteredProducts = filteredProducts.filter(product => {
+//       const sellingPrice = Number(product.sellingPrice);
+//       return sellingPrice <= Number(maxPriceValue);
+//     });
+//   } else if (minPriceValue) {
+//     filteredProducts = filteredProducts.filter(product => {
+//       const sellingPrice = Number(product.sellingPrice);
+//       return sellingPrice >= Number(minPriceValue);
+//     });
+//   }
+
+//   if (rating && rating.length > 0) {
+//     filteredProducts = filteredProducts.filter(product => rating.includes(product.rating));
+//   }
+
+//   if (brand && brand.length > 0) {
+//     filteredProducts = filteredProducts.filter(product => brand.includes(product.brand));
+//   }
+
+//   if (color && color.length > 0) {
+//     filteredProducts = filteredProducts.filter(product => {
+//       let matches = 0;
+
+//       color.forEach((arrcolor: string) => {
+//         const arrColors = arrcolor.toLowerCase().split(/\s+/);
+//         const productColors = product.color.toLowerCase().split(/\s+/);
+
+//         const foundMatches = arrColors.filter(colorWord => productColors.includes(colorWord));
+
+//         if (foundMatches.length > 0) {
+//           matches += foundMatches.length;
+//         }
+//       });
+
+//       return matches > 0;
+//     });
+//   }
+
+//   if (memory && memory.length > 0) {
+//     filteredProducts = filteredProducts.filter(product => memory.includes(product.memory));
+//   }
+
+//   if (storage && storage.length > 0) {
+//     filteredProducts = filteredProducts.filter(product => storage.includes(product.storage));
+//   }
+
+//   // Sort products
+//   filteredProducts.sort((a, b) => {
+//     // Sort out-of-stock items last
+//     if (a.outofstock !== b.outofstock) {
+//       return a.outofstock ? 1 : -1;
+//     }
+
+//     // Apply sort by other criteria
+//     if (sortBy === 'priceLowToHigh') {
+//       return Number(a.sellingPrice) - Number(b.sellingPrice);
+//     } else if (sortBy === 'priceHighToLow') {
+//       return Number(b.sellingPrice) - Number(a.sellingPrice);
+//     } else if (sortBy === 'topRated') {
+//       return b.rating - a.rating;
+//     } else {
+//       return 0; // No sorting if sortBy is invalid or not provided
+//     }
+//   });
+
+//   return res.status(200).json({
+//     success: true,
+//     products: filteredProducts,
+//     message: "Successfully filtered and sorted products",
+//   });
+// });
 
 // export const getFilterAndSortProducts = asyncErrorHandler(async (req, res, next) => {
 //   // Example filters object (adjust as per your UI or requirements)
