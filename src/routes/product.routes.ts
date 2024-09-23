@@ -42,11 +42,11 @@ productRouter.get("/getlimitedproductsbybrand", getLimitedProductsByBrands);
 productRouter.post("/getsimilarproducts", getSimilarProducts);
 
 // ---------------------- Admin routes-----------------------------------------------
-productRouter.get("/getAllAdminProducts", adminOnly, getAllAdminProducts);
-productRouter.post("/updateproduct/:id", adminOnly, updateProduct);
-productRouter.delete("/deleteproduct/:id", adminOnly, deleteProduct);
-productRouter.delete("/deleteproductdirectly/:id", adminOnly, deleteProductDirectly);
-productRouter.post("/deletePreviewImage", adminOnly, deletePreviewCloudinary);
+productRouter.get("/getAllAdminProducts", getAllAdminProducts);
+productRouter.post("/updateproduct/:id", updateProduct);
+productRouter.delete("/deleteproduct/:id", deleteProduct);
+productRouter.delete("/deleteproductdirectly/:id", deleteProductDirectly);
+productRouter.post("/deletePreviewImage", deletePreviewCloudinary);
 
 
 

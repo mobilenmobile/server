@@ -524,7 +524,7 @@ interface AdminSearchRequestQuery {
 export const getAllAdminProducts = asyncErrorHandler(
   async (req: Request<{}, {}, {}, AdminSearchRequestQuery>, res: Response, next: NextFunction) => {
     const { searchQuery, category, sort, page = 1 } = req.query;
-    const limit = 20; // Set a default limit for pagination
+    const limit = 100; // Set a default limit for pagination
     const skip = (page - 1) * limit;
     const baseQuery: any = {}; // Define base query for filtering
 
