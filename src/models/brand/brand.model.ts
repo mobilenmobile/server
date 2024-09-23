@@ -1,4 +1,5 @@
 import mongoose, { Schema } from "mongoose";
+import { Category } from "../category/category.model";
 
 const brandSchema = new Schema({
   brandName: {
@@ -7,26 +8,39 @@ const brandSchema = new Schema({
   },
   brandImgUrl: {
     type: String,
-    // required: [true, "Please provide category name"],
-    // unique: true,
     default: ''
   },
   brandLogoUrl: {
     type: String,
-    // required: [true, "Please provide category name"],
-    // unique: true,
     default: ''
   },
-  category: { required: true, type: mongoose.Schema.Types.ObjectId, ref: 'Category' },
+  categories: [{
+    required: true,
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Category'
+  }],
   createdAt: {
     type: Date,
     default: Date.now
   },
-  models: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Model' }]
+  models: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Model'
+  }]
 });
 
-// Compound unique index on category and name
-brandSchema.index({ brandName: 1, category: 1 }, { unique: true });
+brandSchema.pre('save', async function (next) {
+  if (this.isNew) {
+    const categories = this.categories;
+    this.categories = await Promise.all(categories.map(async (categoryId) => {
+      const category = await Category.findById(categoryId);
+      if (!category) {
+        throw new Error(`Category not found: ${categoryId}`);
+      }
+      return categoryId;
+    }));
+  }
+  next();
+});
 
-export const Brand =
-  mongoose.models.brand || mongoose.model("Brand", brandSchema);
+export const Brand = mongoose.models.Brand || mongoose.model("Brand", brandSchema);
