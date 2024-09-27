@@ -578,7 +578,7 @@ export const getAllOrders = asyncErrorHandler(async (req, res, next) => {
 //-------------------api to get all orders----------------------------------------------------------------
 export const getAllAdminOrders = asyncErrorHandler(async (req, res, next) => {
 
-  const userId = req.user._id; // Assuming req.user.id contains the user's ID
+  // const userId = req.user._id; // Assuming req.user.id contains the user's ID
 
   // Find all orders for the user
   const orders = await Order.find();

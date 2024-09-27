@@ -4,9 +4,10 @@ import mongoose, { Schema } from 'mongoose';
 const bannerSchema = new Schema({
     _id: { type: Schema.Types.ObjectId, auto: true },
     label: { type: String, required: true },
-    imageUrl: { type: String, required: true },
     pageUrl: { type: String },
-    categories: [{ type: Schema.Types.ObjectId, ref: 'Category' }],
+    mobileBanner: { type: String },
+    tabletBanner: { type: String },
+    laptopBanner: { type: String },
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now },
 });

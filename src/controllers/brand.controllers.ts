@@ -13,13 +13,21 @@ import ErrorHandler from "../utils/errorHandler";
 //-------------Api to create new brand------------------------------------------------
 export const newBrand = asyncErrorHandler(
   async (req: Request<{}, {}>, res, next) => {
-    const { brandName, brandImgUrl, brandLogoUrl, categoryName } = req.body;
+    const { brandName, brandImgUrl, brandLogoUrl, categoryArray, brandKeywords } = req.body;
+    let brandKeywordsArr;
+    console.log(brandKeywords, "brandKeywords")
+    if (brandKeywords) {
 
-    if (!categoryName) return next(new ErrorHandler("Category name not provided", 400));
+      brandKeywordsArr = brandKeywords.split(",")
+
+    }
+    console.log(brandKeywordsArr)
+    if (categoryArray.length === 0) return next(new ErrorHandler("Category name not provided", 400));
 
     // Check if category exists by name
-    const category = await Category.findOne({ categoryName: categoryName });
-    if (!category) return next(new ErrorHandler("Category not found", 400));
+
+    // const category = await Category.findOne({ categoryName: categoryName });
+    // if (!category) return next(new ErrorHandler("Category not found", 400));
 
     // Check if the brand already exists in the category
     // const existingBrand = await Brand.findOne({ brandName, categories: category._id });
@@ -27,8 +35,22 @@ export const newBrand = asyncErrorHandler(
     const existingBrand = await Brand.findOne({ brandName });
     console.log("existing brand found", existingBrand)
     if (existingBrand) {
-      // Update existing categories array
-      existingBrand.categories = [...existingBrand.categories, category._id];
+      if (brandName) {
+        existingBrand.brandName = brandName
+      }
+      if (brandKeywords) {
+        existingBrand.branKeywords = brandKeywordsArr
+      }
+      if (brandImgUrl) {
+        existingBrand.brandImgUrl = brandImgUrl
+      }
+      if (brandLogoUrl) {
+        existingBrand.brandLogoUrl = brandLogoUrl
+      }
+      if (categoryArray.length !== 0) {
+        existingBrand.categories = categoryArray
+      }
+
       await existingBrand.save();
       return res.status(201).json({
         success: true,
@@ -41,7 +63,8 @@ export const newBrand = asyncErrorHandler(
         brandName,
         brandImgUrl: brandImgUrl ? brandImgUrl : null,
         brandLogoUrl: brandLogoUrl ? brandLogoUrl : null,
-        categories: [category._id] // Add category to array
+        branKeywords: brandKeywordsArr,
+        categoryArray
       });
       return res.status(201).json({
         success: true,
@@ -56,8 +79,12 @@ export const newBrand = asyncErrorHandler(
 export const getAllBrand = asyncErrorHandler(
   async (req: Request<{}, {}, SearchBrandRequestQuery>, res, next) => {
     const { categoryName } = req.query;
-    console.log(req.query)
+    console.log(req.query, "query")
     const baseQuery = { categories: "" };
+
+
+
+
 
 
     if (categoryName) {
@@ -65,6 +92,39 @@ export const getAllBrand = asyncErrorHandler(
       if (!category) return next(new ErrorHandler("category not found", 400));
       baseQuery.categories = category._id;
     }
+
+    const allBrand = await Brand.find(baseQuery);
+    return res.status(200).json({
+      success: true,
+      message: "All brands fetched successfully",
+      allBrand,
+    });
+  }
+);
+interface brandWithoutCategory {
+  categories?: string;
+}
+export const getAllBrandWithoutCategory = asyncErrorHandler(
+  async (req: Request<{}, {}, SearchBrandRequestQuery>, res, next) => {
+    const { categoryName, brandId } = req.query;
+    console.log(req.query, "query")
+    let baseQuery: any = {}
+
+    if (brandId) {
+      if (typeof brandId !== "string") {
+        return
+      }
+      baseQuery._id = brandId
+    }
+
+    if (categoryName) {
+      const category = await Category.findOne({ categoryName: categoryName });
+      // if (!category) return next(new ErrorHandler("category not found", 400));
+      baseQuery.categories = category._id;
+
+    }
+
+
 
     const allBrand = await Brand.find(baseQuery);
     return res.status(200).json({

@@ -115,6 +115,7 @@ export interface NewCategoryRequestBody {
   categoryName: string;
   categoryImgUrl: string;
   categoryDescription: string;
+  categoryKeywords: string;
 }
 
 export interface NewOfferRequestbody {
@@ -183,6 +184,7 @@ export interface CategoryBaseQuery {
     $regex: string;
     $options: string;
   };
+  _id?: string;
 }
 
 export interface offerBaseQuery {

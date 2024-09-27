@@ -20,23 +20,74 @@ import ErrorHandler from "../utils/errorHandler";
 
 //-------------------api to create new offer-----------------------------------------
 export const addNewOffer = asyncErrorHandler(
-  async (req: Request<{}, {}, NewOfferRequestbody>, res, next) => {
-
-    const { offerCouponCode, offerCouponDiscount, offerExpiry } = req.body;
-
-    if (!offerCouponCode || !offerCouponDiscount || !offerExpiry) {
+  async (req: Request<{}, {}, any>, res, next) => {
+    const { couponId } = req.query as any
+    const { offerIsActive, offerStartDate, offerEndDate, offerCouponCode, offerDiscountCategory, offerDiscountState, offerLimit, offerCouponType, offerDiscountValue } = req.body;
+    console.log(req.body)
+    console.log(offerIsActive, "coupon ocde")
+    if (!offerEndDate || !offerCouponCode || !offerDiscountCategory || !offerLimit || !offerCouponType || !offerDiscountValue) {
       return next(new ErrorHandler("please provide all fields", 400));
     }
 
+    console.log(offerLimit)
+    let existingOffer;
+    console.log(couponId)
+
+    if (couponId) {
+      existingOffer = await Offer.findById(couponId)
+
+    }
+
+
+    console.log(existingOffer, "existing offer")
+    if (existingOffer) {
+      if (offerCouponCode) {
+        existingOffer.offerCouponCode = offerCouponCode
+      }
+      if (offerIsActive) {
+
+        existingOffer.offerIsActive = offerIsActive === "active" ? true : false
+        console.log(existingOffer.offerIsActive, "isactive")
+      }
+      if (offerStartDate) {
+        existingOffer.offerStartDate = offerStartDate;
+      }
+      if (offerEndDate) {
+        existingOffer.offerEndDate = offerEndDate;
+      }
+      if (offerDiscountCategory) {
+        existingOffer.offerDiscountCategory = offerDiscountCategory; // Assuming it's an array
+      }
+      if (offerDiscountState) {
+        existingOffer.offerDiscountState = offerDiscountState; // Assuming it's an array
+      }
+      if (offerLimit) {
+        existingOffer.offerLimit = offerLimit; // Assuming it's an object
+      }
+      if (offerCouponType) {
+        existingOffer.offerCouponType = offerCouponType;
+      }
+      if (offerDiscountValue !== undefined) {
+        existingOffer.offerDiscountValue = offerDiscountValue;
+      }
+      await existingOffer.save()
+      return res.status(201).json({
+        success: true,
+        message: "Offer updated successfully",
+        existingOffer,
+      });
+    }
+
+
     const offer = await Offer.create({
-      offerCouponCode,
-      offerCouponDiscount,
-      offerExpiry,
+      offerIsActive: offerIsActive === "active" ? true : false,
+
+      offerStartDate: offerStartDate && offerStartDate, offerEndDate, offerCouponCode, offerDiscountCategory, offerDiscountState, offerLimit, offerCouponType, offerDiscountValue
     });
 
     return res.status(201).json({
       success: true,
-      message:"Offer created successfully",
+      message: "Offer created successfully",
       offer,
     });
   }
@@ -97,17 +148,23 @@ export const searchAllOffer = asyncErrorHandler(
     //   };
     // }
     // Get current date
+    const { couponId } = req.query
+    let baseQuery: any = {}
+
+    if (couponId) {
+      baseQuery._id = couponId
+    }
     const currentDate = new Date();
-    const offer = await Offer.find();
+    const offer = await Offer.find(baseQuery);
     // console.log(offer)
     if (!offer) {
       return next(new ErrorHandler("Offer not found", 404));
     }
 
-    return res.status(200).json({ 
-      success: true, 
+    return res.status(200).json({
+      success: true,
       message: "Offer found successfully",
-      offer 
+      offer
     });
   }
 );

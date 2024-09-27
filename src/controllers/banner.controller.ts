@@ -6,15 +6,46 @@ import { Request, Response } from "express";
 
 export const newBanner = asyncErrorHandler(
     async (req: Request, res, next) => {
-        const { label, imageUrl, pageUrl } = req.body;
+        const { label, pageUrl, mobileBanner, laptopBanner, tabletBanner } = req.body;
+        const { bannerId } = req.query
+
+        if (bannerId) {
+            const existingBanner = await Banner.findById(bannerId)
+            if (existingBanner) {
+                if (label) {
+                    existingBanner.label = label
+                }
+                if (pageUrl) {
+                    existingBanner.pageUrl = pageUrl
+                }
+                if (mobileBanner) {
+                    existingBanner.mobileBanner = mobileBanner
+                }
+                if (laptopBanner) {
+                    existingBanner.laptopBanner = laptopBanner
+                }
+                if (tabletBanner) {
+                    existingBanner.tabletBanner = tabletBanner
+                }
+                await existingBanner.save()
+                return res.status(204).json({
+                    success: true,
+                    message: "Banner updated successfully",
+                    existingBanner
+                });
+
+            }
+        }
 
         // if (!req.user._id) {
         //     return next(new ErrorHandler("unauthenticated", 400));
         // }
         const banner = await Banner.create({
             label,
-            imageUrl,
             pageUrl,
+            mobileBanner,
+            laptopBanner,
+            tabletBanner
         });
 
         return res.status(201).json({

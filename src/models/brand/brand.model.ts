@@ -6,6 +6,10 @@ const brandSchema = new Schema({
     type: String,
     required: [true, "Please provide brand name"],
   },
+  branKeywords: [
+    {
+      type: String
+    }],
   brandImgUrl: {
     type: String,
     default: ''

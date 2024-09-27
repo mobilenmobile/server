@@ -6,6 +6,10 @@ const CategorySchema = new Schema({
     required: [true, "Please provide category name"],
     unique: true,
   },
+  categoryKeywords: [
+    {
+      type: String
+    }],
   categoryImgUrl: {
     type: String,
   },
