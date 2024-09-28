@@ -59,8 +59,8 @@ export const OfferSchema = new Schema(
     },
     offerDiscountValue: {
       type: String,
-      required: true
-
+      required: true,
+      default: '0'
     },
 
 

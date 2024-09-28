@@ -762,8 +762,8 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
   totals.DiscountedTotal += ComboAccumulator.DiscountedTotal
 
   let couponDiscount = 0
-  if (appliedCoupon && appliedCoupon.offerCouponDiscount) {
-    couponDiscount = Math.round((Number(appliedCoupon.offerCouponDiscount) * totals.DiscountedTotal) / 100)
+  if (appliedCoupon && Number(appliedCoupon.offerDiscountValue) > 0) {
+    couponDiscount = Math.round((Number(appliedCoupon.offerDiscountValue) * totals.DiscountedTotal) / 100)
     couponDiscount = couponDiscount > 500 ? 499 : couponDiscount
   }
 
@@ -804,7 +804,7 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
     success: true,
     message: "Cart details fetched successfully",
     cartItemsData,
-    cartDetails: { ...totals, finalCartTotal, comboTotal: ComboAccumulator, couponDiscount, availableCoins, usableCoins, deliveryCharges, isCoinUseChecked },
+    cartDetails: { ...totals, finalCartTotal, comboTotal: ComboAccumulator, couponDiscount, availableCoins, usableCoins, appliedCoupon, deliveryCharges, isCoinUseChecked },
     offer: user?.coupon,
   });
 });

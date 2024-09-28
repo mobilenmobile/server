@@ -78,14 +78,7 @@ export const newProduct = asyncErrorHandler(
 
     const refCategory = await Category.findOne({ categoryName: category });
 
-    if (!refCategory) {
-      return next(new ErrorHandler("Please provide the category of product", 400));
-    }
-    let refSubCategory
 
-    if (subcategory) {
-      refSubCategory = await subCategory.findOne({ subCategoryName: subcategory });
-    }
     // // const title = `${brand !== "generic" ? brand : ""}- ${
     // //   productModel !== "generic" ? productModel : ""
     // // } ${pattern.length > 0 ? pattern : ""} ${
@@ -94,7 +87,7 @@ export const newProduct = asyncErrorHandler(
 
     const newProduct = await Product.create({
       productCategory: refCategory._id,
-      productSubCategory: refSubCategory ? refSubCategory._id : null,
+      productSubCategory: subcategory ?? null,
       productBrand: refBrand._id,
       productModel: productModel,
       productTitle: productTitle,
