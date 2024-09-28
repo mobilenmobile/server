@@ -4,27 +4,79 @@ import { Model } from "../models/brand/model.model";
 import { Category } from "../models/category/category.model";
 import ErrorHandler from "../utils/errorHandler";
 
+// // Controller to create a new model
+// export const newModel = asyncErrorHandler(
+//     async (req, res, next) => {
+//         const { modelName, brandName, categoryName } = req.body;
+
+//         if (!brandName || !categoryName) {
+//             return next(new ErrorHandler("Brand name and category name are required", 400));
+//         }
+//         // Check if category exists by name
+//         const category = await Category.findOne({ categoryName: categoryName });
+//         if (!category) {
+//             return next(new ErrorHandler("Category not found", 404));
+//         }
+//         // Check if brand exists by name
+//         const brand = await Brand.findOne({ category: category._id, brandName: new RegExp(`^${brandName as string}$`, 'i') });
+//         if (!brand) {
+//             return next(new ErrorHandler("Brand not found", 404));
+//         }
+
+//         // Check if model already exists for the brand and category
+//         const existingModel = await Model.findOne({ modelName, brand: brand._id, category: category._id });
+//         if (existingModel) {
+//             return next(new ErrorHandler('Model name already exists for this brand and category', 400));
+//         }
+
+//         // Create the new model
+//         const model = await Model.create({
+//             modelName,
+//             brand: brand._id,
+//             category: category._id
+//         });
+
+//         return res.status(201).json({
+//             success: true,
+//             message: "New model created successfully",
+//             data: model,
+//         });
+//     }
+// );
+
 // Controller to create a new model
 export const newModel = asyncErrorHandler(
     async (req, res, next) => {
         const { modelName, brandName, categoryName } = req.body;
 
+        // Validate required fields
         if (!brandName || !categoryName) {
             return next(new ErrorHandler("Brand name and category name are required", 400));
         }
+
         // Check if category exists by name
         const category = await Category.findOne({ categoryName: categoryName });
         if (!category) {
             return next(new ErrorHandler("Category not found", 404));
         }
-        // Check if brand exists by name
-        const brand = await Brand.findOne({ category: category._id, brandName:new RegExp(`^${brandName as string}$`, 'i') });
+
+        // Check if brand exists by name and matches the found category
+        const brand = await Brand.findOne({
+            brandName: new RegExp(`^${brandName}$`, 'i'),
+            categories: category._id  // Ensure the brand has the category
+        });
+
         if (!brand) {
             return next(new ErrorHandler("Brand not found", 404));
         }
 
         // Check if model already exists for the brand and category
-        const existingModel = await Model.findOne({ modelName, brand: brand._id, category: category._id });
+        const existingModel = await Model.findOne({
+            modelName,
+            brand: brand._id,
+            category: category._id
+        });
+
         if (existingModel) {
             return next(new ErrorHandler('Model name already exists for this brand and category', 400));
         }
@@ -125,13 +177,20 @@ export const searchModelsv2 = asyncErrorHandler(
             query.category = category._id; // Use the category ID in the query
             console.log(query, "query...........")
         }
+        console.log("############", query.category)
 
         if (brandName) {
-            // Find brand by name
-            const brand = await Brand.findOne({ category: query.category, brandName: new RegExp(`^${brandName as string}$`, 'i') });
-            if (!brand) return next(new ErrorHandler("Brand not found", 404));
+            // // Find brand by name
+            // const brand = await Brand.findOne({ category: query.category, brandName: brandName });
+            // if (!brand) return next(new ErrorHandler("Brand not found", 404));
+            // query.brand = brand._id; // Use the brand ID in the query
+            const brand = await Brand.findOne({
+                brandName: new RegExp(`^${brandName}$`, 'i'),
+                categories: query.category  // Ensure the brand has the category
+            });
             query.brand = brand._id; // Use the brand ID in the query
         }
+
 
         console.log("query 2", query)
 

@@ -161,8 +161,24 @@ export const getSingleProduct = asyncErrorHandler(async (req, res, next) => {
   product = await Product.findById(id)
     .populate("productCategory")
     .populate("productBrand")
-  // .populate('productComboProducts')
-  // .populate('productFreeProducts')
+    .populate({
+      path: 'productComboProducts',  // Field to populate
+      populate: {
+        path: 'productId',  // Field in ComboProducts to populate
+        model: 'product'  // Ensure this matches the model name exactly
+      }
+    })
+    .populate({
+      path: 'productFreeProducts',  // Field to populate
+      populate: {
+        path: 'productId',  // Field in ComboProducts to populate
+        model: 'product'  // Ensure this matches the model name exactly
+      }
+    })
+    .exec()
+  // .populate('productFreeProducts', {
+  //   path: 'productId', // This should refer to the field in the referenced model
+  // })
 
   if (!product) {
     return next(new ErrorHandler("Product not found", 404));
@@ -1070,14 +1086,14 @@ export const getFilterAndSortProducts = asyncErrorHandler(async (req, res, next)
   const {
     category,
     searchText,
-    minPrice=[0],
-    maxPrice=[1000000],
+    minPrice = [0],
+    maxPrice = [1000000],
     rating,
     brand,
     color,
     memory,
     storage,
-    sortBy='priceLowToHigh',
+    sortBy = 'priceLowToHigh',
     page = 1,  // Default to page 1 if not provided
     limit = 6 // Default to 12 products per page
   } = req.body;
