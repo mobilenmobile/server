@@ -617,19 +617,17 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
 
       let productComboProducts = [];
       let productFreeProducts = []
+
+
       if (item.isCombo) {
+
+
         productComboProducts = item?.productId?.productComboProducts.map((item: any) => {
           if (item.productId.productVariance) {
-
             const variantData = item.productId.productVariance[0]
             const productDiscount = calculateDiscount(variantData?.boxPrice, variantData?.sellingPrice)
 
             // console.log("type of ------------->", variantData.quantity, variantData.boxPrice, variantData.sellingPrice)
-
-            // ComboAccumulator.Total = Number(ComboAccumulator.Total + (Number(variantData?.quantity) * Number(variantData?.boxPrice)));
-
-            // ComboAccumulator.DiscountedTotal = Number(ComboAccumulator.DiscountedTotal + (Number(variantData?.quantity) * Number(variantData?.sellingPrice)));
-
             return {
               _id: item._id,
               keyid: `${item._id}${variantData?.id.replace(/\s+/g, "")}`,
@@ -637,9 +635,9 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
               category: item.productId?.productCategory?.categoryName,
               productTitle: item.productId.productTitle,
               thumbnail: variantData?.thumbnail,
-              boxPrice: variantData?.boxPrice,
-              sellingPrice: variantData?.sellingPrice,
-              comboPrice: variantData.comboPrice,
+              boxPrice: variantData?.boxPrice || 0,  // Ensure a valid number
+              sellingPrice: variantData?.sellingPrice || 0,  // Ensure a valid number
+              comboPrice: variantData.comboPrice || variantData.sellingPrice || 0,  // Ensure a valid number
               // color: variantData?.color,
               // ramAndStorage: variantData?.ramAndStorage[0],
               productRating: item.productId.productRating,
@@ -657,9 +655,11 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
 
         // console.log("comboproducts ----------------------- > ", productComboProducts)
         ComboAccumulator = productComboProducts?.reduce((accumulator: any, item: any) => {
-          console.log("accumlateor------------------>", item)
-          const Total = accumulator.Total + (Number(item?.boxPrice));
-          const DiscountedTotal = accumulator.DiscountedTotal + (Number(item?.comboPrice));
+          const boxPrice = Number(item?.boxPrice) || 999;  // Default to 0 if undefined or NaN
+          const comboPrice = Number(item?.comboPrice) || item.sellingPrice || 999;  // Default to 0 if undefined or NaN
+          console.log("boxprice ==>", item.boxPrice, "and ", item.sellingPrice)
+          const Total = accumulator.Total + boxPrice;
+          const DiscountedTotal = accumulator.DiscountedTotal + comboPrice;
 
           return {
             Total,
@@ -668,12 +668,21 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
         }, {
           Total: 0,
           DiscountedTotal: 0,
+        });
 
-        })
+
+        console.log("accucombodata-------------------------------->", "data", ComboAccumulator)
+
         // console.log("combo item -=====>", item.productId)
         ComboAccumulator.productTotal = Number(ComboAccumulator?.Total) + Number(variantData?.sellingPrice)
         ComboAccumulator.finalTotal = Number(ComboAccumulator?.DiscountedTotal) + Number(variantData?.sellingPrice)
+
+
+
       }
+
+
+
       if (item.productId.productFreeProducts.length > 0) {
         productFreeProducts = item?.productId?.productFreeProducts?.map((item: any) => {
           if (item.productId.productVariance) {
@@ -687,9 +696,9 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
               category: item.productId?.productCategory?.categoryName,
               productTitle: item.productId.productTitle,
               thumbnail: variantData?.thumbnail,
-              boxPrice: variantData?.boxPrice,
-              sellingPrice: variantData?.sellingPrice,
-              comboPrice: variantData.comboPrice,
+              boxPrice: variantData?.boxPrice || 0,  // Ensure a valid number
+              sellingPrice: variantData?.sellingPrice || 0,  // Ensure a valid number
+              comboPrice: variantData.comboPrice || variantData.sellingPrice || 0,  // Ensure a valid number
               // color: variantData?.color,
               // ramAndStorage: variantData?.ramAndStorage[0],
               productRating: item.productId.productRating,
@@ -736,16 +745,17 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
 
   let Total = 0
   let DiscountedTotal = 0
-  const cartDetails = cartItemsData.map((item) => {
-    return {
-      Total: Total + (item?.quantity * item?.boxPrice),
-      DiscountedTotal: DiscountedTotal + (item?.quantity * item?.sellingPrice)
-    }
-  })
+  // const cartDetails = cartItemsData.map((item) => {
+  //   return {
+  //     Total: Total + ((item?.quantity ?? 1) * item?.boxPrice),
+  //     DiscountedTotal: DiscountedTotal + ((item?.quantity ?? 1) * item?.sellingPrice)
+  //   }
+  // })
 
   const totals = cartItemsData.reduce((accumulator, item) => {
-    const Total = accumulator.Total + (item?.quantity * item?.boxPrice);
-    const DiscountedTotal = accumulator.DiscountedTotal + (item?.quantity * item?.sellingPrice);
+    // console.log("accumulator ==> ", accumulator, "==and==>", item)
+    const Total = accumulator.Total + ((item?.quantity ?? 1) * item?.boxPrice);
+    const DiscountedTotal = accumulator.DiscountedTotal + ((item?.quantity ?? 1) * item?.sellingPrice);
 
     return {
       Total,
@@ -756,16 +766,20 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
     DiscountedTotal: 0,
   })
 
-  // console.log("comboaccumulator=====>", ComboAccumulator)
+
+
+  console.log("comboaccumulator=====>", ComboAccumulator)
+
+
   //Add combo price 
   totals.Total += ComboAccumulator.Total ? ComboAccumulator.Total : 0
-  totals.DiscountedTotal += ComboAccumulator.DiscountedTotal ? ComboAccumulator.DiscountedTotal :0
+  totals.DiscountedTotal += ComboAccumulator.DiscountedTotal ? ComboAccumulator.DiscountedTotal : 0
 
   let couponDiscount = 0
-  // if (appliedCoupon && Number(appliedCoupon.offerDiscountValue) > 0) {
-  //   couponDiscount = Math.round((Number(appliedCoupon.offerDiscountValue) * totals.DiscountedTotal) / 100)
-  //   couponDiscount = couponDiscount > 500 ? 499 : couponDiscount
-  // }
+  if (appliedCoupon && Number(appliedCoupon.offerDiscountValue) > 0) {
+    couponDiscount = Math.round((Number(appliedCoupon.offerDiscountValue) * totals.DiscountedTotal) / 100)
+    couponDiscount = couponDiscount > 500 ? 499 : couponDiscount
+  }
 
 
 
@@ -898,7 +912,7 @@ export const getUnAuthenticatedCartDetails = asyncErrorHandler(async (req: Reque
 
         // console.log("comboproducts ----------------------- > ", productComboProducts)
         ComboAccumulator = productComboProducts?.reduce((accumulator: any, item: any) => {
-          // console.log("accumlateor------------------>", item)
+          console.log("accumlateor------------------>", item)
           const Total = accumulator.Total + (Number(item?.boxPrice));
           const DiscountedTotal = accumulator.DiscountedTotal + (Number(item?.sellingPrice));
 
