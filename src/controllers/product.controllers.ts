@@ -401,9 +401,11 @@ export const getSingleProductDetails = asyncErrorHandler(async (req, res, next) 
 
 //------------------------api to update product for admin only-------------------------------
 export const updateProduct = asyncErrorHandler(
-  async (req: Request<{}, {}, UpdateProductRequestBody>, res, next) => {
+  async (req, res, next) => {
     const id = (req.params as { id: string }).id;
     const {
+      subcategory,
+      model,
       brand,
       productModel,
       productTitle,
@@ -412,8 +414,8 @@ export const updateProduct = asyncErrorHandler(
       headsetType,
       variance,
       colors,
-      comboOfferProducts,
-      freeOfferProducts,
+      comboProducts,
+      freeProducts,
       selectedComboCategory,
       selectedFreeCategory,
       productVideoUrls,
@@ -435,6 +437,8 @@ export const updateProduct = asyncErrorHandler(
       }
       product.productBrand = refBrand._id;
     }
+    if (subcategory) product.productSubCategory = subcategory
+    if (model) product.productModel = model
     if (productModel) product.productModel = productModel;
     if (productTitle) product.productTitle = productTitle;
     if (description) product.productDescription = description;
@@ -442,8 +446,8 @@ export const updateProduct = asyncErrorHandler(
     if (headsetType) product.productHeadsetType = headsetType;
     if (variance) product.productVariance = JSON.parse(variance);
     if (colors) product.productColors = JSON.parse(colors)
-    if (comboOfferProducts) product.productComboProducts = JSON.parse(comboOfferProducts)
-    if (freeOfferProducts) product.productFreeProducts = JSON.parse(freeOfferProducts)
+    if (comboProducts) product.productComboProducts = JSON.parse(comboProducts)
+    if (freeProducts) product.productFreeProducts = JSON.parse(freeProducts)
     if (selectedComboCategory) product.productSelectedComboCategory = selectedComboCategory ? JSON.parse(selectedComboCategory) : null
     if (selectedFreeCategory) product.productSelectedFreeCategory = selectedFreeCategory ? JSON.parse(selectedFreeCategory) : null
     if (productVideoUrls) product.productVideoUrls = productVideoUrls ? JSON.parse(productVideoUrls) : null

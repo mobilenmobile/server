@@ -758,14 +758,14 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
 
   // console.log("comboaccumulator=====>", ComboAccumulator)
   //Add combo price 
-  totals.Total += ComboAccumulator.Total
-  totals.DiscountedTotal += ComboAccumulator.DiscountedTotal
+  totals.Total += ComboAccumulator.Total ? ComboAccumulator.Total : 0
+  totals.DiscountedTotal += ComboAccumulator.DiscountedTotal ? ComboAccumulator.DiscountedTotal :0
 
   let couponDiscount = 0
-  if (appliedCoupon && Number(appliedCoupon.offerDiscountValue) > 0) {
-    couponDiscount = Math.round((Number(appliedCoupon.offerDiscountValue) * totals.DiscountedTotal) / 100)
-    couponDiscount = couponDiscount > 500 ? 499 : couponDiscount
-  }
+  // if (appliedCoupon && Number(appliedCoupon.offerDiscountValue) > 0) {
+  //   couponDiscount = Math.round((Number(appliedCoupon.offerDiscountValue) * totals.DiscountedTotal) / 100)
+  //   couponDiscount = couponDiscount > 500 ? 499 : couponDiscount
+  // }
 
 
 
@@ -880,7 +880,7 @@ export const getUnAuthenticatedCartDetails = asyncErrorHandler(async (req: Reque
               thumbnail: variantData?.thumbnail,
               boxPrice: variantData?.boxPrice,
               sellingPrice: variantData?.sellingPrice,
-              comboPrice: variantData.comboPrice,
+              comboPrice: variantData?.comboPrice,
               // color: variantData?.color,
               // ramAndStorage: variantData?.ramAndStorage[0],
               productRating: item.productId.productRating,
@@ -927,7 +927,7 @@ export const getUnAuthenticatedCartDetails = asyncErrorHandler(async (req: Reque
               thumbnail: variantData?.thumbnail,
               boxPrice: variantData?.boxPrice,
               sellingPrice: variantData?.sellingPrice,
-              comboPrice: variantData.comboPrice,
+              comboPrice: variantData?.comboPrice,
               // color: variantData?.color,
               // ramAndStorage: variantData?.ramAndStorage[0],
               productRating: item.productId.productRating,
