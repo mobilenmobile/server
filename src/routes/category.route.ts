@@ -12,6 +12,6 @@ const router = Express.Router();
 
 router.get("/", searchCategory);
 router.post("/", addNewCategory);
-router.delete("/deletecategory", adminOnly, deleteCategory);
+router.delete("/:categoryId", deleteCategory);
 
 export default router;

@@ -148,6 +148,7 @@ export type SearchCategoryQuery = {
 };
 export type deleteCategoryQuery = {
   id?: string;
+  categoryId?: string;
 };
 export type deleteBrandQuery = {
   id?: string;

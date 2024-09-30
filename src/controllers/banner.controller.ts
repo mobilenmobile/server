@@ -6,36 +6,36 @@ import { Request, Response } from "express";
 
 export const newBanner = asyncErrorHandler(
     async (req: Request, res, next) => {
-        const { label, pageUrl, mobileBanner, laptopBanner, tabletBanner } = req.body;
+        const { label, pageUrl, mobileBanner } = req.body;
         const { bannerId } = req.query
+        console.log(req.body, "body req")
 
+        let existingBanner;
         if (bannerId) {
-            const existingBanner = await Banner.findById(bannerId)
-            if (existingBanner) {
-                if (label) {
-                    existingBanner.label = label
-                }
-                if (pageUrl) {
-                    existingBanner.pageUrl = pageUrl
-                }
-                if (mobileBanner) {
-                    existingBanner.mobileBanner = mobileBanner
-                }
-                if (laptopBanner) {
-                    existingBanner.laptopBanner = laptopBanner
-                }
-                if (tabletBanner) {
-                    existingBanner.tabletBanner = tabletBanner
-                }
-                await existingBanner.save()
-                return res.status(204).json({
-                    success: true,
-                    message: "Banner updated successfully",
-                    existingBanner
-                });
-
-            }
+            existingBanner = await Banner.findById(bannerId)
         }
+
+        if (existingBanner) {
+            if (label) {
+                existingBanner.label = label
+            }
+            if (pageUrl) {
+                existingBanner.pageUrl = pageUrl
+            }
+            if (mobileBanner) {
+                existingBanner.bannerImage = mobileBanner
+            }
+
+            await existingBanner.save()
+            console.log(existingBanner, "banner result")
+            return res.status(201).json({
+                success: true,
+                message: "Banner updated successfully",
+                banner: existingBanner
+            });
+
+        }
+
 
         // if (!req.user._id) {
         //     return next(new ErrorHandler("unauthenticated", 400));
@@ -43,9 +43,8 @@ export const newBanner = asyncErrorHandler(
         const banner = await Banner.create({
             label,
             pageUrl,
-            mobileBanner,
-            laptopBanner,
-            tabletBanner
+            bannerImage: mobileBanner
+
         });
 
         return res.status(201).json({
@@ -58,7 +57,17 @@ export const newBanner = asyncErrorHandler(
 
 export const getAllBanners = asyncErrorHandler(
     async (req: Request, res: Response) => {
-        const banners = await Banner.find();
+        const { bannerId } = req.query
+        const query: any = {}
+        console.log(bannerId)
+        if (bannerId) {
+            if(typeof bannerId !=="string"){
+                return
+            }
+            query._id = bannerId
+        }
+        const banners = await Banner.find(query);
+        console.log(banners)
 
         return res.status(200).json({
             success: true,
@@ -161,8 +170,16 @@ export const deleteBanner = asyncErrorHandler(
                 message: "Banner ID is required",
             });
         }
+        console.log(bannerId, "bannerid")
+        console.log(await Banner.find())
 
+        console.log(await Banner.findOne({ _id: bannerId }))
+        const findBanner = await Banner.findById(bannerId)
+        if (!findBanner) {
+            return res.json({ error: "no id found" })
+        }
         const banner = await Banner.findByIdAndDelete(bannerId);
+
 
         return res.status(200).json({
             success: true,

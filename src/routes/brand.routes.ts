@@ -22,7 +22,7 @@ router.get('/searchmodels', searchModelsv2);
 // router.get("/searchbrandv2", getAllBrandv2);
 router.get("/searchbrand", getAllBrand);
 router.get("/searchallCategorybrands", getAllBrandWithoutCategory)
-router.delete("/deletebrand", deleteBrand);
+router.delete("/:brandId", deleteBrand);
 
 // ----------- delete model -----------------------
 router.delete("/deletemodel", adminOnly, deleteModel);

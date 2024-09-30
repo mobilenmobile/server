@@ -172,8 +172,8 @@ export const searchAllOffer = asyncErrorHandler(
 //-------------------api to delete offer-----------------------------------------------
 
 export const deleteOffer = asyncErrorHandler(async (req, res, next) => {
-  const { id } = req.params;
-  const offer = await Offer.findById(id);
+  const { offerId } = req.params;
+  const offer = await Offer.findById(offerId);
   if (!offer) {
     return next(new ErrorHandler("offer not found", 404));
   }

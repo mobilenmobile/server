@@ -5,9 +5,8 @@ const bannerSchema = new Schema({
     _id: { type: Schema.Types.ObjectId, auto: true },
     label: { type: String, required: true },
     pageUrl: { type: String },
-    mobileBanner: { type: String },
-    tabletBanner: { type: String },
-    laptopBanner: { type: String },
+    bannerImage: { type: String },
+
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now },
 });

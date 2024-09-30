@@ -23,47 +23,46 @@ import ErrorHandler from "../utils/errorHandler";
 
 export const addNewCategory = asyncErrorHandler(
   async (req: Request<{}, {}, NewCategoryRequestBody>, res, next) => {
-    const { categoryName, categoryKeywords, categoryImgUrl } = req.body;
+    const { categoryName, categoryImgUrl } = req.body;
+    const { categoryId } = req.query
     console.log(req.body)
     let categoryKeywordsArr;
     if (!categoryName) {
       return next(new ErrorHandler("please provide category name.", 400));
     }
-    if (categoryKeywords) {
-      categoryKeywordsArr = categoryKeywords.split(",")
 
-    }
-    const exisitingCategory = await Category.findOne({ categoryName })
 
+    const exisitingCategory = await Category.findOne({ _id: categoryId })
+    console.log(exisitingCategory, "category eixsitn")
     if (exisitingCategory) {
       if (categoryName) {
         exisitingCategory.categoryName = categoryName
 
       }
-      if (categoryKeywords) {
-        exisitingCategory.categoryKeywords = categoryKeywordsArr
-      }
+
       if (categoryImgUrl) {
         exisitingCategory.categoryImgUrl = categoryImgUrl ?? ""
       }
       await exisitingCategory.save()
-      return res.status(204).json({
+      return res.status(201).json({
         success: true,
         message: "category updated successfully",
         category: exisitingCategory
       })
     }
+    else {
 
-    const category = await Category.create({
-      categoryName,
-      categoryKeywords: categoryKeywordsArr,
-      categoryImgUrl: categoryImgUrl ? categoryImgUrl : "",
-    });
-    return res.status(201).json({
-      success: true,
-      message: "New category created successfully",
-      category
-    });
+      const category = await Category.create({
+        categoryName,
+        categoryImgUrl: categoryImgUrl ? categoryImgUrl : "",
+      });
+      return res.status(201).json({
+        success: true,
+        message: "New category created successfully",
+        category
+      });
+    }
+
   }
 );
 
@@ -98,16 +97,16 @@ export const searchCategory = asyncErrorHandler(
 
 //-------------------api to delete specfic category-----------------------------------
 export const deleteCategory = asyncErrorHandler(
-  async (req: Request<{}, {}, deleteCategoryQuery>, res, next) => {
-    const { id } = req.body;
+  async (req, res, next) => {
+    const { categoryId } = req.params
 
     // console.log(req.body);
 
-    if (!id) {
+    if (!categoryId) {
       return res.status(400).json({ error: "provide id" });
     }
 
-    const deleteCategory = await Category.findByIdAndDelete(id);
+    const deleteCategory = await Category.findByIdAndDelete(categoryId);
 
     if (!deleteCategory) {
       return res.status(400).json({ error: "category doesnt exist" });

@@ -13,15 +13,9 @@ import ErrorHandler from "../utils/errorHandler";
 //-------------Api to create new brand------------------------------------------------
 export const newBrand = asyncErrorHandler(
   async (req: Request<{}, {}>, res, next) => {
-    const { brandName, brandImgUrl, brandLogoUrl, categoryArray, brandKeywords } = req.body;
-    let brandKeywordsArr;
-    console.log(brandKeywords, "brandKeywords")
-    if (brandKeywords) {
+    const { brandName, brandImgUrl, brandLogoUrl, categoryArray } = req.body;
+    const { brandId } = req.query
 
-      brandKeywordsArr = brandKeywords.split(",")
-
-    }
-    console.log(brandKeywordsArr)
     if (categoryArray.length === 0) return next(new ErrorHandler("Category name not provided", 400));
 
     // Check if category exists by name
@@ -32,15 +26,13 @@ export const newBrand = asyncErrorHandler(
     // Check if the brand already exists in the category
     // const existingBrand = await Brand.findOne({ brandName, categories: category._id });
 
-    const existingBrand = await Brand.findOne({ brandName });
+    const existingBrand = await Brand.findOne({ _id: brandId });
     console.log("existing brand found", existingBrand)
     if (existingBrand) {
       if (brandName) {
         existingBrand.brandName = brandName
       }
-      if (brandKeywords) {
-        existingBrand.branKeywords = brandKeywordsArr
-      }
+
       if (brandImgUrl) {
         existingBrand.brandImgUrl = brandImgUrl
       }
@@ -63,7 +55,6 @@ export const newBrand = asyncErrorHandler(
         brandName,
         brandImgUrl: brandImgUrl ? brandImgUrl : null,
         brandLogoUrl: brandLogoUrl ? brandLogoUrl : null,
-        branKeywords: brandKeywordsArr,
         categoryArray
       });
       return res.status(201).json({
@@ -138,38 +129,50 @@ export const getAllBrandWithoutCategory = asyncErrorHandler(
 //-----------------Api to delete brand----------------------------------------
 export const deleteBrand = asyncErrorHandler(
   async (req, res, next) => {
-    const { brandName, categoryName } = req.body;
-
-    if (!brandName || !categoryName) {
-      return next(new ErrorHandler("please provide brand name and category name", 400));
+    const { brandId } = req.params
+    console.log(brandId, "id id id")
+    const offer = await Brand.findById(brandId);
+    if (!offer) {
+      return next(new ErrorHandler("brand not found", 404));
     }
+    await offer.deleteOne();
+    return res.status(200).json({
+      success: true,
+      message: "brand Deleted Successfully",
+    });
+    //   const { brandName, categoryName } = req.body;
 
-    // Find category ID
-    const category = await Category.findOne({ categoryName });
-    if (!category) {
-      return next(new ErrorHandler("Category not found", 400));
-    }
+    //   if (!brandName || !categoryName) {
+    //     return next(new ErrorHandler("please provide brand name and category name", 400));
+    //   }
 
-    // Find brand and remove category from categories array
-    const updatedBrand = await Brand.findOneAndUpdate(
-      { brandName },
-      { $pull: { categories: category._id } },
-      { new: true }
-    );
+    //   // Find category ID
+    //   const category = await Category.findOne({ categoryName });
+    //   if (!category) {
+    //     return next(new ErrorHandler("Category not found", 400));
+    //   }
 
-    if (!updatedBrand) {
-      return next(new ErrorHandler("No brand found", 400));
-    }
+    //   // Find brand and remove category from categories array
+    //   const updatedBrand = await Brand.findOneAndUpdate(
+    //     { brandName },
+    //     { $pull: { categories: category._id } },
+    //     { new: true }
+    //   );
 
-    // Check if category is removed
-    if (!updatedBrand.categories.includes(category._id)) {
-      return res.status(200).json({
-        success: true,
-        message: "Category removed from brand successfully",
-        updatedBrand,
-      });
-    } else {
-      return next(new ErrorHandler("Failed to remove category from brand", 400));
-    }
+    //   if (!updatedBrand) {
+    //     return next(new ErrorHandler("No brand found", 400));
+    //   }
+
+    //   // Check if category is removed
+    //   if (!updatedBrand.categories.includes(category._id)) {
+    //     return res.status(200).json({
+    //       success: true,
+    //       message: "Category removed from brand successfully",
+    //       updatedBrand,
+    //     });
+    //   } else {
+    //     return next(new ErrorHandler("Failed to remove category from brand", 400));
+    //   }
+    // }
   }
 );
