@@ -533,7 +533,8 @@ interface AdminSearchRequestQuery {
   page?: number;
 }
 
-//api to get all products
+
+// API to get all products
 export const getAllAdminProducts = asyncErrorHandler(
   async (req: Request<{}, {}, {}, AdminSearchRequestQuery>, res: Response, next: NextFunction) => {
     const { searchQuery, category, sort, page = 1 } = req.query;
@@ -548,8 +549,7 @@ export const getAllAdminProducts = asyncErrorHandler(
       };
     }
 
-    if (category && category.toLowerCase() != "all") {
-
+    if (category && category.toLowerCase() !== "all") {
       const findCategory = await Category.findOne({ categoryName: category });
       if (findCategory) {
         baseQuery.productCategory = findCategory._id;
@@ -575,9 +575,14 @@ export const getAllAdminProducts = asyncErrorHandler(
       } else if (sort === "oldest") {
         sortBy.createdAt = 1;
       } else {
+        // Default to newest if an unknown sort is provided
         sortBy.createdAt = -1;
       }
+    } else {
+      // Default to sorting by newest products if no sort query is provided
+      sortBy.createdAt = -1;
     }
+
     // Fetch products with applied filters, sorting, and pagination
     const [products, totalProductsCount] = await Promise.all([
       Product.find(baseQuery)
@@ -593,11 +598,6 @@ export const getAllAdminProducts = asyncErrorHandler(
 
     const totalPage = Math.ceil(totalProductsCount / limit);
 
-
-
-    // console.log("-------admin product--------------------------")
-    // console.log(searchQuery)
-    // console.log("-------admin product--------------------------")
     return res.status(200).json({
       success: true,
       products,
@@ -606,6 +606,81 @@ export const getAllAdminProducts = asyncErrorHandler(
     });
   }
 );
+
+
+// //api to get all products
+// export const getAllAdminProducts = asyncErrorHandler(
+//   async (req: Request<{}, {}, {}, AdminSearchRequestQuery>, res: Response, next: NextFunction) => {
+//     const { searchQuery, category, sort, page = 1 } = req.query;
+//     const limit = 100; // Set a default limit for pagination
+//     const skip = (page - 1) * limit;
+//     const baseQuery: any = {}; // Define base query for filtering
+
+//     if (searchQuery) {
+//       baseQuery.productTitle = {
+//         $regex: searchQuery,
+//         $options: "i",
+//       };
+//     }
+
+//     if (category && category.toLowerCase() != "all") {
+
+//       const findCategory = await Category.findOne({ categoryName: category });
+//       if (findCategory) {
+//         baseQuery.productCategory = findCategory._id;
+//       } else {
+//         // If the category is not found, return an empty result
+//         return res.status(404).json({
+//           success: false,
+//           message: 'Category not found',
+//           products: [],
+//           totalPage: 0,
+//           totalProducts: 0,
+//         });
+//       }
+//     }
+
+//     const sortBy: any = {};
+
+//     if (sort) {
+//       if (sort === "A-Z") {
+//         sortBy.productTitle = 1;
+//       } else if (sort === "Z-A") {
+//         sortBy.productTitle = -1;
+//       } else if (sort === "oldest") {
+//         sortBy.createdAt = 1;
+//       } else {
+//         sortBy.createdAt = -1;
+//       }
+//     }
+//     // Fetch products with applied filters, sorting, and pagination
+//     const [products, totalProductsCount] = await Promise.all([
+//       Product.find(baseQuery)
+//         .populate('productCategory')
+//         .populate('productBrand')
+//         .populate('productComboProducts')
+//         .populate('productFreeProducts')
+//         .sort(sortBy)
+//         .skip(skip)
+//         .limit(limit),
+//       Product.countDocuments(baseQuery),
+//     ]);
+
+//     const totalPage = Math.ceil(totalProductsCount / limit);
+
+
+
+//     // console.log("-------admin product--------------------------")
+//     // console.log(searchQuery)
+//     // console.log("-------admin product--------------------------")
+//     return res.status(200).json({
+//       success: true,
+//       products,
+//       totalPage,
+//       totalProducts: totalProductsCount,
+//     });
+//   }
+// );
 
 // export const getAllAdminProducts = asyncErrorHandler(
 //   async (req: Request<{}, {}, {}, SearchRequestQuery>, res, next) => {

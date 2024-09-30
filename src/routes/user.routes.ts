@@ -1,6 +1,7 @@
 import express from "express";
 
 import {
+    changeUserRole,
     clearCart,
     decreaseCartProductQuantity,
     getAppliedCoupon,
@@ -9,6 +10,7 @@ import {
     getUnAuthenticatedCartDetails,
     getUser,
     getWishlistItems,
+    listAllUsers,
     newUser,
     removeCartItem,
     removeComboItem,
@@ -65,5 +67,11 @@ userRouter.delete("/clearcart", authenticated, clearCart)
 // ------------------------   buy now related routes-------------------------------------------
 
 userRouter.post("/getBuyNowCartDetails", authenticated, getBuyNowCartDetails)
+
+
+// ====================== admin user =============================
+userRouter.get("/getallusers", listAllUsers)
+userRouter.post("/changeroles", changeUserRole);
+
 
 export default userRouter;

@@ -114,46 +114,97 @@ export const getUser = asyncErrorHandler(async (req: Request, res, next) => {
   });
 });
 
-//-----------------------api to update profile ----------------------------------------
+// //-----------------------api to update profile ----------------------------------------
+// export const updateProfile = asyncErrorHandler(async (req, res, next) => {
+//   const { profile } = req.body
+//   const user = await User.findById(req.user._id);
+//   if (!user) {
+//     return next(new ErrorHandler("No user found by this id", 404));
+//   }
+
+//   const profileData = JSON.parse(profile)
+//   console.log(profileData)
+//   const {
+//     profileImageUrl,
+//     profileName,
+//     profilePhoneNo,
+//     profileGender,
+//     profileLocation,
+//     profileAlternateMobileNo,
+//   } = profileData
+
+//   user.name = profileData.profileName
+//   user.profile = {
+//     profileImageUrl,
+//     profileName,
+//     profilePhoneNo,
+//     profileGender,
+//     profileLocation,
+//     profileAlternateMobileNo,
+//     profileEmailId: user.profile.profileEmailId,
+//   }
+
+//   await updateFirebaseProfile(req.user.uid, profileData.profileName, profileData.profileImageUrl, profileData.profilePhoneNo)
+//   // user.email = profileData.profileEmailId
+//   await user.save();
+
+//   return res.status(200).json({
+//     success: true,
+//     message: "Successfully updated profile",
+
+//   });
+// });
 export const updateProfile = asyncErrorHandler(async (req, res, next) => {
-  const { profile } = req.body
+  const { profile } = req.body;
   const user = await User.findById(req.user._id);
   if (!user) {
     return next(new ErrorHandler("No user found by this id", 404));
   }
 
-  const profileData = JSON.parse(profile)
-  console.log(profileData)
-  const {
-    profileImageUrl,
-    profileName,
-    profilePhoneNo,
-    profileGender,
-    profileLocation,
-    profileAlternateMobileNo,
-  } = profileData
+  // Parse profile only if it is provided
+  const profileData = profile ? JSON.parse(profile) : {};
 
-  user.name = profileData.profileName
-  user.profile = {
-    profileImageUrl,
-    profileName,
-    profilePhoneNo,
-    profileGender,
-    profileLocation,
-    profileAlternateMobileNo,
-    profileEmailId: user.profile.profileEmailId,
+  // Retain previous values and update only the provided fields
+  if (profileData.profileName) {
+    user.profile.profileName = profileData.profileName;
+    user.name = profileData.profileName
+  }
+  if (profileData.profilePhoneNo) {
+    user.profile.profilePhoneNo = profileData.profilePhoneNo;
+  }
+  if (profileData.profileImageUrl) {
+    user.profile.profileImageUrl = profileData.profileImageUrl;
+  }
+  if (profileData.profileGender) {
+    user.profile.profileGender = profileData.profileGender;
+  }
+  if (profileData.profileLocation) {
+    user.profile.profileLocation = profileData.profileLocation;
+  }
+  if (profileData.profileAlternateMobileNo) {
+    user.profile.profileAlternateMobileNo = profileData.profileAlternateMobileNo;
+  }
+  // The email is retained as it is
+  user.profile.profileEmailId = user.profile.profileEmailId;
+
+  // Optionally update Firebase if profileName or profileImageUrl is changed
+  if (profileData.profileName || profileData.profileImageUrl || profileData.profilePhoneNo) {
+    await updateFirebaseProfile(req.user.uid,
+      profileData.profileName || user.profile.profileName,
+      profileData.profileImageUrl || user.profile.profileImageUrl,
+      profileData.profilePhoneNo || user.profile.profilePhoneNo
+    );
   }
 
-  await updateFirebaseProfile(req.user.uid, profileData.profileName, profileData.profileImageUrl, profileData.profilePhoneNo)
-  // user.email = profileData.profileEmailId
   await user.save();
 
   return res.status(200).json({
     success: true,
     message: "Successfully updated profile",
-
+    userData: user
   });
 });
+
 
 //---------------------api to update profile image-------------------------------------------
 export const updateProfileImage = asyncErrorHandler(async (req, res, next) => {
@@ -1229,5 +1280,61 @@ export const getBuyNowCartDetails = asyncErrorHandler(async (req: Request, res, 
     cartItemsData,
     cartDetails: { ...totals, finalCartTotal, couponDiscount, availableCoins, usableCoins, deliveryCharges, isCoinUseChecked },
     offer: user?.coupon,
+  });
+});
+
+
+
+
+
+
+
+
+// =============================== admin panel======================================
+
+
+
+
+
+
+
+export const listAllUsers = asyncErrorHandler(async (req, res, next) => {
+  // Fetch all users from the database
+  const users = await User.find();
+
+  if (!users || users.length === 0) {
+    return next(new ErrorHandler("No users found", 204));
+  }
+
+  return res.status(200).json({
+    success: true,
+    message: "Successfully fetched users",
+    users,
+  });
+});
+
+
+export const changeUserRole = asyncErrorHandler(async (req, res, next) => {
+  const { userId, newRole } = req.body;
+
+  // Validate the newRole against defined roles
+  const validRoles = ['admin', 'editor', 'customer'];
+  if (!validRoles.includes(newRole)) {
+    return next(new ErrorHandler("Invalid role provided", 400));
+  }
+
+  // Find the user and update the role
+  const userToUpdate = await User.findById(userId);
+  if (!userToUpdate) {
+    return next(new ErrorHandler("User not found", 404));
+  }
+
+  userToUpdate.role = newRole;
+  await userToUpdate.save();
+
+  return res.status(200).json({
+    success: true,
+    message: "User role updated successfully",
+    updatedUser: userToUpdate,
   });
 });

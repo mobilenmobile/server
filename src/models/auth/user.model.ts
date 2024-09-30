@@ -47,6 +47,17 @@ const userSchema = new Schema(
       type: String,
       // required: [true, "Please enter name"]
     },
+    platform: {
+      type: String,
+      // required: [true, "Please enter name"]
+      enum: ['mnm', 'mnmadmin'], // Define the roles here
+      default: "mnm"
+    },
+    role: {
+      type: String,
+      enum: ['admin', 'editor', 'customer'], // Define the roles here
+      default: 'customer', // Default role
+    },
     email: {
       type: String,
       unique: [true, "Email already exists"],

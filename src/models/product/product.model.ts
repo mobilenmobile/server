@@ -60,6 +60,14 @@ const varianceType = new Schema({
     type: String,
     required: true,
   },
+  videoUrl: {
+    type: String,
+    default: ''
+  },
+  colorHexCode: {
+    type: String,
+    default: ''
+  },
   thumbnail: {
     type: String,
     required: true,
