@@ -78,14 +78,7 @@ export const newProduct = asyncErrorHandler(
 
     const refCategory = await Category.findOne({ categoryName: category });
 
-    if (!refCategory) {
-      return next(new ErrorHandler("Please provide the category of product", 400));
-    }
-    let refSubCategory
 
-    if (subcategory) {
-      refSubCategory = await subCategory.findOne({ subCategoryName: subcategory });
-    }
     // // const title = `${brand !== "generic" ? brand : ""}- ${
     // //   productModel !== "generic" ? productModel : ""
     // // } ${pattern.length > 0 ? pattern : ""} ${
@@ -94,7 +87,7 @@ export const newProduct = asyncErrorHandler(
 
     const newProduct = await Product.create({
       productCategory: refCategory._id,
-      productSubCategory: refSubCategory ? refSubCategory._id : null,
+      productSubCategory: subcategory ?? null,
       productBrand: refBrand._id,
       productModel: productModel,
       productTitle: productTitle,
@@ -161,8 +154,24 @@ export const getSingleProduct = asyncErrorHandler(async (req, res, next) => {
   product = await Product.findById(id)
     .populate("productCategory")
     .populate("productBrand")
-  // .populate('productComboProducts')
-  // .populate('productFreeProducts')
+    .populate({
+      path: 'productComboProducts',  // Field to populate
+      populate: {
+        path: 'productId',  // Field in ComboProducts to populate
+        model: 'product'  // Ensure this matches the model name exactly
+      }
+    })
+    .populate({
+      path: 'productFreeProducts',  // Field to populate
+      populate: {
+        path: 'productId',  // Field in ComboProducts to populate
+        model: 'product'  // Ensure this matches the model name exactly
+      }
+    })
+    .exec()
+  // .populate('productFreeProducts', {
+  //   path: 'productId', // This should refer to the field in the referenced model
+  // })
 
   if (!product) {
     return next(new ErrorHandler("Product not found", 404));
@@ -392,9 +401,11 @@ export const getSingleProductDetails = asyncErrorHandler(async (req, res, next) 
 
 //------------------------api to update product for admin only-------------------------------
 export const updateProduct = asyncErrorHandler(
-  async (req: Request<{}, {}, UpdateProductRequestBody>, res, next) => {
+  async (req, res, next) => {
     const id = (req.params as { id: string }).id;
     const {
+      subcategory,
+      model,
       brand,
       productModel,
       productTitle,
@@ -403,8 +414,8 @@ export const updateProduct = asyncErrorHandler(
       headsetType,
       variance,
       colors,
-      comboOfferProducts,
-      freeOfferProducts,
+      comboProducts,
+      freeProducts,
       selectedComboCategory,
       selectedFreeCategory,
       productVideoUrls,
@@ -426,6 +437,8 @@ export const updateProduct = asyncErrorHandler(
       }
       product.productBrand = refBrand._id;
     }
+    if (subcategory) product.productSubCategory = subcategory
+    if (model) product.productModel = model
     if (productModel) product.productModel = productModel;
     if (productTitle) product.productTitle = productTitle;
     if (description) product.productDescription = description;
@@ -433,8 +446,8 @@ export const updateProduct = asyncErrorHandler(
     if (headsetType) product.productHeadsetType = headsetType;
     if (variance) product.productVariance = JSON.parse(variance);
     if (colors) product.productColors = JSON.parse(colors)
-    if (comboOfferProducts) product.productComboProducts = JSON.parse(comboOfferProducts)
-    if (freeOfferProducts) product.productFreeProducts = JSON.parse(freeOfferProducts)
+    if (comboProducts) product.productComboProducts = JSON.parse(comboProducts)
+    if (freeProducts) product.productFreeProducts = JSON.parse(freeProducts)
     if (selectedComboCategory) product.productSelectedComboCategory = selectedComboCategory ? JSON.parse(selectedComboCategory) : null
     if (selectedFreeCategory) product.productSelectedFreeCategory = selectedFreeCategory ? JSON.parse(selectedFreeCategory) : null
     if (productVideoUrls) product.productVideoUrls = productVideoUrls ? JSON.parse(productVideoUrls) : null
@@ -1070,14 +1083,14 @@ export const getFilterAndSortProducts = asyncErrorHandler(async (req, res, next)
   const {
     category,
     searchText,
-    minPrice=[0],
-    maxPrice=[1000000],
+    minPrice = [0],
+    maxPrice = [1000000],
     rating,
     brand,
     color,
     memory,
     storage,
-    sortBy='priceLowToHigh',
+    sortBy = 'priceLowToHigh',
     page = 1,  // Default to page 1 if not provided
     limit = 6 // Default to 12 products per page
   } = req.body;
