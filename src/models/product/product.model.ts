@@ -27,19 +27,19 @@ const varianceType = new Schema({
     required: true,
   },
   boxPrice: {
-    type: String,
+    type: Number,
     required: true,
   },
   sellingPrice: {
-    type: String,
+    type: Number,
     required: true,
   },
   comboPrice: {
-    type: String,
+    type: Number,
     default: ''
   },
   quantity: {
-    type: String,
+    type: Number,
     required: true,
   },
   videoUrl: {
