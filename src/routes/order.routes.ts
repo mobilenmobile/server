@@ -12,8 +12,8 @@ orderRouter.put("/processOrder/:id", authenticated, processOrder)
 orderRouter.put("/cancellOrder/:id", authenticated, cancellOrder)
 
 // -------------------- admin routes---------------------------
-orderRouter.put("/:id", adminOnly, processOrder)
-orderRouter.delete("/deleteOrder/:id", adminOnly, deleteOrder)
+orderRouter.put("/:id", processOrder)
+orderRouter.delete("/deleteOrder/:id", deleteOrder)
 orderRouter.get("/getAllAdminOrders", getAllAdminOrders)
 orderRouter.get("/getOrderDetails/:id", getAdminSingleOrderDetails)
 
