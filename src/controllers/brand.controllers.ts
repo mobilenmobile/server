@@ -13,14 +13,47 @@ import ErrorHandler from "../utils/errorHandler";
 //-------------Api to create new brand------------------------------------------------
 export const newBrand = asyncErrorHandler(
   async (req: Request<{}, {}>, res, next) => {
-    const { brandName, brandImgUrl, brandLogoUrl, categoryArray } = req.body;
+    const { categoryName, brandName, brandImgUrl, brandLogoUrl, categoryArray } = req.body;
     const { brandId } = req.query
 
-    if (categoryArray.length === 0) return next(new ErrorHandler("Category name not provided", 400));
+    console.log(req.body)
 
     // Check if category exists by name
 
-    // const category = await Category.findOne({ categoryName: categoryName });
+
+    if (categoryName) {
+
+      const category = await Category.findOne({ categoryName: categoryName.trim() });
+      const existingBrand = await Brand.findOne({ brandName: brandName.trim() });
+
+      if (existingBrand) {
+
+        if (!existingBrand.categories.includes(category._id)) {
+          existingBrand.categories.push(category._id); // Add category ID if not already present
+          await existingBrand.save();
+        }
+
+        return res.status(201).json({
+          success: true,
+          message: "brand updated successfully",
+          data: existingBrand,
+        });
+      }
+      else {
+        const brand = await Brand.create({
+          brandName,
+          brandImgUrl: null,
+          brandLogoUrl: null,
+          categories: [category._id]
+        });
+        return res.status(201).json({
+          success: true,
+          message: "New brand created successfully",
+          data: brand,
+        });
+      }
+
+    }
     // if (!category) return next(new ErrorHandler("Category not found", 400));
 
     // Check if the brand already exists in the category
@@ -28,6 +61,9 @@ export const newBrand = asyncErrorHandler(
 
     const existingBrand = await Brand.findOne({ _id: brandId });
     console.log("existing brand found", existingBrand)
+
+
+    if (categoryArray.length === 0) return next(new ErrorHandler("Category name not provided", 400));
     if (existingBrand) {
       if (brandName) {
         existingBrand.brandName = brandName
