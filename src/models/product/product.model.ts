@@ -1,36 +1,18 @@
 import mongoose, { Schema } from "mongoose";
 
-// export interface RamAndStorage {
-//   id: {
-//     type: String,
-//     required: true,
-//   },
-//   ram: {
-//     type: String,
-//     required: true,
-//   },
-//   storage: {
-//     type: String,
-//     required: true,
-//   },
-// }
+const RamAndStorage = new Schema({
+  id: {
+    type: String,
+  },
+  ram: {
+    type: String,
+  },
+  storage: {
+    type: String,
+  },
+});
 
-
-const RamAndStorage = new Schema(
-  {
-    id: {
-      type: String,
-    },
-    ram: {
-      type: String,
-    },
-    storage: {
-      type: String,
-    },
-  }
-);
-
-//variance data type
+// Variance data type
 const varianceType = new Schema({
   id: {
     type: String,
@@ -45,19 +27,19 @@ const varianceType = new Schema({
     required: true,
   },
   boxPrice: {
-    type: String,
+    type: Number,
     required: true,
   },
   sellingPrice: {
-    type: String,
+    type: Number,
     required: true,
   },
   comboPrice: {
-    type: String,
-    required: true,
+    type: Number,
+    default: ''
   },
   quantity: {
-    type: String,
+    type: Number,
     required: true,
   },
   videoUrl: {
@@ -76,42 +58,18 @@ const varianceType = new Schema({
     type: [String],
     required: true,
   },
-})
+});
 
-// export interface IProduct {
-//   productTitle: {
-//     type: String,
-//     required: true,
-//   },
-//   productCategory: {
-//     type: String,
-//     required: true,
-//   },
-//   productBrand: string,
-//   productModel: string,
-//   productDescription: string,
-//   productSkinPattern: string,
-//   productHeadsetType: string,
-//   productVariance: varianceType[]
-//   productColors: string[]
-//   productRamAndStorage: RamAndStorage[]
-//   productRating: number
-//   productNumReviews: number
-// }
-
-const ComboProducts = new Schema(
-  {
-    productTitle: {
-      type: String,
-      default: ""
-
-    },
-    productId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "product",
-    }
+const ComboProducts = new Schema({
+  productTitle: {
+    type: String,
+    default: ""
+  },
+  productId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "product",
   }
-)
+});
 
 const productSchema = new Schema(
   {
@@ -126,14 +84,12 @@ const productSchema = new Schema(
     productSubCategory: {
       type: String,
       default: ''
-
     },
     productBrand: {
       type: Schema.Types.ObjectId,
       ref: "Brand",
       required: [true, "product brand is required"],
     },
-
     productModel: {
       type: String,
       required: [true, "product model is required"],
@@ -193,6 +149,19 @@ const productSchema = new Schema(
     timestamps: true,
   }
 );
+
+// Pre-save middleware to set comboPrice to sellingPrice if not provided
+productSchema.pre('save', function (next) {
+  if (!this.productVariance) return next();
+
+  this.productVariance.forEach(variant => {
+    if (!variant.comboPrice && variant.sellingPrice) {
+      variant.comboPrice = variant.sellingPrice;
+    }
+  });
+
+  next();
+});
 
 const Product = mongoose.models.product || mongoose.model("product", productSchema);
 

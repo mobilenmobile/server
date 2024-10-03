@@ -54,7 +54,7 @@ export const newBanner = asyncErrorHandler(
         });
     }
 );
-
+        
 export const getAllBanners = asyncErrorHandler(
     async (req: Request, res: Response) => {
         const { bannerId } = req.query

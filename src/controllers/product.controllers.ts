@@ -825,8 +825,8 @@ export const getAllAdminProducts = asyncErrorHandler(
 
 //---------------------api to get all products and change its structure------------------------------------
 export const getAllProducts = asyncErrorHandler(
-  async (req: Request<{}, {}, {}, SearchRequestQuery>, res, next) => {
-    const { search, sort, category, price } = req.query;
+  async (req, res, next) => {
+    const { search, sort, category, price, device } = req.query;
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 20;
     const skip = (page - 1) * limit;
@@ -838,6 +838,7 @@ export const getAllProducts = asyncErrorHandler(
         $options: "i",
       };
     }
+
     if (price) {
       baseQuery.price = {
         $lte: Number(price), //less than equal to
@@ -871,7 +872,7 @@ export const getAllProducts = asyncErrorHandler(
       .skip(skip)
       .limit(limit);
 
-    const [products, filteredProductwithoutlimit] = await Promise.all([
+    let [products, filteredProductwithoutlimit] = await Promise.all([
       productPromise,
       Product.find({ baseQuery }),
     ]);
@@ -880,11 +881,25 @@ export const getAllProducts = asyncErrorHandler(
     if (!totalProducts) {
       return next(new ErrorHandler("No Product Found", 204));
     }
+
+
+    if (category == "skin" && typeof device == 'string' && device.length > 1) {
+      console.log("skin filter according to device :---", device)
+      products = products.filter((item) => {
+        if (item.ProductSkinSelectedItems.includes(device.toLowerCase().trim())) {
+          console.log(item.ProductSkinSelectedItems, device)
+          // console.log(item)
+          return item
+        }
+      })
+    }
+
     let flatProducts: any = []
 
     products.forEach(product => {
       product.productVariance.forEach((variant: ProductVariance) => {
         const productDiscount = calculateDiscount(variant.boxPrice, variant.sellingPrice)
+
         // console.log(variant)
         // if (Number(variant.quantity) > 0) {
         // console.log("--------------------------------ram---------------------", variant.ramAndStorage[0])
@@ -922,14 +937,20 @@ export const getAllProducts = asyncErrorHandler(
         // }
       });
     });
+    // let filteredProducts = products
+
+
     // console.log("----------flatProducts--------", flatProducts)
-    const totalPage = Math.ceil(totalProducts / limit);
+    const totalPage = Math.ceil(flatProducts / limit);
 
     //shuffling the products array
     for (let i = flatProducts.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [flatProducts[i], flatProducts[j]] = [flatProducts[j], flatProducts[i]];
     }
+
+
+    // console.log("products list -------------> ", flatProducts)
 
     return res.status(200).json({
       success: true,

@@ -137,6 +137,7 @@ export type SearchRequestQuery = {
   sort?: string;
   page?: string;
   limit?: string;
+  device:string
 };
 
 export type SearchBrandRequestQuery = {
