@@ -68,6 +68,10 @@ const ComboProducts = new Schema({
   productId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "product",
+  },
+  comboPrice: {
+    type: Number,
+    default: 0
   }
 });
 
@@ -143,6 +147,14 @@ const productSchema = new Schema(
     ProductSkinSelectedItems: {
       type: [String],
       default: []
+    },
+    isFeatured: {
+      type: Boolean,
+      default: false,
+    },
+    isArchived: {
+      type: Boolean,
+      default: false,
     }
   },
   {

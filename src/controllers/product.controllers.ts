@@ -61,6 +61,7 @@ export const newProduct = asyncErrorHandler(
       selectedFreeCategory,
       productVideoUrls,
       skinSelectedItems,
+      
 
     } = req.body;
 
@@ -420,6 +421,8 @@ export const updateProduct = asyncErrorHandler(
       selectedFreeCategory,
       productVideoUrls,
       skinSelectedItems,
+      isfeatured,
+      isArchived,
     } = req.body;
 
     console.log("update-req-body", req.body);
@@ -452,7 +455,8 @@ export const updateProduct = asyncErrorHandler(
     if (selectedFreeCategory) product.productSelectedFreeCategory = selectedFreeCategory ? JSON.parse(selectedFreeCategory) : null
     if (productVideoUrls) product.productVideoUrls = productVideoUrls ? JSON.parse(productVideoUrls) : null
     if (skinSelectedItems) product.ProductSkinSelectedItems = skinSelectedItems ? JSON.parse(skinSelectedItems) : null
-
+    if (isfeatured) product.isFeatured = isfeatured
+    if (isArchived) product.isArchived = isArchived
     // console.log(JSON.parse(comboOfferProducts))
 
     const prod = await product.save();
@@ -826,11 +830,16 @@ export const getAllAdminProducts = asyncErrorHandler(
 //---------------------api to get all products and change its structure------------------------------------
 export const getAllProducts = asyncErrorHandler(
   async (req, res, next) => {
-    const { search, sort, category, price, device } = req.query;
+    const { search, sort, category, price, device, isfeatured } = req.query;
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 20;
     const skip = (page - 1) * limit;
     const baseQuery: FilterQuery<BaseQuery> = {};
+
+    // If isfeatured is true, return all featured products
+    if (isfeatured === 'true') {
+      baseQuery.isFeatured = true; // Assuming there's an 'isFeatured' field in the Product schema
+    }
 
     if (search) {
       baseQuery.productTitle = {
@@ -841,14 +850,15 @@ export const getAllProducts = asyncErrorHandler(
 
     if (price) {
       baseQuery.price = {
-        $lte: Number(price), //less than equal to
+        $lte: Number(price), // Less than or equal to
       };
     }
+
     if (category) {
       const findCategory = await Category.findOne({ categoryName: category });
-      // console.log(findCategory);
-
-      baseQuery.productCategory = findCategory._id;
+      if (findCategory) {
+        baseQuery.productCategory = findCategory._id;
+      }
     }
 
     const sortBy: any = {};
@@ -864,7 +874,7 @@ export const getAllProducts = asyncErrorHandler(
         sortBy.createdAt = -1;
       }
     }
-    // console.log(baseQuery);
+
     const productPromise = Product.find(baseQuery)
       .populate("productCategory")
       .populate("productBrand")
@@ -877,47 +887,32 @@ export const getAllProducts = asyncErrorHandler(
       Product.find({ baseQuery }),
     ]);
 
-    const totalProducts = (await Product.find(baseQuery)).length;
+    const totalProducts = await Product.countDocuments(baseQuery); // Use countDocuments for accurate total
     if (!totalProducts) {
       return next(new ErrorHandler("No Product Found", 204));
     }
 
-
-    if (category == "skin" && typeof device == 'string' && device.length > 1) {
-      console.log("skin filter according to device :---", device)
+    if (category === "skin" && typeof device === 'string' && device.length > 1) {
+      console.log("skin filter according to device :---", device);
       products = products.filter((item) => {
-        if (item.ProductSkinSelectedItems.includes(device.toLowerCase().trim())) {
-          console.log(item.ProductSkinSelectedItems, device)
-          // console.log(item)
-          return item
-        }
-      })
+        return item.ProductSkinSelectedItems.includes(device.toLowerCase().trim());
+      });
     }
 
-    let flatProducts: any = []
+    let flatProducts: any = [];
 
     products.forEach(product => {
       product.productVariance.forEach((variant: ProductVariance) => {
-        const productDiscount = calculateDiscount(variant.boxPrice, variant.sellingPrice)
+        const productDiscount = calculateDiscount(variant.boxPrice, variant.sellingPrice);
 
-        // console.log(variant)
-        // if (Number(variant.quantity) > 0) {
-        // console.log("--------------------------------ram---------------------", variant.ramAndStorage[0])
-
-        //dynamically creating title of product
-        let title = product.productTitle
+        let title = product.productTitle;
 
         if (variant['ramAndStorage'].length > 0 && variant.ramAndStorage[0]?.ram) {
-          // title = `${product.productTitle} ${variant.ramAndStorage
-          //   && `(${variant.ramAndStorage[0].ram != '0' ? `${variant.color} ${variant.ramAndStorage[0].ram}GB` : ''} ${variant.ramAndStorage[0].storage != '0' ? `${variant.ramAndStorage[0].storage}GB` : ''})`
-          //   }`
-          title = `${product.productTitle} ${variant.ramAndStorage
-            && `(${variant.color} ${variant.ramAndStorage[0].storage != '0' ? `${variant.ramAndStorage[0].storage}GB` : ''})`
-            }`
+          title = `${product.productTitle} ${variant.ramAndStorage[0].storage !== '0' ? `(${variant.color} ${variant.ramAndStorage[0].storage}GB)` : `(${variant.color})`}`;
         } else {
-          title = `${product.productTitle} (${variant.color})`
+          title = `${product.productTitle} (${variant.color})`;
         }
-        //creating different product based on variance
+
         const newProduct = {
           productid: `${product._id}`,
           keyid: `${product._id}${variant.id.replace(/\s+/g, "")}`,
@@ -929,38 +924,169 @@ export const getAllProducts = asyncErrorHandler(
           sellingPrice: variant.sellingPrice,
           discount: productDiscount,
           rating: product.productRating,
-          color: variant.color, // Replace with actual rating if available
+          color: variant.color,
           brand: product.productBrand?.brandName || 'nobrand',
-          outofstock: Number(variant?.quantity) == 0 ? true : false,
+          outofstock: Number(variant?.quantity) === 0,
         };
-        flatProducts.push(newProduct)
-        // }
+        flatProducts.push(newProduct);
       });
     });
-    // let filteredProducts = products
 
+    const totalPage = Math.ceil(totalProducts / limit);
 
-    // console.log("----------flatProducts--------", flatProducts)
-    const totalPage = Math.ceil(flatProducts / limit);
-
-    //shuffling the products array
+    // Shuffling the products array
     for (let i = flatProducts.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [flatProducts[i], flatProducts[j]] = [flatProducts[j], flatProducts[i]];
     }
 
-
-    // console.log("products list -------------> ", flatProducts)
-
     return res.status(200).json({
       success: true,
-      message: "all products fetched successfully",
+      message: "All products fetched successfully",
       products: flatProducts,
       totalPage,
       totalProducts,
     });
   }
 );
+
+// export const getAllProducts = asyncErrorHandler(
+//   async (req, res, next) => {
+//     const { search, sort, category, price, device ,isfeatured} = req.query;
+//     const page = Number(req.query.page) || 1;
+//     const limit = Number(req.query.limit) || 20;
+//     const skip = (page - 1) * limit;
+//     const baseQuery: FilterQuery<BaseQuery> = {};
+
+//     if (search) {
+//       baseQuery.productTitle = {
+//         $regex: search,
+//         $options: "i",
+//       };
+//     }
+
+//     if (price) {
+//       baseQuery.price = {
+//         $lte: Number(price), //less than equal to
+//       };
+//     }
+//     if (category) {
+//       const findCategory = await Category.findOne({ categoryName: category });
+//       // console.log(findCategory);
+
+//       baseQuery.productCategory = findCategory._id;
+//     }
+
+//     const sortBy: any = {};
+
+//     if (sort) {
+//       if (sort === "A-Z") {
+//         sortBy.productTitle = 1;
+//       } else if (sort === "Z-A") {
+//         sortBy.productTitle = -1;
+//       } else if (sort === "oldest") {
+//         sortBy.createdAt = 1;
+//       } else {
+//         sortBy.createdAt = -1;
+//       }
+//     }
+//     // console.log(baseQuery);
+//     const productPromise = Product.find(baseQuery)
+//       .populate("productCategory")
+//       .populate("productBrand")
+//       .sort(sort ? sortBy : { createdAt: -1 })
+//       .skip(skip)
+//       .limit(limit);
+
+//     let [products, filteredProductwithoutlimit] = await Promise.all([
+//       productPromise,
+//       Product.find({ baseQuery }),
+//     ]);
+
+//     const totalProducts = (await Product.find(baseQuery)).length;
+//     if (!totalProducts) {
+//       return next(new ErrorHandler("No Product Found", 204));
+//     }
+
+
+//     if (category == "skin" && typeof device == 'string' && device.length > 1) {
+//       console.log("skin filter according to device :---", device)
+//       products = products.filter((item) => {
+//         if (item.ProductSkinSelectedItems.includes(device.toLowerCase().trim())) {
+//           console.log(item.ProductSkinSelectedItems, device)
+//           // console.log(item)
+//           return item
+//         }
+//       })
+//     }
+
+//     let flatProducts: any = []
+
+//     products.forEach(product => {
+//       product.productVariance.forEach((variant: ProductVariance) => {
+//         const productDiscount = calculateDiscount(variant.boxPrice, variant.sellingPrice)
+
+//         // console.log(variant)
+//         // if (Number(variant.quantity) > 0) {
+//         // console.log("--------------------------------ram---------------------", variant.ramAndStorage[0])
+
+//         //dynamically creating title of product
+//         let title = product.productTitle
+
+//         if (variant['ramAndStorage'].length > 0 && variant.ramAndStorage[0]?.ram) {
+//           // title = `${product.productTitle} ${variant.ramAndStorage
+//           //   && `(${variant.ramAndStorage[0].ram != '0' ? `${variant.color} ${variant.ramAndStorage[0].ram}GB` : ''} ${variant.ramAndStorage[0].storage != '0' ? `${variant.ramAndStorage[0].storage}GB` : ''})`
+//           //   }`
+//           title = `${product.productTitle} ${variant.ramAndStorage
+//             && `(${variant.color} ${variant.ramAndStorage[0].storage != '0' ? `${variant.ramAndStorage[0].storage}GB` : ''})`
+//             }`
+//         } else {
+//           title = `${product.productTitle} (${variant.color})`
+//         }
+//         //creating different product based on variance
+//         const newProduct = {
+//           productid: `${product._id}`,
+//           keyid: `${product._id}${variant.id.replace(/\s+/g, "")}`,
+//           variantid: `${variant.id.replace(/\s+/g, "")}`,
+//           title: title.toLowerCase(),
+//           category: product?.productCategory?.categoryName,
+//           thumbnail: variant.thumbnail,
+//           boxPrice: variant.boxPrice,
+//           sellingPrice: variant.sellingPrice,
+//           discount: productDiscount,
+//           rating: product.productRating,
+//           color: variant.color, // Replace with actual rating if available
+//           brand: product.productBrand?.brandName || 'nobrand',
+//           outofstock: Number(variant?.quantity) == 0 ? true : false,
+//         };
+//         flatProducts.push(newProduct)
+//         // }
+//       });
+//     });
+//     // let filteredProducts = products
+
+
+//     // console.log("----------flatProducts--------", flatProducts)
+//     const totalPage = Math.ceil(flatProducts / limit);
+
+//     //shuffling the products array
+//     for (let i = flatProducts.length - 1; i > 0; i--) {
+//       const j = Math.floor(Math.random() * (i + 1));
+//       [flatProducts[i], flatProducts[j]] = [flatProducts[j], flatProducts[i]];
+//     }
+
+
+//     // console.log("products list -------------> ", flatProducts)
+
+//     return res.status(200).json({
+//       success: true,
+//       message: "all products fetched successfully",
+//       products: flatProducts,
+//       totalPage,
+//       totalProducts,
+//     });
+//   }
+// );
 //---------------------api to get similar products and change its structure------------------------------------
 export const getSimilarProducts = asyncErrorHandler(
   async (req, res, next) => {
