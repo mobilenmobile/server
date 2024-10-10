@@ -1,10 +1,27 @@
-import mongoose, { Schema } from "mongoose";
+import mongoose, { Document, Schema } from "mongoose";
 import { Category } from "../category/category.model";
 
-const brandSchema = new Schema({
+interface ICategory {
+  _id: string;
+  categoryName: string;
+}
+
+interface IBrand extends Document {
+  brandName: string;
+  branKeywords: string[];
+  brandImgUrl: string;
+  brandLogoUrl: string;
+  categories: ICategory['_id'][];
+  createdAt: Date;
+  models: mongoose.Types.ObjectId[];
+}
+
+const brandSchema = new Schema<IBrand>({
   brandName: {
     type: String,
     required: [true, "Please provide brand name"],
+    unique: true,  // Ensure brand name is unique
+    set: (value: string) => value.trim().toLowerCase() // Always save in lowercase and trim whitespaces
   },
   branKeywords: [
     {
@@ -33,7 +50,8 @@ const brandSchema = new Schema({
   }]
 });
 
-brandSchema.pre('save', async function (next) {
+// Ensure categories are valid and exist
+brandSchema.pre<IBrand>('save', async function (next) {
   if (this.isNew) {
     const categories = this.categories;
     this.categories = await Promise.all(categories.map(async (categoryId) => {
@@ -47,4 +65,4 @@ brandSchema.pre('save', async function (next) {
   next();
 });
 
-export const Brand = mongoose.models.Brand || mongoose.model("Brand", brandSchema);
+export const Brand = mongoose.models.Brand || mongoose.model<IBrand>("Brand", brandSchema);
