@@ -1,29 +1,5 @@
 import mongoose, { Schema } from "mongoose";
 
-// Define the Address schema
-// const ramAndStorageSchema = new Schema({
-//   id: { type: String },
-//   ram: { type: String },
-//   storage: { type: String },
-// })
-
-// const varianceTypeSchema = new Schema({
-//   id: { type: String, required: true },
-//   color: { type: String, required: true },
-//   ramAndStorage: { type: ramAndStorageSchema },
-//   boxPrice: { type: String, required: true },
-//   sellingPrice: { type: String, required: true },
-//   quantity: { type: String, required: true },
-//   thumbnail: { type: String, required: true },
-//   productImages: { type: [String], required: true },
-// })
-
-// const orderItemSchema = new Schema({
-//   id: { type: String, required: true },
-//   productTitle: { type: String, required: true },
-//   product: { type: String, required: true },
-//   selectedVariance: { type: varianceTypeSchema, required: true },
-// })
 
 // Define the Address schema
 const addressSchema = new Schema({
@@ -42,15 +18,16 @@ const addressSchema = new Schema({
   default: { type: Boolean, default: false },
 });
 
-
-// orderItems,
-// orderStatuses,
-// total,
-// couponcode,
-// paymentMethod,
-// paymentStatus,
-// deliveryAddress,
-// discount,
+// Define the Courier Order Details schema with default values
+const courierOrderDetailsSchema = new Schema({
+  order_id: { type: Number, default: null },
+  channel_order_id: { type: String, default: "" },
+  shipment_id: { type: Number, default: null },
+  status: { type: String, default: "" },
+  awb_code: { type: String, default: "" },
+  courier_company_id: { type: String, default: "" },
+  courier_name: { type: String, default: "" },
+});
 
 
 const orderSchema = new Schema({
@@ -67,6 +44,10 @@ const orderSchema = new Schema({
   deliveryCharges: { type: Number, default: 0 },
   orderStatuses: {
     type: [Object],
+  },
+  orderStatusState: {
+    type: String,
+    default: 'placed',
   },
   total: {
     type: Number,
@@ -107,8 +88,11 @@ const orderSchema = new Schema({
   shippingId: {
     type: String,
     default: ""
-  }
-  ,
+  },
+  courierOrderDetails: {
+    type: courierOrderDetailsSchema,
+    default: () => ({}) // Default to an empty object
+  },
   createdAt: {
     type: Date,
     default: Date.now
