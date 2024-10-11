@@ -15,11 +15,11 @@ export const OfferSchema = new Schema(
       default: true
     },
     offerStartDate: {
-      type: String,
+      type: Date,
       default: Date.now()
     },
     offerEndDate: {
-      type: String,
+      type: Date,
       required: true
     },
 

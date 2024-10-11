@@ -4,6 +4,7 @@ import {
     changeUserRole,
     clearCart,
     decreaseCartProductQuantity,
+    findUser,
     getAppliedCoupon,
     getBuyNowCartDetails,
     getCartDetails,
@@ -33,6 +34,7 @@ const userRouter = express.Router();
 // --------------------------user routes-------------------------------------------
 userRouter.post("/new", newUser);
 userRouter.get("/userDetails/:uid", authenticated, getUser);
+userRouter.post("/userBasicInfo",findUser);
 
 //----------------------- USER COIN SECTION --------------------------------
 userRouter.get("/getCoinAccountDetails", authenticated, getCoinAccount);

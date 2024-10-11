@@ -5,39 +5,12 @@ import { ShipRocket } from "../models/shiprocket/shiprocket.model";
 import { Order } from "../models/order/order.model";
 
 
-// Store user credentials
-// export const SaveShiprocketCredentials = asyncErrorHandler(async (req, res, next) => {
-//     const { email, password } = req.body;
-
-//     if (!email || !password) {
-//         return res.status(400).send('User ID and password are required');
-//     }
-
-
-
-//     try {
-//         const token = await fetchToken(email, password);
-//         const newUser = new ShipRocket({
-//             email,
-//             password, // Password will be hashed before saving
-//             token,
-//             tokenUpdatedAt: new Date()
-//         });
-//         await newUser.save();
-//         res.status(201).send('User credentials stored');
-//     } catch (error) {
-//         res.status(500).json({ success: false, error: error })
-//     }
-
-// });
-
-
 // -----------------!!!!!!!!!!!!!!!!!!!!!! save shiprocket credentials !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!--------------------------------------
 export const SaveShiprocketCredentials = asyncErrorHandler(async (req, res, next) => {
     const { email, password } = req.body;
 
     if (!email || !password) {
-        return res.status(400).send('Email and password are required');
+        return res.status(400).json({ success: false, message: "email and password required" })
     }
 
     try {
@@ -71,13 +44,10 @@ export const SaveShiprocketCredentials = asyncErrorHandler(async (req, res, next
 export const GetShiprocketCredentials = asyncErrorHandler(async (req, res, next) => {
     const ShipRocketCredentials = await ShipRocket.findOne({ email: "mobilenmobilebjnr1@gmail.com" })
     if (!ShipRocketCredentials) {
-        return res.status(404).json({ message: "ShipRocket credentials not found" })
+        return res.status(404).json({ success: false, message: "ShipRocket credentials not found" })
     }
     return res.status(200).json({ credential: {} })
 });
-
-
-
 
 
 // -----------------!!!!!!!!!!!!!!!!!!!!!! list of available delivery partners !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!--------------------------------------
@@ -89,14 +59,14 @@ export const shipRocketAvailableDeliveryPartner = asyncErrorHandler(async (req, 
     let params
     if (orderId) {
         if (!orderId) {
-            return res.status(400).send({ message: 'orderId is required' })
+            return res.status(400).send({ success: false, message: 'orderId is required' })
         }
         params = {
             "order_id": orderId
         }
     } else {
         if (!deliveryPincode || !productWeight) {
-            return res.status(400).send({ message: 'delivery pincode and product weight  are required' })
+            return res.status(400).send({ success: false, message: 'delivery pincode and product weight  are required' })
         }
         params = {
             "pickup_postcode": "305624",
@@ -108,7 +78,7 @@ export const shipRocketAvailableDeliveryPartner = asyncErrorHandler(async (req, 
     console.log("params === >", params)
     const ShipRocketCredentials = await ShipRocket.findOne({ email: "mobilenmobilebjnr1@gmail.com" })
     if (!ShipRocketCredentials) {
-        return res.status(404).json({ message: "ShipRocket credentials not found" })
+        return res.status(404).json({ success: false, message: "ShipRocket credentials not found" })
     }
     const config = {
         headers: {
@@ -148,7 +118,7 @@ export const shipRocketAvailableDeliveryPartner = asyncErrorHandler(async (req, 
             // Something happened in setting up the request that triggered an Error
             console.error('Error message:', error.message);
         }
-        return res.status(500).json({ message: "Error in creating order" })
+        return res.status(500).json({ success: false, message: "Error in creating order" })
     }
 
 });
@@ -220,17 +190,16 @@ export function createOrderBody(orderData: any) {
 }
 
 
-
 // -----------------!!!!!!!!!!!!!!!!!!!!!! create shiprocket order !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!--------------------------------------
 export const shipRocketCreateOrder = asyncErrorHandler(async (req, res, next) => {
     const { orderId } = req.body
     if (!orderId) {
-        return res.status(400).send({ message: 'orderId is required' })
+        return res.status(400).send({ success: false, message: 'orderId is required' })
     }
     const UserOrder = await Order.findOne({ _id: orderId }).populate("user")
     const ShipRocketCredentials = await ShipRocket.findOne({ email: "mobilenmobilebjnr1@gmail.com" })
     if (!ShipRocketCredentials) {
-        return res.status(404).json({ message: "ShipRocket credentials not found" })
+        return res.status(404).json({ success: false, message: "ShipRocket credentials not found" })
     }
     const config = {
         headers: {
@@ -254,12 +223,12 @@ export const shipRocketCreateOrder = asyncErrorHandler(async (req, res, next) =>
 export const shipRocketGenerateAwb = asyncErrorHandler(async (req, res, next) => {
     const { shipmentId, courierId } = req.body
     if (!shipmentId || !courierId) {
-        return res.status(400).send({ message: 'shipmentId and courierId are required' })
+        return res.status(400).send({ success: false, message: 'shipmentId and courierId are required' })
     }
     // const UserOrder = await Order.findOne({ _id: orderId }).populate("user")
     const ShipRocketCredentials = await ShipRocket.findOne({ email: "mobilenmobilebjnr1@gmail.com" })
     if (!ShipRocketCredentials) {
-        return res.status(404).json({ message: "ShipRocket credentials not found" })
+        return res.status(404).json({ success: false, message: "ShipRocket credentials not found" })
     }
 
     const config = {
@@ -281,7 +250,7 @@ export const shipRocketGenerateAwb = asyncErrorHandler(async (req, res, next) =>
     try {
         const response = await axios.post(createAwbUrl, generateAwbBodyData, config)
         console.log('Response data for create awb:', response.data);
-        return res.status(200).json({ message: "successfully generated awb", data: response.data })
+        return res.status(200).json({ success: true, message: "successfully generated awb", data: response.data })
     } catch (error: any) {
         if (error.response) {
             // The request was made and the server responded with a status code
@@ -306,12 +275,12 @@ export const shipRocketGenerateManifest = asyncErrorHandler(async (req, res, nex
     const { shipmentId } = req.body
 
     if (!shipmentId) {
-        return res.status(400).send({ message: 'shipmentId is required' })
+        return res.status(400).json({ success: false, message: 'shipmentId is required' })
     }
     // const UserOrder = await Order.findOne({ _id: orderId }).populate("user")
     const ShipRocketCredentials = await ShipRocket.findOne({ email: "mobilenmobilebjnr1@gmail.com" })
     if (!ShipRocketCredentials) {
-        return res.status(404).json({ message: "ShipRocket credentials not found" })
+        return res.status(404).json({ success: false, message: "ShipRocket credentials not found" })
     }
 
     const config = {
@@ -355,13 +324,13 @@ export const shipRocketGenerateManifest = asyncErrorHandler(async (req, res, nex
 export const shipRocketPrintManifest = asyncErrorHandler(async (req, res, next) => {
     const { orderId } = req.body
     if (!orderId) {
-        return res.status(400).send({ message: 'orderId is required' })
+        return res.status(400).json({ success: false, message: 'orderId is required' })
     }
 
 
     const ShipRocketCredentials = await ShipRocket.findOne({ email: "mobilenmobilebjnr1@gmail.com" })
     if (!ShipRocketCredentials) {
-        return res.status(404).json({ message: "ShipRocket credentials not found" })
+        return res.status(404).json({ success: false, message: "ShipRocket credentials not found" })
     }
 
     const config = {
@@ -382,7 +351,7 @@ export const shipRocketPrintManifest = asyncErrorHandler(async (req, res, next) 
     try {
         const response = await axios.post(printManifestUrl, printManifestBodyData, config)
         console.log('Response data for manifest:', response.data);
-        return res.status(200).json({ message: "successfully generated manifest", data: response.data })
+        return res.status(200).json({ success: true, message: "successfully generated manifest", data: response.data })
     } catch (error: any) {
         if (error.response) {
             // The request was made and the server responded with a status code
@@ -409,13 +378,13 @@ export const shipRocketGenerateLabel = asyncErrorHandler(async (req, res, next) 
     console.log(req.body)
 
     if (!shipmentId) {
-        return res.status(400).send({ message: 'shipmentId  are required' })
+        return res.status(400).send({ success: false, message: 'shipmentId  are required' })
     }
 
     //shiprocket credentials
     const ShipRocketCredentials = await ShipRocket.findOne({ email: "mobilenmobilebjnr1@gmail.com" })
     if (!ShipRocketCredentials) {
-        return res.status(404).json({ message: "ShipRocket credentials not found" })
+        return res.status(404).json({ success: false, message: "ShipRocket credentials not found" })
     }
 
 
@@ -451,7 +420,7 @@ export const shipRocketGenerateLabel = asyncErrorHandler(async (req, res, next) 
             // Something happened in setting up the request that triggered an Error
             console.error('Error message:', error.message);
         }
-        return res.status(500).json({ message: "Error in creating label" })
+        return res.status(500).json({ success: false, message: "Error in creating label" })
     }
 
 });
@@ -460,12 +429,12 @@ export const shipRocketGenerateLabel = asyncErrorHandler(async (req, res, next) 
 export const shipRocketGenerateInvoice = asyncErrorHandler(async (req, res, next) => {
     const { orderId } = req.body
     if (!orderId) {
-        return res.status(400).send({ message: 'orderId are required' })
+        return res.status(400).send({ success: false, message: 'orderId are required' })
     }
     // const UserOrder = await Order.findOne({ _id: orderId }).populate("user")
     const ShipRocketCredentials = await ShipRocket.findOne({ email: "mobilenmobilebjnr1@gmail.com" })
     if (!ShipRocketCredentials) {
-        return res.status(404).json({ message: "ShipRocket credentials not found" })
+        return res.status(404).json({ success: false, message: "ShipRocket credentials not found" })
     }
 
     const config = {
@@ -501,7 +470,7 @@ export const shipRocketGenerateInvoice = asyncErrorHandler(async (req, res, next
             // Something happened in setting up the request that triggered an Error
             console.error('Error message:', error.message);
         }
-        return res.status(500).json({ message: "Error in generating invoice" })
+        return res.status(500).json({ success: false, message: "Error in generating invoice" })
     }
 
 });
@@ -510,14 +479,14 @@ export const shipRocketGenerateInvoice = asyncErrorHandler(async (req, res, next
 export const cancellShipment = asyncErrorHandler(async (req, res, next) => {
     const { awb } = req.body
     if (!awb) {
-        return res.status(400).send({ message: 'Awb are required' })
+        return res.status(400).json({ success: false, message: 'Awb are required' })
     }
     const cancellShipmetUrl = "https://apiv2.shiprocket.in/v1/external/orders/cancel/shipment/awbs"
 
     // const UserOrder = await Order.findOne({ _id: orderId }).populate("user")
     const ShipRocketCredentials = await ShipRocket.findOne({ email: "mobilenmobilebjnr1@gmail.com" })
     if (!ShipRocketCredentials) {
-        return res.status(404).json({ message: "ShipRocket credentials not found" })
+        return res.status(404).json({ success: false, message: "ShipRocket credentials not found" })
     }
 
     const config = {
@@ -538,7 +507,7 @@ export const cancellShipment = asyncErrorHandler(async (req, res, next) => {
     try {
         const response = await axios.post(cancellShipmetUrl, cancellShipmetBodyData, config)
         console.log('Response data for cancell shipment:', response.data);
-        return res.status(200).json({ message: "successfully cancelled Shipment", data: response.data })
+        return res.status(200).json({ suceess: true, message: "successfully cancelled Shipment", data: response.data })
     } catch (error: any) {
         if (error.response) {
             // The request was made and the server responded with a status code
@@ -551,7 +520,7 @@ export const cancellShipment = asyncErrorHandler(async (req, res, next) => {
             // Something happened in setting up the request that triggered an Error
             console.error('Error message:', error.message);
         }
-        return res.status(500).json({ message: "Error in cancelling shipment" })
+        return res.status(500).json({ success: false, message: "Error in cancelling shipment" })
     }
 
 });
@@ -561,14 +530,14 @@ export const cancellShiprocketOrder = asyncErrorHandler(async (req, res, next) =
 
     const { orderId } = req.body
     if (!orderId) {
-        return res.status(400).send({ message: 'orderId is required' })
+        return res.status(400).send({ success: false, message: 'orderId is required' })
     }
     const cancellOrderUrl = "https://apiv2.shiprocket.in/v1/external/orders/cancel"
 
     // const UserOrder = await Order.findOne({ _id: orderId }).populate("user")
     const ShipRocketCredentials = await ShipRocket.findOne({ email: "mobilenmobilebjnr1@gmail.com" })
     if (!ShipRocketCredentials) {
-        return res.status(404).json({ message: "ShipRocket credentials not found" })
+        return res.status(404).json({ success: false, message: "ShipRocket credentials not found" })
     }
 
     const config = {
@@ -590,7 +559,7 @@ export const cancellShiprocketOrder = asyncErrorHandler(async (req, res, next) =
     try {
         const response = await axios.post(cancellOrderUrl, cancellOrderBodyData, config)
         console.log('Response data for cancell order:', response.data);
-        return res.status(200).json({ message: "successfully cancelled shiprocket order", data: response.data })
+        return res.status(200).json({ success: true, message: "successfully cancelled shiprocket order", data: response.data })
     } catch (error: any) {
         if (error.response) {
             // The request was made and the server responded with a status code
@@ -603,7 +572,7 @@ export const cancellShiprocketOrder = asyncErrorHandler(async (req, res, next) =
             // Something happened in setting up the request that triggered an Error
             console.error('Error message:', error.message);
         }
-        return res.status(500).json({ message: "Error in cancelling order" })
+        return res.status(500).json({ success: false, message: "Error in cancelling order" })
     }
 });
 
@@ -612,14 +581,14 @@ export const trackShiprocketOrder = asyncErrorHandler(async (req, res, next) => 
 
     const { awb } = req.body
     if (!awb) {
-        return res.status(400).send({ message: 'awb is required' })
+        return res.status(400).send({ success: false, message: 'awb is required' })
     }
     const trackshipmentUrl = `https://apiv2.shiprocket.in/v1/external/courier/track/awb/${awb}`
 
     // const UserOrder = await Order.findOne({ _id: orderId }).populate("user")
     const ShipRocketCredentials = await ShipRocket.findOne({ email: "mobilenmobilebjnr1@gmail.com" })
     if (!ShipRocketCredentials) {
-        return res.status(404).json({ message: "ShipRocket credentials not found" })
+        return res.status(404).json({ success: false, message: "ShipRocket credentials not found" })
     }
 
     const config = {
@@ -632,7 +601,7 @@ export const trackShiprocketOrder = asyncErrorHandler(async (req, res, next) => 
     try {
         const response = await axios.get(trackshipmentUrl, config)
         console.log('Response data for track shipment:', response.data);
-        return res.status(200).json({ message: "successfully tracked shipment", data: response.data })
+        return res.status(200).json({ success: true, message: "successfully tracked shipment", data: response.data })
     } catch (error: any) {
         if (error.response) {
             // The request was made and the server responded with a status code
@@ -645,7 +614,7 @@ export const trackShiprocketOrder = asyncErrorHandler(async (req, res, next) => 
             // Something happened in setting up the request that triggered an Error
             console.error('Error message:', error.message);
         }
-        return res.status(400).json({ message: "Error in tracking order" })
+        return res.status(400).json({ success: false, message: "Error in tracking order" })
     }
 
 });
@@ -656,14 +625,14 @@ export const scheduleOrderPickup = asyncErrorHandler(async (req, res, next) => {
 
     const { shipmentId, pickupDate } = req.body
     if (!shipmentId || !pickupDate) {
-        return res.status(400).send({ message: 'shipmentId and pickupDate is required' })
+        return res.status(400).send({ success: false, message: 'shipmentId and pickupDate is required' })
     }
     const schedulePickupUrl = "https://apiv2.shiprocket.in/v1/external/courier/generate/pickup"
 
     //shiprocket credentials
     const ShipRocketCredentials = await ShipRocket.findOne({ email: "mobilenmobilebjnr1@gmail.com" })
     if (!ShipRocketCredentials) {
-        return res.status(404).json({ message: "ShipRocket credentials not found" })
+        return res.status(404).json({ success: false, message: "ShipRocket credentials not found" })
     }
 
     //config

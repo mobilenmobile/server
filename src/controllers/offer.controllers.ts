@@ -122,7 +122,7 @@ export const updateOffer = asyncErrorHandler(
 );
 
 //------------------api to list all the available offers-------------------------------
-export const searchAllOffer = asyncErrorHandler(
+export const AdminSearchAllOffer = asyncErrorHandler(
   async (req: Request<{}, {}, SearchOfferQuery>, res, next) => {
 
     // const { offercode, offerdescription } = req.query;
@@ -165,6 +165,46 @@ export const searchAllOffer = asyncErrorHandler(
       success: true,
       message: "Offer found successfully",
       offer
+    });
+  }
+);
+
+
+export const searchAllOffer = asyncErrorHandler(
+  async (req: Request<{}, {}, SearchOfferQuery>, res, next) => {
+    const { couponId, state } = req.query;
+    const currentDate = new Date();
+
+    let baseQuery: any = {
+      offerIsActive: true,
+      offerStartDate: { $lte: currentDate },
+      offerEndDate: { $gte: currentDate }
+    };
+
+    if (couponId) {
+      baseQuery._id = couponId;
+    }
+
+    if (state) {new Date();
+    }
+
+    console.log('Base Query:', baseQuery);
+    const offers = await Offer.find(baseQuery);
+
+    console.log('Offers found:', offers);
+
+    if (!offers.length) {
+      return res.status(201).json({
+        success: true,
+        message: "No Offer available",
+        offers
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Offers found successfully",
+      offers
     });
   }
 );

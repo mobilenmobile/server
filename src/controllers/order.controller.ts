@@ -6,7 +6,7 @@ import { Review } from "../models/review/review.model.js";
 import { IncreaseCoins } from "./coin.controller.js";
 import { CoinAccount } from "../models/coins/coinAccount.js";
 import { CoinTransaction } from "../models/coins/coinTransaction.js";
-import mongoose from "mongoose";
+import mongoose, { startSession } from "mongoose";
 import { ShipRocket } from "../models/shiprocket/shiprocket.model.js";
 import { createOrderBody } from "./shiprocket.controller.js";
 import axios from "axios";
@@ -164,17 +164,32 @@ export const newOrder = asyncErrorHandler(
       try {
         const response = await axios.post(createOrderUrl, creatorderbodydata, config)
         console.log({ success: true, message: 'shipRocket Order Created', data: response.data })
+        // Store courier order details in the order
+        newOrder.courierOrderDetails = {
+          order_id: response.data.order_id,
+          channel_order_id: response.data.channel_order_id,
+          shipment_id: response.data.shipment_id,
+          status: response.data.status,
+          awb_code: response.data.awb_code,
+          courier_company_id: response.data.courier_company_id,
+          courier_name: response.data.courier_name
+        };
+
+        await newOrder.save({ session });
 
       } catch (error: any) {
         console.log("error occured in creating shiprocket order------------>", error)
-      }
+        //abort the transaction if shiprocket order does not create
+        await session.abortTransaction();
 
+      }
 
       // Commit the transaction
       await session.commitTransaction();
       session.endSession();
-
-
+      console.log("------------------------------ new order-----------------------------------")
+      console.log(newOrder)
+      console.log("------------------------------ new order-----------------------------------")
       return res.status(201).json({
         success: true,
         message: "Order created successfully",
@@ -191,6 +206,59 @@ export const newOrder = asyncErrorHandler(
     }
   }
 );
+
+
+// -----------------------!!!!!!!!!!!!! Track shipment !!!!!!!!!!!--------------------------
+export const trackOrder = asyncErrorHandler(async (req, res, next) => {
+
+  const { orderId } = req.body
+  if (!orderId) {
+    return res.status(400).send({ success: false, message: 'order id is required' })
+  }
+
+  const order = await Order.findById(orderId)
+
+  if (!order) {
+    return res.status(400).send({ success: false, message: 'order not found' })
+  }
+
+
+  const trackshipmentUrl = `https://apiv2.shiprocket.in/v1/external/courier/track?order_id=${order.courierOrderDetails.order_id}&channel_id=${order.courierOrderDetails.channel_id}`
+
+  // const UserOrder = await Order.findOne({ _id: orderId }).populate("user")
+  const ShipRocketCredentials = await ShipRocket.findOne({ email: "mobilenmobilebjnr1@gmail.com" })
+  if (!ShipRocketCredentials) {
+    return res.status(404).json({ success: false, message: "ShipRocket credentials not found" })
+  }
+
+  const config = {
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${ShipRocketCredentials.token}`
+    }
+  };
+  // console.log("awbdata------------>", cancellShipmetBodyData)
+  try {
+    const response = await axios.get(trackshipmentUrl, config)
+    console.log('Response data for track shipment:', response.data);
+    return res.status(200).json({ success: true, message: "successfully tracked shipment", data: response.data })
+  } catch (error: any) {
+    if (error.response) {
+      // The request was made and the server responded with a status code
+      // that falls out of the range of 2xx
+      console.error('Error response data:', error.response.data.errors || error.response.data.message || error.response.data || 'No error message');
+    } else if (error.request) {
+      // The request was made but no response was received
+      console.error('Error request:', error.request);
+    } else {
+      // Something happened in setting up the request that triggered an Error
+      console.error('Error message:', error.message);
+    }
+    return res.status(400).json({ success: false, message: "Error in tracking order" })
+  }
+
+});
+
 
 //------------- api to create new order-----------------------------------------------------
 // export const newOrder = asyncErrorHandler(
@@ -468,39 +536,194 @@ export const processOrder = asyncErrorHandler(async (req, res, next) => {
 });
 
 //--------------------api to cancell order---------------------------------------------------
-export const cancellOrder = asyncErrorHandler(async (req, res, next) => {
-  const { id } = req.params;
-  const order = await Order.findById(id);
 
-  if (!order) {
-    return next(new ErrorHandler("order not found", 404));
+
+export const cancellOrder = asyncErrorHandler(async (req, res, next) => {
+  console.log("order cancellation called")
+  const { shipRocketId, orderId } = req.body;
+  console.log(req.body)
+
+  if (!orderId || !shipRocketId) {
+    return res.status(400).send({ success: false, message: 'orderId is required' });
   }
 
-  order.orderStatuses.push({
-    date: new Date(),
-    status: 'cancelled'
-  });
+  const ShipRocketCredentials = await ShipRocket.findOne({ email: "mobilenmobilebjnr1@gmail.com" });
+  if (!ShipRocketCredentials) {
+    return res.status(404).json({ success: false, message: "ShipRocket credentials not found" });
+  }
 
-  await order.save();
+  const cancellOrderUrl = "https://apiv2.shiprocket.in/v1/external/orders/cancel";
+  const config = {
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${ShipRocketCredentials.token}`
+    }
+  };
 
-  return res.status(200).json({
-    success: true,
-    message: "Order Cancelled Successfully",
-  });
+  const cancellOrderBodyData = {
+    "ids": [shipRocketId]
+  };
+
+  const session = await startSession();
+  session.startTransaction();
+
+  try {
+    const order = await Order.findById(orderId).session(session);
+    if (!order) {
+      await session.abortTransaction();
+      session.endSession();
+      return next(new ErrorHandler("Order not found", 404));
+    }
+
+    // Attempt to cancel the order on Shiprocket first
+    const response = await axios.post(cancellOrderUrl, cancellOrderBodyData, config);
+    console.log('Response data for cancel order:', response.data);
+
+    // If Shiprocket cancellation is successful, cancel the order in MongoDB
+    order.orderStatuses.push({
+      date: new Date(),
+      status: 'cancelled'
+    });
+    order.orderStatusState = "cancelled"
+    await order.save({ session });
+
+    await session.commitTransaction();
+    session.endSession();
+
+    return res.status(200).json({
+      success: true,
+      message: "Order cancelled and deleted successfully",
+      data: response.data
+    });
+
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+
+    if (axios.isAxiosError(error)) {
+      if (error.response) {
+        console.error('Error response data:', error.response.data.errors || error.response.data.message || error.response.data || 'No error message');
+      } else if (error.request) {
+        console.error('Error request:', error.request);
+      } else {
+        console.error('Error message:', error.message);
+      }
+    } else {
+      console.error('Unknown error:', error);
+    }
+
+    return res.status(500).json({ success: false, message: "Error in cancelling Shiprocket order", error });
+  }
 });
 
+
+// export const cancellOrder = asyncErrorHandler(async (req, res, next) => {
+//   const { id } = req.params;
+//   const order = await Order.findById(id);
+
+//   if (!order) {
+//     return next(new ErrorHandler("order not found", 404));
+//   }
+
+//   order.orderStatuses.push({
+//     date: new Date(),
+//     status: 'cancelled'
+//   });
+
+//   await order.save();
+
+//   return res.status(200).json({
+//     success: true,
+//     message: "Order Cancelled Successfully",
+//   });
+// });
+
 //-------------------api to delete order------------------------------------------------------
+// export const deleteOrder = asyncErrorHandler(async (req, res, next) => {
+//   const { id } = req.params;
+//   const order = await Order.findById(id);
+//   if (!order) {
+//     return next(new ErrorHandler("order not found", 404));
+//   }
+//   await order.deleteOne();
+//   return res.status(200).json({
+//     success: true,
+//     message: "Order Deleted Successfully",
+//   });
+// });
+
+
 export const deleteOrder = asyncErrorHandler(async (req, res, next) => {
   const { id } = req.params;
-  const order = await Order.findById(id);
-  if (!order) {
-    return next(new ErrorHandler("order not found", 404));
+  const { shipRocketId, orderId } = req.body;
+  console.log(req.body)
+
+  if (!orderId || !shipRocketId) {
+    return res.status(400).send({ success: false, message: 'Both orderId is required' });
   }
-  await order.deleteOne();
-  return res.status(200).json({
-    success: true,
-    message: "Order Deleted Successfully",
-  });
+
+  const ShipRocketCredentials = await ShipRocket.findOne({ email: "mobilenmobilebjnr1@gmail.com" });
+  if (!ShipRocketCredentials) {
+    return res.status(404).json({ success: false, message: "ShipRocket credentials not found" });
+  }
+
+  const cancellOrderUrl = "https://apiv2.shiprocket.in/v1/external/orders/cancel";
+  const config = {
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${ShipRocketCredentials.token}`
+    }
+  };
+
+  const cancellOrderBodyData = {
+    "ids": [shipRocketId]
+  };
+
+  const session = await startSession();
+  session.startTransaction();
+
+  try {
+    const order = await Order.findById(orderId).session(session);
+    if (!order) {
+      await session.abortTransaction();
+      session.endSession();
+      return next(new ErrorHandler("Order not found", 404));
+    }
+
+    // Attempt to cancel the order on Shiprocket first
+    const response = await axios.post(cancellOrderUrl, cancellOrderBodyData, config);
+    console.log('Response data for cancel order:', response.data);
+
+    // If Shiprocket cancellation is successful, delete the order from MongoDB
+    await order.deleteOne({ session });
+
+    await session.commitTransaction();
+    session.endSession();
+
+    return res.status(200).json({
+      success: true,
+      message: "Order cancelled and deleted successfully",
+      data: response.data
+    });
+
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+
+    if (axios.isAxiosError(error)) {
+      if (error.response) {
+        console.error('Error response data:', error.response.data.errors || error.response.data.message || error.response.data || 'No error message');
+      } else if (error.request) {
+        console.error('Error request:', error.request);
+      } else {
+        console.error('Error message:', error.message);
+      }
+    } else {
+      console.error('Unknown error:', error);
+    }
+
+    return res.status(500).json({ success: false, message: "Error in cancelling Shiprocket order", error });
+  }
 });
 
 //-----------------api to get all orders for the user logged in---------------------------------------------
@@ -557,6 +780,7 @@ export const getAllOrders = asyncErrorHandler(async (req, res, next) => {
     }
     return null; // Return null if no statuses are present
   }
+
 
   // Sorting orders based on the last status
   ordersWithReviews.sort((a, b) => {

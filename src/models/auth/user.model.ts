@@ -64,6 +64,17 @@ const userSchema = new Schema(
       required: [true, "Please enter email"],
       validate: validator.default.isEmail,
     },
+    phoneNumber: {
+      type: String,
+      unique: [true, "mobileno already exists"],
+      required: [true, "Please enter mobile number"],
+      validate: {
+        validator: function (v: string) {
+          return /^\d{10}$/.test(v);
+        },
+        message: (props: { value: string }) => `${props.value} is not a valid 10-digit mobile number!`
+      }
+    },
     profile: { type: ProfileSchema, default: DefaultProfileData },
     coupon: {
       type: Schema.Types.ObjectId,

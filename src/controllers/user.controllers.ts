@@ -1,4 +1,4 @@
-import { Request } from "express";
+import { NextFunction, Request, Response } from "express";
 import { asyncErrorHandler } from "../middleware/error.middleware";
 import { NewUserRequestBody } from "../types/types";
 import ErrorHandler from "../utils/errorHandler";
@@ -22,6 +22,7 @@ import { populate } from "dotenv";
 
 
 // 1.newUser
+// .finduser
 // 2.getUser
 // 3.updateProfile
 // 4.updateProfileImage
@@ -46,11 +47,18 @@ export const newUser = asyncErrorHandler(
   async (req: Request<{}, {}, NewUserRequestBody>, res, next) => {
     const { name, uid, email, phoneNumber } = req.body;
 
-    if (!email || !uid) {
-      return next(new ErrorHandler("please provide email and uid", 400));
+    if (!email || !phoneNumber || !uid) {
+      return next(new ErrorHandler("please provide email,phone and uid", 400));
     }
 
-    const userExist = await User.findOne({ email });
+    // const userExist = await User.findOne({ email });
+    const userExist = await User.findOne({
+      $or: [{ email }, { phoneNumber }]
+    });
+
+    if (userExist) {
+      return res.status(200).json({ success: true, message: `welcome back ${name}` });
+    }
 
     if (userExist) {
       return res
@@ -72,6 +80,7 @@ export const newUser = asyncErrorHandler(
       name: name ? name : "",
       uid,
       email,
+      phoneNumber,
       profile: profileData
     };
 
@@ -94,6 +103,40 @@ export const newUser = asyncErrorHandler(
       success: true,
       message: `welcome ${name} to mnm`,
       user
+    });
+  }
+);
+
+
+
+
+// -------------------------- find user--------------------------------------------------------------------
+export const findUser = asyncErrorHandler(
+  async (req: Request<{}, {}, { email?: string; phoneNumber?: string }>, res: Response, next: NextFunction) => {
+    const { email, phoneNumber } = req.body;
+    console.log("find user called")
+    console.log(req.body)
+
+    if (!email && !phoneNumber) {
+      return next(new ErrorHandler("Please provide either email or phone number", 400));
+    }
+
+    const query: { [key: string]: string } = {};
+    if (email) query.email = email;
+    if (phoneNumber) query.phoneNumber = phoneNumber;
+
+    const user = await User.findOne(query);
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        email: user.email,
+        phoneNumber: user.phoneNumber
+      }
     });
   }
 );
@@ -228,25 +271,59 @@ export const updateProfileImage = asyncErrorHandler(async (req, res, next) => {
 });
 
 //------------------api to add coupon code for cart------------------------------------------
+// export const updateCouponCode = asyncErrorHandler(async (req, res, next) => {
+//   const { couponId } = req.body
+//   if (!couponId) {
+//     return next(new ErrorHandler("enter coupon code", 404));
+//   }
+//   const couponCode = await Offer.findOne({ _id: couponId })
+
+//   if (!couponCode) {
+//     return next(new ErrorHandler("No coupon found by this id", 404));
+//   }
+
+//   const user = await User.findById(req.user._id);
+
+//   if (!user) {
+//     return next(new ErrorHandler("No user found by this id", 404));
+//   }
+
+//   user.coupon = couponId
+
+//   await user.save();
+
+//   return res.status(200).json({
+//     success: true,
+//     message: "Successfully added coupon",
+//   });
+// });
+
 export const updateCouponCode = asyncErrorHandler(async (req, res, next) => {
-  const { couponId } = req.body
+  const { couponId } = req.body;
   if (!couponId) {
-    return next(new ErrorHandler("enter coupon code", 404));
+    return next(new ErrorHandler("Enter coupon code", 404));
   }
-  const couponCode = await Offer.findOne({ _id: couponId })
+
+  const currentDate = new Date();
+
+  const couponCode = await Offer.findOne({
+    _id: couponId,
+    offerIsActive: true,
+    offerStartDate: { $lte: currentDate },
+    offerEndDate: { $gte: currentDate }
+  });
 
   if (!couponCode) {
-    return next(new ErrorHandler("No coupon found by this id", 404));
+    return next(new ErrorHandler("Coupon is expired", 404));
   }
 
   const user = await User.findById(req.user._id);
 
   if (!user) {
-    return next(new ErrorHandler("No user found by this id", 404));
+    return next(new ErrorHandler("No user found by this ID", 404));
   }
 
-  user.coupon = couponId
-
+  user.coupon = couponId;
   await user.save();
 
   return res.status(200).json({
@@ -619,19 +696,19 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
   if (!req.user._id) {
     return next(new ErrorHandler("unauthenticated", 400));
   }
+
   // const cartItems = await cart.find({ user: req.user._id }).populate("productId");
   const cartItems = await cart.find({ user: req.user._id }).populate({
     path: 'productId',
     populate: [{
       path: 'productCategory',
-
     },
+
     {
       path: 'productComboProducts',
       populate: {
         path: 'productId'
       }
-
     },
     {
       path: 'productFreeProducts',
@@ -727,8 +804,6 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
         // console.log("combo item -=====>", item.productId)
         ComboAccumulator.productTotal = Number(ComboAccumulator?.Total) + Number(variantData?.sellingPrice)
         ComboAccumulator.finalTotal = Number(ComboAccumulator?.DiscountedTotal) + Number(variantData?.sellingPrice)
-
-
 
       }
 
@@ -827,12 +902,41 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
   totals.DiscountedTotal += ComboAccumulator.DiscountedTotal ? ComboAccumulator.DiscountedTotal : 0
 
   let couponDiscount = 0
+  let deliveryCharges = 150
+
+
+  // if (appliedCoupon && Number(appliedCoupon.offerDiscountValue) > 0) {
+  //   couponDiscount = Math.round((Number(appliedCoupon.offerDiscountValue) * totals.DiscountedTotal) / 100)
+  //   couponDiscount = couponDiscount > 500 ? 499 : couponDiscount
+  // }
+
+  // Step 4: Apply coupon discounts if offer limit conditions are met
   if (appliedCoupon && Number(appliedCoupon.offerDiscountValue) > 0) {
-    couponDiscount = Math.round((Number(appliedCoupon.offerDiscountValue) * totals.DiscountedTotal) / 100)
-    couponDiscount = couponDiscount > 500 ? 499 : couponDiscount
+    const minLimit = Number(appliedCoupon.offerLimit.minLimit);
+    const maxLimit = Number(appliedCoupon.offerLimit.maxLimit);
+
+    // Use totals.Total instead of finalCartTotal
+    if (totals.Total >= minLimit && totals.Total <= maxLimit) {
+      switch (appliedCoupon.offerCouponType) {
+        case 'freeshipping':
+          deliveryCharges = 0 // Assume 499 is the max discount allowed for shipping
+          break;
+
+        case 'percentage':
+          couponDiscount = Math.round((Number(appliedCoupon.offerDiscountValue) * totals.DiscountedTotal) / 100);
+          couponDiscount = Math.min(499, couponDiscount); // Cap discount at 499
+          break;
+
+        case 'fixedamount':
+          couponDiscount = Math.min(Number(appliedCoupon.offerDiscountValue), totals.DiscountedTotal);
+          break;
+
+        default:
+          // Handle unexpected coupon types if necessary
+          break;
+      }
+    }
   }
-
-
 
   const availableCoins = coinAccountData.length > 0 && coinAccountData[0]?.coinAccountBalance || 0
 
@@ -857,11 +961,10 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
   let isCoinUseChecked = coinAccountData[0].useCoinForPayment || false
   let finalCartTotal = totals.DiscountedTotal - (couponDiscount) - deductCoinsForCart
 
-  let deliveryCharges = 0
+  // if (finalCartTotal < 500) {
+  //   deliveryCharges = 150
+  // }
 
-  if (finalCartTotal < 500) {
-    deliveryCharges = 150
-  }
 
   finalCartTotal = finalCartTotal + deliveryCharges
 

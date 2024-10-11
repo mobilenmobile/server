@@ -23,8 +23,11 @@ export const newBrand = asyncErrorHandler(
 
     if (categoryName) {
 
-      const category = await Category.findOne({ categoryName: categoryName.trim() });
-      const existingBrand = await Brand.findOne({ brandName: brandName.trim() });
+      const categoryNameTrimmedLowercase = categoryName.trim().toLowerCase();
+      const brandNameTrimmedLowercase = brandName.trim().toLowerCase();
+
+      const category = await Category.findOne({ categoryName: categoryNameTrimmedLowercase });
+      const existingBrand = await Brand.findOne({ brandName: brandNameTrimmedLowercase });
 
       if (existingBrand) {
 
