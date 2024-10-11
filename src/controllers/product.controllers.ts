@@ -71,14 +71,16 @@ export const newProduct = asyncErrorHandler(
       return next(new ErrorHandler("provide all product fields", 400));
     }
     // console.log(brand);
-    const refBrand = await Brand.findOne({ brandName: brand });
+    console.log("brand", brand, brand.trim())
+    const refBrand = await Brand.findOne({ brandName: brand.trim() });
+    const refBrand2 = await Brand.find({ brandName: brand });
+    console.log(refBrand, refBrand2)
 
     if (!refBrand) {
       return next(new ErrorHandler("Please provide the brand ", 400));
     }
 
     const refCategory = await Category.findOne({ categoryName: category });
-
 
     // // const title = `${brand !== "generic" ? brand : ""}- ${
     // //   productModel !== "generic" ? productModel : ""
@@ -433,7 +435,9 @@ export const updateProduct = asyncErrorHandler(
     }
 
     if (brand) {
-      const refBrand = await Brand.findOne({ brandName: brand });
+      // const 
+      console.log("brand", brand, brand.trim().toLowerCase())
+      const refBrand = await Brand.findOne({ brandName: brand.trim().toLowerCase() });
       // console.log("refBrand " + refBrand);
       if (!refBrand) {
         return next(new ErrorHandler("Please provide the brand ", 400));
@@ -542,7 +546,7 @@ interface AdminSearchRequestQuery {
 export const getAllAdminProducts = asyncErrorHandler(
   async (req: Request<{}, {}, {}, AdminSearchRequestQuery>, res: Response, next: NextFunction) => {
     const { searchQuery, category, sort, page = 1 } = req.query;
-    const limit = 100; // Set a default limit for pagination
+    const limit = 10; // Set a default limit for pagination
     const skip = (page - 1) * limit;
     const baseQuery: any = {}; // Define base query for filtering
 
@@ -984,6 +988,19 @@ export const getAllProducts = asyncErrorHandler(
         { productSubCategory: { $regex: search, $options: 'i' } }
       ]
     } : {};
+    // Split search terms and remove "and" or "or"
+    // const conjunctions = ["and", "or"];
+    // const searchTerms = search && typeof search === 'string' ? search.split(" ").filter(word => !conjunctions.includes(word.toLowerCase())) : [];
+
+    // const searchQuery = searchTerms.length ? {
+    //   $or: searchTerms.map(word => ({
+    //     $or: [
+    //       { productTitle: { $regex: word, $options: 'i' } },
+    //       { productSubCategory: { $regex: word, $options: 'i' } }
+    //     ]
+    //   }))
+    // } : {};
+
 
     const combinedQuery = {
       ...baseQuery,

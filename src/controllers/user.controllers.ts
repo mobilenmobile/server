@@ -1,4 +1,4 @@
-import { Request } from "express";
+import { NextFunction, Request, Response } from "express";
 import { asyncErrorHandler } from "../middleware/error.middleware";
 import { NewUserRequestBody } from "../types/types";
 import ErrorHandler from "../utils/errorHandler";
@@ -22,6 +22,7 @@ import { populate } from "dotenv";
 
 
 // 1.newUser
+// .finduser
 // 2.getUser
 // 3.updateProfile
 // 4.updateProfileImage
@@ -46,11 +47,18 @@ export const newUser = asyncErrorHandler(
   async (req: Request<{}, {}, NewUserRequestBody>, res, next) => {
     const { name, uid, email, phoneNumber } = req.body;
 
-    if (!email || !uid) {
-      return next(new ErrorHandler("please provide email and uid", 400));
+    if (!email || !phoneNumber || !uid) {
+      return next(new ErrorHandler("please provide email,phone and uid", 400));
     }
 
-    const userExist = await User.findOne({ email });
+    // const userExist = await User.findOne({ email });
+    const userExist = await User.findOne({
+      $or: [{ email }, { phoneNumber }]
+    });
+
+    if (userExist) {
+      return res.status(200).json({ success: true, message: `welcome back ${name}` });
+    }
 
     if (userExist) {
       return res
@@ -72,6 +80,7 @@ export const newUser = asyncErrorHandler(
       name: name ? name : "",
       uid,
       email,
+      phoneNumber,
       profile: profileData
     };
 
@@ -94,6 +103,40 @@ export const newUser = asyncErrorHandler(
       success: true,
       message: `welcome ${name} to mnm`,
       user
+    });
+  }
+);
+
+
+
+
+// -------------------------- find user--------------------------------------------------------------------
+export const findUser = asyncErrorHandler(
+  async (req: Request<{}, {}, { email?: string; phoneNumber?: string }>, res: Response, next: NextFunction) => {
+    const { email, phoneNumber } = req.body;
+    console.log("find user called")
+    console.log(req.body)
+
+    if (!email && !phoneNumber) {
+      return next(new ErrorHandler("Please provide either email or phone number", 400));
+    }
+
+    const query: { [key: string]: string } = {};
+    if (email) query.email = email;
+    if (phoneNumber) query.phoneNumber = phoneNumber;
+
+    const user = await User.findOne(query);
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        email: user.email,
+        phoneNumber: user.phoneNumber
+      }
     });
   }
 );
@@ -892,7 +935,7 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
           // Handle unexpected coupon types if necessary
           break;
       }
-    }                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
+    }
   }
 
   const availableCoins = coinAccountData.length > 0 && coinAccountData[0]?.coinAccountBalance || 0
@@ -921,7 +964,7 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
   // if (finalCartTotal < 500) {
   //   deliveryCharges = 150
   // }
-  
+
 
   finalCartTotal = finalCartTotal + deliveryCharges
 
