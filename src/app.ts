@@ -15,6 +15,7 @@ import addressRoute from "./routes/address.routes.js";
 import shipRocketRoute from "./routes/shiprocket.routes.js";
 import bannerRoute from "./routes/banner.routes.js";
 import settingsRoute from "./routes/settings.routes.js";
+import blogRoute from "./routes/blog.routes.js";
 
 
 import NodeCache from "node-cache";
@@ -64,6 +65,7 @@ app.use("/api/v1/chatbot", chatbotRoute);
 app.use("/api/v1/courier", shipRocketRoute);
 app.use("/api/v1/banner", bannerRoute);
 app.use("/api/v1/settings", settingsRoute);
+app.use("/api/v1/blog", blogRoute);
 //Error middleware to be used below route
 //to cache err from routes
 app.use(errorMiddleware);
