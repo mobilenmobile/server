@@ -3,9 +3,29 @@ import mongoose, { Schema } from 'mongoose';
 
 const bannerSchema = new Schema({
     _id: { type: Schema.Types.ObjectId, auto: true },
-    label: { type: String, required: true },
-    pageUrl: { type: String },
-    bannerImage: { type: String },
+
+    homeBanner: {
+        mainImage: {
+            type: String
+        },
+        otherImages: [{ type: String }]
+
+    },
+    skinBanner: {
+        mainImage: {
+            type: String
+        },
+        otherImages: [{ type: String }]
+
+    },
+    accessoriesBanner: {
+        mainImage: {
+            type: String
+        },
+        otherImages: [{ type: String }]
+
+    },
+
 
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now },

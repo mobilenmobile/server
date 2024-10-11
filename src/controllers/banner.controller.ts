@@ -6,62 +6,102 @@ import { Request, Response } from "express";
 
 export const newBanner = asyncErrorHandler(
     async (req: Request, res, next) => {
-        const { label, pageUrl, mobileBanner } = req.body;
+        const { page, mainImage, otherImages } = req.body;
         const { bannerId } = req.query
         console.log(req.body, "body req")
 
         let existingBanner;
         if (bannerId) {
             existingBanner = await Banner.findById(bannerId)
-        }
+            console.log(existingBanner, "existing banner")
 
-        if (existingBanner) {
-            if (label) {
-                existingBanner.label = label
+
+            if (page === "home") {
+
+                if (mainImage) {
+                    existingBanner.homeBanner.mainImage = mainImage
+                }
+                if (otherImages.length !== 0) {
+                    existingBanner.homeBanner.otherImages = otherImages
+                }
+
             }
-            if (pageUrl) {
-                existingBanner.pageUrl = pageUrl
+            else if (page === "skin") {
+                if (mainImage) {
+                    existingBanner.skinBanner.mainImage = mainImage
+                }
+                if (otherImages.length !== 0) {
+                    existingBanner.skinBanner.otherImages = otherImages
+                }
             }
-            if (mobileBanner) {
-                existingBanner.bannerImage = mobileBanner
+            else {
+                if (mainImage) {
+                    existingBanner.accessoriesBanner.mainImage = mainImage
+                }
+                if (otherImages.length !== 0) {
+                    existingBanner.accessoriesBanner.otherImages = otherImages
+                }
             }
 
             await existingBanner.save()
-            console.log(existingBanner, "banner result")
             return res.status(201).json({
                 success: true,
-                message: "Banner updated successfully",
+                message: "Banner created successfully",
                 banner: existingBanner
+            });
+        }
+        else {
+            let homeBanner;
+            let accessoriesBanner;
+            let skinBanner
+            if (page === "home") {
+                homeBanner = {
+                    mainImage: mainImage,
+                    otherImages: otherImages
+                }
+
+            }
+            else if (page === "skin") {
+                skinBanner = {
+                    mainImage: mainImage,
+                    otherImages: otherImages
+                }
+            }
+            else {
+                accessoriesBanner = {
+                    mainImage: mainImage,
+                    otherImages: otherImages
+                }
+            }
+            const banner = await Banner.create({
+                homeBanner,
+                skinBanner,
+                accessoriesBanner
+
+            });
+
+            return res.status(201).json({
+                success: true,
+                message: "Banner created successfully",
+                banner
             });
 
         }
 
 
-        // if (!req.user._id) {
-        //     return next(new ErrorHandler("unauthenticated", 400));
-        // }
-        const banner = await Banner.create({
-            label,
-            pageUrl,
-            bannerImage: mobileBanner
 
-        });
 
-        return res.status(201).json({
-            success: true,
-            message: "Banner created successfully",
-            banner
-        });
+
     }
 );
-        
+
 export const getAllBanners = asyncErrorHandler(
     async (req: Request, res: Response) => {
         const { bannerId } = req.query
         const query: any = {}
         console.log(bannerId)
         if (bannerId) {
-            if(typeof bannerId !=="string"){
+            if (typeof bannerId !== "string") {
                 return
             }
             query._id = bannerId
@@ -71,7 +111,7 @@ export const getAllBanners = asyncErrorHandler(
 
         return res.status(200).json({
             success: true,
-            data: banners,
+            banner: banners,
         });
     }
 );
@@ -162,7 +202,13 @@ export const updateBanner = asyncErrorHandler(
  */
 export const deleteBanner = asyncErrorHandler(
     async (req: Request, res: Response) => {
+        console.log("hey")
+
         const { bannerId } = req.params;
+        const { page, mainImage, otherImagesUrl } = req.body;
+
+        console.log(bannerId, "bannerid banner id")
+        console.log(otherImagesUrl)
 
         if (!bannerId) {
             return res.status(400).json({
@@ -171,19 +217,55 @@ export const deleteBanner = asyncErrorHandler(
             });
         }
         console.log(bannerId, "bannerid")
-        console.log(await Banner.find())
+
+
 
         console.log(await Banner.findOne({ _id: bannerId }))
         const findBanner = await Banner.findById(bannerId)
         if (!findBanner) {
             return res.json({ error: "no id found" })
         }
-        const banner = await Banner.findByIdAndDelete(bannerId);
+        console.log(otherImagesUrl, "other")
+
+
+        const banner = await Banner.findById(bannerId);
+
+        if (page === "home") {
+
+            if (mainImage) {
+                banner.homeBanner.mainImage = ""
+            }
+            if (otherImagesUrl) {
+                const otherImage = banner.homeBanner.otherImages.filter((item: string) => item !== otherImagesUrl)
+                console.log(otherImage, "other image")
+                banner.homeBanner.otherImages = otherImage
+            }
+
+        }
+        else if (page === "skin") {
+            if (mainImage) {
+                banner.skinBanner.mainImage = ""
+            }
+            if (otherImagesUrl) {
+                banner.skinBanner.otherImages.filter((item: string) => item !== otherImagesUrl)
+            }
+        }
+
+        else {
+            if (mainImage) {
+                banner.accessoriesBanner.mainImage = ""
+            }
+            if (otherImagesUrl) {
+                banner.accessoriesBanner.otherImages.filter((item: string) => item !== otherImagesUrl)
+            }
+        }
+
+        await banner.save()
 
 
         return res.status(200).json({
             success: true,
-            data: banner,
+            banner,
         });
     }
 );
