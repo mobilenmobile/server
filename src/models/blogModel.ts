@@ -8,7 +8,7 @@ interface IBlog extends Document {
     author: string;
     createdAt: Date;
     updatedAt: Date;
-    socialMediaType: 'facebook' | 'youtube' | 'instagram' | 'whatsapp';
+    socialMediaType: 'facebook' | 'youtube' | 'instagram' | 'whatsapp' | "X";
 }
 
 const BlogSchema: Schema = new Schema({
@@ -21,7 +21,7 @@ const BlogSchema: Schema = new Schema({
     updatedAt: { type: Date, default: Date.now },
     socialMediaType: {
         type: String,
-        enum: ['facebook', 'youtube', 'instagram', 'whatsapp'],
+        enum: ['facebook', 'youtube', 'instagram', 'whatsapp', "X"],
         required: true
     }
 });
