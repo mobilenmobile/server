@@ -116,6 +116,7 @@ export interface NewCategoryRequestBody {
   categoryImgUrl: string;
   categoryDescription: string;
   categoryKeywords: string;
+  redeemedCoin: number;
 }
 
 export interface NewOfferRequestbody {
@@ -137,7 +138,7 @@ export type SearchRequestQuery = {
   sort?: string;
   page?: string;
   limit?: string;
-  device:string
+  device: string
 };
 
 export type SearchBrandRequestQuery = {

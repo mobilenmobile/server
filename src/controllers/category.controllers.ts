@@ -23,7 +23,7 @@ import ErrorHandler from "../utils/errorHandler";
 
 export const addNewCategory = asyncErrorHandler(
   async (req: Request<{}, {}, NewCategoryRequestBody>, res, next) => {
-    const { categoryName, categoryImgUrl } = req.body;
+    const { categoryName, categoryImgUrl, redeemedCoin } = req.body;
     const { categoryId } = req.query
     console.log(req.body)
     let categoryKeywordsArr;
@@ -38,6 +38,9 @@ export const addNewCategory = asyncErrorHandler(
       if (categoryName) {
         exisitingCategory.categoryName = categoryName
 
+      }
+      if (redeemedCoin) {
+        exisitingCategory.redeemedCoin = redeemedCoin
       }
 
       if (categoryImgUrl) {
@@ -54,6 +57,7 @@ export const addNewCategory = asyncErrorHandler(
 
       const category = await Category.create({
         categoryName,
+        redeemedCoin,
         categoryImgUrl: categoryImgUrl ? categoryImgUrl : "",
       });
       return res.status(201).json({

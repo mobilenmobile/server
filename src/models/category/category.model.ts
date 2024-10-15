@@ -6,6 +6,10 @@ const CategorySchema = new Schema({
     required: [true, "Please provide category name"],
     unique: true,
   },
+  redeemedCoin: {
+    type: String,
+    default: "0"
+  },
   categoryKeywords: [
     {
       type: String
