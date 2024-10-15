@@ -102,14 +102,15 @@ export const newModel = asyncErrorHandler(
 export const deleteModel = asyncErrorHandler(
     async (req, res, next) => {
         const { id } = req.body;
+        const { modelId } = req.params
 
         // console.log(req.body);
 
-        if (!id) {
-            return next(new ErrorHandler("please provide aid", 400));
+        if (!modelId) {
+            return next(new ErrorHandler("please provide model id", 400));
         }
 
-        const deleteModel = await Model.findByIdAndDelete(id);
+        const deleteModel = await Model.findByIdAndDelete(modelId);
 
         if (!deleteModel) {
             return next(new ErrorHandler("No brand found ", 400));

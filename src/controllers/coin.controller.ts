@@ -8,6 +8,11 @@ import { Timestamp, Transaction } from "firebase-admin/firestore";
 
 
 
+
+// -------------------------------------- coin settings--------------------------------------------
+
+// -------------------------------------- coin settings--------------------------------------------
+
 const createNewCoinAccount = async (userId: any) => {
     // Create a new coin account for the user
 

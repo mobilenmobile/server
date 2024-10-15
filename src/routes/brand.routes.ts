@@ -25,6 +25,6 @@ router.get("/searchallCategorybrands", getAllBrandWithoutCategory)
 router.delete("/:brandId", deleteBrand);
 
 // ----------- delete model -----------------------
-router.delete("/deletemodel", adminOnly, deleteModel);
+router.delete("/deletemodel/:modelId", adminOnly, deleteModel);
 
 export default router;
