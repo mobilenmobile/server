@@ -1397,24 +1397,63 @@ export const getBuyNowCartDetails = asyncErrorHandler(async (req: Request, res, 
 
 
 
+// Define the expected shape of the query parameters
+interface UserQuery {
+  name?: string;
+}
 
+export const listAllUsers = asyncErrorHandler(async (req: Request, res: Response, next: NextFunction) => {
+  const { name, page = '1' } = req.query; // defaults: page = 1, limit = 10
+  const limit = 10;
+  const pageNumber = Number(page); // parse page and limit to numbers
+  const limitNumber = Number(limit);
+  const skip = (pageNumber - 1) * limitNumber;
 
+  // Filter users by name if query is provided
+  const query = name ? { name: { $regex: name, $options: 'i' } } : {};
 
-
-export const listAllUsers = asyncErrorHandler(async (req, res, next) => {
-  // Fetch all users from the database
-  const users = await User.find();
+  // Fetch users with pagination
+  const users = await User.find(query)
+    .select('_id name profile') // only return _id and profileDetails
+    .skip(skip)
+    .limit(limitNumber);
 
   if (!users || users.length === 0) {
     return next(new ErrorHandler("No users found", 204));
   }
 
+  // Get total count of users (for pagination calculation)
+  const totalUsers = await User.countDocuments(query);
+  const totalPages = Math.ceil(totalUsers / limitNumber);
+
   return res.status(200).json({
     success: true,
     message: "Successfully fetched users",
     users,
+    pagination: {
+      totalUsers,
+      totalPages,
+      currentPage: pageNumber,
+      limitPerPage: limitNumber,
+    },
   });
 });
+
+// export const listAllUsers = asyncErrorHandler(async (req, res, next) => {
+//   // Fetch all users from the database
+//   // Fetch all users from the database, selecting only the _id and profileDetails fields
+//   const users = await User.find().select('_id profileDetails');
+
+//   if (!users || users.length === 0) {
+//     return next(new ErrorHandler("No users found", 204));
+//   }
+
+//   return res.status(200).json({
+//     success: true,
+//     message: "Successfully fetched users",
+//     users,
+//   });
+// });
 
 
 export const changeUserRole = asyncErrorHandler(async (req, res, next) => {

@@ -112,18 +112,16 @@ export const getAllBrand = asyncErrorHandler(
     console.log(req.query, "query")
     const baseQuery = { categories: "" };
 
-
-
-
-
-
     if (categoryName) {
       const category = await Category.findOne({ categoryName: categoryName });
       if (!category) return next(new ErrorHandler("category not found", 400));
       baseQuery.categories = category._id;
     }
 
-    const allBrand = await Brand.find(baseQuery);
+ 
+    // Fetch all brands sorted by the created date in descending order
+    const allBrand = await Brand.find(baseQuery).sort({ createdAt: -1 }); // Assuming 'createdAt' is the field you use for creation date
+
     return res.status(200).json({
       success: true,
       message: "All brands fetched successfully",
@@ -131,6 +129,8 @@ export const getAllBrand = asyncErrorHandler(
     });
   }
 );
+
+
 interface brandWithoutCategory {
   categories?: string;
 }
