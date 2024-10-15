@@ -8,6 +8,11 @@ import { Timestamp, Transaction } from "firebase-admin/firestore";
 
 
 
+
+// -------------------------------------- coin settings--------------------------------------------
+
+// -------------------------------------- coin settings--------------------------------------------
+
 const createNewCoinAccount = async (userId: any) => {
     // Create a new coin account for the user
 
@@ -164,7 +169,6 @@ export const setUseCoinBalance = asyncErrorHandler(
     }
 );
 
-
 export const IncreaseCoins = async (userId: any, rewardType: string, orderId: string, coinsTobeAdded: number) => {
     // Start a session for transaction management
     const session = await mongoose.startSession();
@@ -214,7 +218,6 @@ export const IncreaseCoins = async (userId: any, rewardType: string, orderId: st
         throw error;
     }
 };
-
 
 export const ReduceCoins = async (userId: any, rewardType: string, orderId: string, coinsTobeReduced: number) => {
     // Start a session for transaction management
