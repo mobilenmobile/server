@@ -199,13 +199,26 @@ export const getUser = asyncErrorHandler(async (req: Request, res, next) => {
 // });
 export const updateProfile = asyncErrorHandler(async (req, res, next) => {
   const { profile } = req.body;
+
+  console.log("req body", profile)
+
+  if (!profile) {
+    return next(new ErrorHandler("please provide all fields", 400));
+  }
+
+
+
   const user = await User.findById(req.user._id);
   if (!user) {
     return next(new ErrorHandler("No user found by this id", 404));
   }
 
+
+
   // Parse profile only if it is provided
   const profileData = profile ? JSON.parse(profile) : {};
+  // if(profileData =)
+  user.phoneNumber = profileData.profilePhoneNo
 
   // Retain previous values and update only the provided fields
   if (profileData.profileName) {

@@ -365,6 +365,7 @@ export const updateProduct = asyncErrorHandler(
       headsetType,
       variance,
       colors,
+      ramAndStorage,
       comboProducts,
       freeProducts,
       selectedComboCategory,
@@ -407,6 +408,7 @@ export const updateProduct = asyncErrorHandler(
     if (headsetType) product.productHeadsetType = headsetType;
     if (variance) product.productVariance = JSON.parse(variance);
     if (colors) product.productColors = JSON.parse(colors)
+    if (ramAndStorage) product.productRamAndStorage = JSON.parse(ramAndStorage)
     if (comboProducts) product.productComboProducts = JSON.parse(comboProducts)
     if (freeProducts) product.productFreeProducts = JSON.parse(freeProducts)
     if (selectedComboCategory) product.productSelectedComboCategory = selectedComboCategory ? JSON.parse(selectedComboCategory) : null
