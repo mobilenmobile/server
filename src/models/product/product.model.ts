@@ -17,6 +17,7 @@ const varianceType = new Schema({
   id: {
     type: String,
     required: true,
+    trim: true, // Automatically trims the value
   },
   color: {
     type: String,

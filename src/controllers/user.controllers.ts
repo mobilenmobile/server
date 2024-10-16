@@ -1418,8 +1418,13 @@ interface UserQuery {
 // import { User } from './models/User'; // Adjust this import based on your project structure
 
 export const listAllUsers = asyncErrorHandler(async (req, res, next) => {
-  const { name, platform, page = '1' } = req.query; // defaults: page = 1
-  const limit = 10;
+  const { name, platform, page = '1', export: exportFlag } = req.query; // defaults: page = 1
+  let limit = 10;
+  // Convert exportFlag string to boolean
+  const isExport = exportFlag === 'true';
+  if (isExport) {
+    limit = 500
+  }
   const pageNumber = Number(page); // parse page to number
   const skip = (pageNumber - 1) * limit;
 
