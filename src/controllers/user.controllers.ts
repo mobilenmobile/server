@@ -1419,7 +1419,12 @@ export const listAllUsers = asyncErrorHandler(async (req: Request, res: Response
     .limit(limitNumber);
 
   if (!users || users.length === 0) {
-    return next(new ErrorHandler("No users found", 204));
+    return res.status(200).json({
+      success: false,
+      message: "No user found",
+      users: [],
+
+    });
   }
 
   // Get total count of users (for pagination calculation)
