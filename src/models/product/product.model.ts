@@ -155,7 +155,25 @@ const productSchema = new Schema(
     isArchived: {
       type: Boolean,
       default: false,
-    }
+    },
+
+    // New fields for dimensions and weight
+    length: {
+      type: Number,
+      required: true,
+    },
+    breadth: {
+      type: Number,
+      required: true,
+    },
+    height: {
+      type: Number,
+      required: true,
+    },
+    weight: {
+      type: Number,
+      required: true,
+    },
   },
   {
     timestamps: true,

@@ -64,12 +64,22 @@ export const newProduct = asyncErrorHandler(
       isfeatured,
       isArchived,
 
+      // New fields for dimensions and weight
+      length,
+      breadth,
+      height,
+      weight,
+
     } = req.body;
 
     // console.log("new product req body=>", JSON.parse(colors))
 
-    if (!brand || !category || !productModel) {
-      return next(new ErrorHandler("provide all product fields", 400));
+    // if (!brand || !category || !productModel) {
+    //   return next(new ErrorHandler("provide all product fields", 400));
+    // }
+    // Validate required fields
+    if (!brand || !category || !productModel || !length || !breadth || !height || !weight) {
+      return next(new ErrorHandler("Provide all required product fields", 400));
     }
     // console.log(brand);
     console.log("brand", brand, brand.trim())
@@ -82,12 +92,6 @@ export const newProduct = asyncErrorHandler(
     }
 
     const refCategory = await Category.findOne({ categoryName: category });
-
-    // // const title = `${brand !== "generic" ? brand : ""}- ${
-    // //   productModel !== "generic" ? productModel : ""
-    // // } ${pattern.length > 0 ? pattern : ""} ${
-    // //   headsetType.length > 0 ? headsetType : ""
-    // // }`;
 
     const newProduct = await Product.create({
       productCategory: refCategory._id,
@@ -105,9 +109,14 @@ export const newProduct = asyncErrorHandler(
       productFreeProducts: freeProducts && JSON.parse(freeProducts),
       productVideoUrls: productVideoUrls ? JSON.parse(productVideoUrls) : null,
       ProductSkinSelectedItems: skinSelectedItems ? JSON.parse(skinSelectedItems) : null,
-      isFeatured: isfeatured ?? '',
-      isArchived: isArchived ?? ''
+      isFeatured: isfeatured ?? false,
+      isArchived: isArchived ?? false,
       // productTitle: title,
+      // New fields
+      length: Number(length),
+      breadth: Number(breadth),
+      height: Number(height),
+      weight: Number(weight),
     });
     return res.status(200).json({
       success: true,
@@ -202,45 +211,6 @@ export const getSingleProduct = asyncErrorHandler(async (req, res, next) => {
     product,
   });
 });
-//-----------------------------api to get single product-----------------------------------
-// export const getSingleProductDetails = asyncErrorHandler(async (req, res, next) => {
-//   let product;
-//   const id = req.params.id;
-//   product = await Product.findById(id)
-//     .populate("productCategory")
-//     .populate("productBrand")
-//     .populate({
-//       path: 'productComboProducts',  // Field to populate
-//       populate: {
-//         path: 'productId',  // Field in ComboProducts to populate
-//         model: 'product'  // Ensure this matches the model name exactly
-//       }
-//     })
-//     .exec();
-
-//   if (!product) {
-//     return next(new ErrorHandler("Product not found", 404));
-//   }
-
-//   // Function to modify strings starting with "0-"
-//   if (product?.productRamAndStorage && product?.productBrand?.brandName == 'apple') {
-//     let modifiedRamAndStorage = product.productRamAndStorage.map((item: { id: string }) => {
-//       if (item.id.startsWith("0-")) {
-//         return item.id = item.id.substring(2); // Take substring from index 2 to end
-//       } else {
-//         return item; // Return unchanged if it doesn't start with "0-"
-//       }
-//     });
-//     product.productRamAndStorage = modifiedRamAndStorage
-//   }
-
-//   // console.log(updateProduct)
-//   return res.status(200).json({
-//     success: true,
-//     message: "product fetched successfully",
-//     product,
-//   });
-// });
 
 export const getSingleProductDetails = asyncErrorHandler(async (req, res, next) => {
   const id = req.params.id;
@@ -288,7 +258,7 @@ export const getSingleProductDetails = asyncErrorHandler(async (req, res, next) 
           let title = product.productTitle
 
           if (variant['ramAndStorage'].length > 0 && variant.ramAndStorage[0]?.ram) {
-        
+
             title = `${product.productTitle} ${variant.ramAndStorage
               && `(${variant.color} ${variant.ramAndStorage[0].storage != '0' ? `${variant.ramAndStorage[0].storage}GB` : ''})`
               }`
@@ -330,7 +300,7 @@ export const getSingleProductDetails = asyncErrorHandler(async (req, res, next) 
           let title = product.productTitle
 
           if (variant['ramAndStorage'].length > 0 && variant.ramAndStorage[0]?.ram) {
-       
+
             title = `${product.productTitle} ${variant.ramAndStorage
               && `(${variant.color} ${variant.ramAndStorage[0].storage != '0' ? `${variant.ramAndStorage[0].storage}GB` : ''})`
               }`
@@ -395,6 +365,7 @@ export const updateProduct = asyncErrorHandler(
       headsetType,
       variance,
       colors,
+      ramAndStorage,
       comboProducts,
       freeProducts,
       selectedComboCategory,
@@ -403,6 +374,12 @@ export const updateProduct = asyncErrorHandler(
       skinSelectedItems,
       isfeatured,
       isArchived,
+
+      // New fields for dimensions and weight
+      length,
+      breadth,
+      height,
+      weight,
     } = req.body;
 
     console.log("update-req-body", req.body);
@@ -431,6 +408,7 @@ export const updateProduct = asyncErrorHandler(
     if (headsetType) product.productHeadsetType = headsetType;
     if (variance) product.productVariance = JSON.parse(variance);
     if (colors) product.productColors = JSON.parse(colors)
+    if (ramAndStorage) product.productRamAndStorage = JSON.parse(ramAndStorage)
     if (comboProducts) product.productComboProducts = JSON.parse(comboProducts)
     if (freeProducts) product.productFreeProducts = JSON.parse(freeProducts)
     if (selectedComboCategory) product.productSelectedComboCategory = selectedComboCategory ? JSON.parse(selectedComboCategory) : null
@@ -440,6 +418,12 @@ export const updateProduct = asyncErrorHandler(
     if (isfeatured) product.isFeatured = isfeatured
     if (isArchived) product.isArchived = isArchived
     // console.log(JSON.parse(comboOfferProducts))
+    // New fields for dimensions and weight
+    if (length) product.length = Number(length);
+    if (breadth) product.breadth = Number(breadth);
+    if (height) product.height = Number(height);
+    if (weight) product.weight = Number(weight);
+
 
     const prod = await product.save();
     // console.log(prod)
