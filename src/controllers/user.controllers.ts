@@ -1414,7 +1414,7 @@ export const listAllUsers = asyncErrorHandler(async (req: Request, res: Response
 
   // Fetch users with pagination
   const users = await User.find(query)
-    .select('_id name profile') // only return _id and profileDetails
+    .select('_id name role profile') // only return _id and profileDetails
     .skip(skip)
     .limit(limitNumber);
 

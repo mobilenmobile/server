@@ -41,7 +41,7 @@ import { subCategory } from "../models/subCategory/subCategory.model.js";
 
 //------------------api to create new product-----------
 export const newProduct = asyncErrorHandler(
-  async (req: Request<{}, {}, NewProductRequestBody>, res, next) => {
+  async (req: Request, res, next) => {
     // console.log("----------------", req.body, "----------------");
     const {
       category,
@@ -61,7 +61,8 @@ export const newProduct = asyncErrorHandler(
       selectedFreeCategory,
       productVideoUrls,
       skinSelectedItems,
-
+      isfeatured,
+      isArchived,
 
     } = req.body;
 
@@ -104,6 +105,8 @@ export const newProduct = asyncErrorHandler(
       productFreeProducts: freeProducts && JSON.parse(freeProducts),
       productVideoUrls: productVideoUrls ? JSON.parse(productVideoUrls) : null,
       ProductSkinSelectedItems: skinSelectedItems ? JSON.parse(skinSelectedItems) : null,
+      isFeatured: isfeatured ?? '',
+      isArchived: isArchived ?? ''
       // productTitle: title,
     });
     return res.status(200).json({
@@ -268,27 +271,6 @@ export const getSingleProductDetails = asyncErrorHandler(async (req, res, next) 
   if (!product) {
     return next(new ErrorHandler("Product not found", 404));
   }
-
-  // Transform productComboProducts to the desired format
-  // const transformedComboProducts = product.productComboProducts.map((comboProduct: any) => {
-  //   const variant = comboProduct.productId; // Extract the productId from comboProduct
-
-  //   return {
-  //     productid: `${product._id}`,
-  //     keyid: `${product._id}${variant._id.toString().replace(/\s+/g, "")}`,
-  //     variantid: `${variant._id.toString().replace(/\s+/g, "")}`,
-  //     title: product.productTitle.toLowerCase(),
-  //     category: product.productCategory?.categoryName || 'Unknown Category',
-  //     thumbnail: (variant.productImages && variant.productImages[0]) || 'default_thumbnail.jpg',
-  //     boxPrice: variant.boxPrice,
-  //     sellingPrice: variant.sellingPrice,
-  //     discount: variant.discount || 0,
-  //     rating: product.productRating,
-  //     reviews: product.productNumReviews,
-  //     color: variant.color,
-  //     brand: product.productBrand?.brandName || 'nobrand'
-  //   };
-  // });
   let transformedComboProducts: any = []
   let transformedFreeProducts: any = []
 
@@ -306,9 +288,7 @@ export const getSingleProductDetails = asyncErrorHandler(async (req, res, next) 
           let title = product.productTitle
 
           if (variant['ramAndStorage'].length > 0 && variant.ramAndStorage[0]?.ram) {
-            // title = `${product.productTitle} ${variant.ramAndStorage
-            //   && `(${variant.ramAndStorage[0].ram != '0' ? `${variant.color} ${variant.ramAndStorage[0].ram}GB` : ''} ${variant.ramAndStorage[0].storage != '0' ? `${variant.ramAndStorage[0].storage}GB` : ''})`
-            //   }`
+        
             title = `${product.productTitle} ${variant.ramAndStorage
               && `(${variant.color} ${variant.ramAndStorage[0].storage != '0' ? `${variant.ramAndStorage[0].storage}GB` : ''})`
               }`
@@ -350,9 +330,7 @@ export const getSingleProductDetails = asyncErrorHandler(async (req, res, next) 
           let title = product.productTitle
 
           if (variant['ramAndStorage'].length > 0 && variant.ramAndStorage[0]?.ram) {
-            // title = `${product.productTitle} ${variant.ramAndStorage
-            //   && `(${variant.ramAndStorage[0].ram != '0' ? `${variant.color} ${variant.ramAndStorage[0].ram}GB` : ''} ${variant.ramAndStorage[0].storage != '0' ? `${variant.ramAndStorage[0].storage}GB` : ''})`
-            //   }`
+       
             title = `${product.productTitle} ${variant.ramAndStorage
               && `(${variant.color} ${variant.ramAndStorage[0].storage != '0' ? `${variant.ramAndStorage[0].storage}GB` : ''})`
               }`
