@@ -1402,21 +1402,58 @@ interface UserQuery {
   name?: string;
 }
 
-export const listAllUsers = asyncErrorHandler(async (req: Request, res: Response, next: NextFunction) => {
-  const { name, page = '1' } = req.query; // defaults: page = 1, limit = 10
+// import { User } from './models/User'; // Adjust this import based on your project structure
+
+export const listAllUsers = asyncErrorHandler(async (req, res, next) => {
+  const { name, platform, page = '1' } = req.query; // defaults: page = 1
   const limit = 10;
-  const pageNumber = Number(page); // parse page and limit to numbers
-  const limitNumber = Number(limit);
-  const skip = (pageNumber - 1) * limitNumber;
+  const pageNumber = Number(page); // parse page to number
+  const skip = (pageNumber - 1) * limit;
 
-  // Filter users by name if query is provided
-  const query = name ? { name: { $regex: name, $options: 'i' } } : {};
+  // Construct query filters
+  const query: any = {};
+  if (name) {
+    query.name = { $regex: name, $options: 'i' };
+  }
+  if (platform) {
+    query.platform = platform;
+  }
 
-  // Fetch users with pagination
-  const users = await User.find(query)
-    .select('_id name role profile') // only return _id and profileDetails
-    .skip(skip)
-    .limit(limitNumber);
+  // Exclude admin users from the results
+  query.role = { $ne: 'admin' }; // Add this line to exclude admins
+
+  // Aggregation to sort users based on role
+  const users = await User.aggregate([
+    { $match: query },
+    {
+      $addFields: {
+        sortOrder: {
+          $switch: {
+            branches: [
+              { case: { $eq: ['$role', 'editor'] }, then: 1 },
+              { case: { $eq: ['$role', 'customer'] }, then: 2 },
+            ],
+            default: 3, // for any other role
+          },
+        },
+      },
+    },
+    { $sort: { sortOrder: 1 } }, // Sort by the computed field
+    { $skip: skip },
+    { $limit: limit },
+    {
+      $project: {
+        _id: 1,
+        name: 1,
+        role: 1,
+        platform: 1,
+        profile: 1,
+        // Exclude sortOrder from the output to avoid error
+        // If you want to keep it, just include it in the projection
+        // sortOrder: 1, // Uncomment if you want to include it
+      },
+    },
+  ]);
 
   if (!users || users.length === 0) {
     return next(new ErrorHandler("No users found", 204));
@@ -1424,7 +1461,7 @@ export const listAllUsers = asyncErrorHandler(async (req: Request, res: Response
 
   // Get total count of users (for pagination calculation)
   const totalUsers = await User.countDocuments(query);
-  const totalPages = Math.ceil(totalUsers / limitNumber);
+  const totalPages = Math.ceil(totalUsers / limit);
 
   return res.status(200).json({
     success: true,
@@ -1434,10 +1471,13 @@ export const listAllUsers = asyncErrorHandler(async (req: Request, res: Response
       totalUsers,
       totalPages,
       currentPage: pageNumber,
-      limitPerPage: limitNumber,
+      limitPerPage: limit,
     },
   });
 });
+
+
+
 
 // export const listAllUsers = asyncErrorHandler(async (req, res, next) => {
 //   // Fetch all users from the database
