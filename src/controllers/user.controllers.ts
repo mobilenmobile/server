@@ -45,8 +45,8 @@ import { populate } from "dotenv";
 //------------------------api to create new user----------------------------------
 export const newUser = asyncErrorHandler(
   async (req: Request<{}, {}, NewUserRequestBody>, res, next) => {
-    const { name, uid, email, phoneNumber } = req.body;
-
+    const { name, uid, email, phoneNumber, platform } = req.body;
+    console.log("creating new user ------------->", req.body)
     if (!email || !phoneNumber || !uid) {
       return next(new ErrorHandler("please provide email,phone and uid", 400));
     }
@@ -56,14 +56,11 @@ export const newUser = asyncErrorHandler(
       $or: [{ email }, { phoneNumber }]
     });
 
-    if (userExist) {
-      return res.status(200).json({ success: true, message: `welcome back ${name}` });
-    }
 
     if (userExist) {
       return res
         .status(200)
-        .json({ success: true, message: `welcome back ${name}` });
+        .json({ success: false, message: `email or mobile no already used` });
     }
 
     const profileData = {
@@ -81,7 +78,8 @@ export const newUser = asyncErrorHandler(
       uid,
       email,
       phoneNumber,
-      profile: profileData
+      profile: profileData,
+      platform: platform ?? 'mnm'
     };
 
     const user = await User.create(userData);

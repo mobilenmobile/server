@@ -9,6 +9,7 @@ export interface NewUserRequestBody {
   role?: string;
   phoneNumber?: string
   password: string;
+  platform?:string;
 }
 
 export interface LoginRequestBody {

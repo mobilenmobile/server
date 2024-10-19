@@ -3,6 +3,7 @@ import mongoose, { Schema } from "mongoose";
 const RamAndStorage = new Schema({
   id: {
     type: String,
+    trim: true,
   },
   ram: {
     type: String,
@@ -22,6 +23,7 @@ const varianceType = new Schema({
   color: {
     type: String,
     required: true,
+    trim: true,
   },
   ramAndStorage: {
     type: [RamAndStorage],
@@ -45,7 +47,8 @@ const varianceType = new Schema({
   },
   videoUrl: {
     type: String,
-    default: ''
+    default: '',
+    trim: true,
   },
   colorHexCode: {
     type: String,
@@ -54,6 +57,7 @@ const varianceType = new Schema({
   thumbnail: {
     type: String,
     required: true,
+    trim: true,
   },
   productImages: {
     type: [String],
@@ -80,6 +84,7 @@ const productSchema = new Schema(
   {
     productTitle: {
       type: String,
+      trim: true,
     },
     productCategory: {
       type: Schema.Types.ObjectId,
@@ -175,6 +180,17 @@ const productSchema = new Schema(
       type: Number,
       required: true,
     },
+    // User ID reference
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      // required: true, // Ensure that the user is always provided
+    },
+    updatedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+    },
+
   },
   {
     timestamps: true,
@@ -193,6 +209,27 @@ productSchema.pre('save', function (next) {
 
   next();
 });
+
+
+// Pre-save middleware to modify `id` field in `productVariance`
+productSchema.pre('save', function (next) {
+  if (!this.productVariance) return next();
+
+  this.productVariance.forEach(variant => {
+    // Normalize the `id` to be lowercase and replace spaces with hyphens
+    if (variant.id) {
+      variant.id = variant.id.toLowerCase().replace(/\s+/g, '-');
+    }
+
+    // Set comboPrice to sellingPrice if comboPrice is not provided
+    if (!variant.comboPrice && variant.sellingPrice) {
+      variant.comboPrice = variant.sellingPrice;
+    }
+  });
+
+  next();
+});
+
 
 const Product = mongoose.models.product || mongoose.model("product", productSchema);
 

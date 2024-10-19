@@ -117,6 +117,9 @@ export const newProduct = asyncErrorHandler(
       breadth: Number(breadth),
       height: Number(height),
       weight: Number(weight),
+
+      //user ref
+      createdBy: req.user._id
     });
     return res.status(200).json({
       success: true,
@@ -423,7 +426,7 @@ export const updateProduct = asyncErrorHandler(
     if (breadth) product.breadth = Number(breadth);
     if (height) product.height = Number(height);
     if (weight) product.weight = Number(weight);
-
+    product.updatedBy = req.user._id;
 
     const prod = await product.save();
     // console.log(prod)
@@ -997,7 +1000,7 @@ export const getAllProducts = asyncErrorHandler(
 
     const totalProducts = await Product.countDocuments(combinedQuery);
     if (!totalProducts) {
-      return next(new ErrorHandler("No Product Found", 204));
+      return res.status(200).json({ success: false, products: [] })
     }
 
     if (category === "skin" && typeof device === 'string' && device.length > 1) {

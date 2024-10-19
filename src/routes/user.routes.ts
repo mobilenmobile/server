@@ -25,16 +25,17 @@ import {
     updateWishlist
 } from "../controllers/user.controllers.js";
 
-import { authenticated } from "../middleware/auth.middleware.js";
+import { authenticated, EditorOnly, newUserOnly, UserInfo } from "../middleware/auth.middleware.js";
 import { getCoinAccount, setUseCoinBalance } from "../controllers/coin.controller.js";
 
 
 const userRouter = express.Router();
 
 // --------------------------user routes-------------------------------------------
-userRouter.post("/new", newUser);
+userRouter.post("/new", newUserOnly, newUser);
 userRouter.get("/userDetails/:uid", authenticated, getUser);
-userRouter.post("/userBasicInfo",findUser);
+userRouter.get("/userDetails", UserInfo);
+userRouter.post("/userBasicInfo", findUser);
 
 //----------------------- USER COIN SECTION --------------------------------
 userRouter.get("/getCoinAccountDetails", authenticated, getCoinAccount);

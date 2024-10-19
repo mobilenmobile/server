@@ -19,15 +19,13 @@ export const newBrand = asyncErrorHandler(
     console.log(req.body)
 
     // Check if category exists by name
-
-
+    const brandNameTrimmedLowercase = brandName.trim().toLowerCase();
+    const existingBrand = await Brand.findOne({ brandName: brandNameTrimmedLowercase });
     if (categoryName) {
 
       const categoryNameTrimmedLowercase = categoryName.trim().toLowerCase();
-      const brandNameTrimmedLowercase = brandName.trim().toLowerCase();
-
       const category = await Category.findOne({ categoryName: categoryNameTrimmedLowercase });
-      const existingBrand = await Brand.findOne({ brandName: brandNameTrimmedLowercase });
+      
 
       if (existingBrand) {
 
@@ -62,16 +60,13 @@ export const newBrand = asyncErrorHandler(
     // Check if the brand already exists in the category
     // const existingBrand = await Brand.findOne({ brandName, categories: category._id });
 
-    const existingBrand = await Brand.findOne({ _id: brandId });
+    // const existingBrand = await Brand.findOne({ _id: brandId });
     console.log("existing brand found", existingBrand)
 
 
     if (categoryArray.length === 0) return next(new ErrorHandler("Category name not provided", 400));
     if (existingBrand) {
-      if (brandName) {
-        existingBrand.brandName = brandName
-      }
-
+      console.log("updating existing brand....")
       if (brandImgUrl) {
         existingBrand.brandImgUrl = brandImgUrl
       }
@@ -118,7 +113,7 @@ export const getAllBrand = asyncErrorHandler(
       baseQuery.categories = category._id;
     }
 
- 
+
     // Fetch all brands sorted by the created date in descending order
     const allBrand = await Brand.find(baseQuery).sort({ createdAt: -1 }); // Assuming 'createdAt' is the field you use for creation date
 
