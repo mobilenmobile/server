@@ -41,7 +41,7 @@ export const authenticated = asyncErrorHandler(async (req, res, next) => {
   next();
 });
 export const newUserOnly = asyncErrorHandler(async (req, res, next) => {
- 
+
   const authToken =
     req.cookies?.accessToken ||
     req.header("Authorization")?.replace("Bearer ", "");
@@ -90,10 +90,14 @@ export const adminOnly = asyncErrorHandler(async (req, res, next) => {
   // console.log(user);
   if (!user) return next(new ErrorHandler("your id is invalid", 401));
 
-  if (user.email !== "mobilenmobile2024@gmail.com") {
-    return next(new ErrorHandler("you are not authorized to perform this operation ", 401));
+  // if (user.email !== "mobilenmobile2024@gmail.com") {
+  //   return next(new ErrorHandler("you are not authorized to perform this operation ", 401));
+  // }
+
+  if (user.role !== "admin") {
+    return next(new ErrorHandler("you don't have edit access", 401));
   }
-  
+
   req.user = user;
   // if (user.role !== "admin") {
   //     return next(new ErrorHandler("access is unauthorized", 401))

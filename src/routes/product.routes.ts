@@ -22,7 +22,7 @@ import { adminOnly, authenticated } from "../middleware/auth.middleware.js";
 
 const productRouter = express.Router();
 
-productRouter.post("/new",authenticated, fileUpload.array("productImages"), newProduct);
+productRouter.post("/new", authenticated, fileUpload.array("productImages"), newProduct);
 productRouter.post(
   "/previewImages",
   fileUpload.array("productImages"),
@@ -43,10 +43,10 @@ productRouter.post("/getsimilarproducts", getSimilarProducts);
 
 // ---------------------- Admin routes-----------------------------------------------
 productRouter.get("/getAllAdminProducts", getAllAdminProducts);
-productRouter.post("/updateproduct/:id", updateProduct);
-productRouter.delete("/deleteproduct/:id", deleteProduct);
-productRouter.delete("/deleteproductdirectly/:id", deleteProductDirectly);
-productRouter.post("/deletePreviewImage", deletePreviewCloudinary);
+productRouter.post("/updateproduct/:id", authenticated, updateProduct);
+productRouter.delete("/deleteproduct/:id", authenticated, deleteProduct);
+productRouter.delete("/deleteproductdirectly/:id", authenticated, deleteProductDirectly);
+productRouter.post("/deletePreviewImage", authenticated, deletePreviewCloudinary);
 
 
 
