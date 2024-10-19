@@ -5,10 +5,10 @@ import { asyncErrorHandler } from "./error.middleware.js";
 
 
 export const authenticated = asyncErrorHandler(async (req, res, next) => {
-  // console.log(
-  //   "req.header",
-  //   req.header("Authorization")?.replace("Bearer ", "")
-  // );
+  console.log(
+    "req.header",
+    req.header("Authorization")?.replace("Bearer ", "")
+  );
 
   const authToken =
     req.cookies?.accessToken ||
@@ -59,8 +59,6 @@ export const newUserOnly = asyncErrorHandler(async (req, res, next) => {
 
   next();
 });
-
-
 // middleware to allow only specifice email to  access controllers
 export const adminOnly = asyncErrorHandler(async (req, res, next) => {
   // console.log(
@@ -104,7 +102,6 @@ export const adminOnly = asyncErrorHandler(async (req, res, next) => {
   // }
   next();
 });
-
 // middleware to allow only specifice email to  access controllers
 export const EditorOnly = asyncErrorHandler(async (req, res, next) => {
   // console.log(
@@ -143,13 +140,8 @@ export const EditorOnly = asyncErrorHandler(async (req, res, next) => {
   // }
   next();
 });
-
 // middleware to allow only specifice email to  access controllers
 export const UserInfo = asyncErrorHandler(async (req, res, next) => {
-  // console.log(
-  //   "req.header",
-  //   req.header("Authorization")?.replace("Bearer ", "")
-  // );
   const authToken =
     req.cookies?.accessToken ||
     req.header("Authorization")?.replace("Bearer ", "");
