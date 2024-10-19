@@ -10,7 +10,7 @@ import { Offer } from "../models/offer/offer.model";
 import { calculateDiscount } from "./product.controllers";
 import { deleteUser, updateFirebaseProfile } from "../db/firebase";
 import { IncreaseCoins } from "./coin.controller";
-import mongoose, { ObjectId } from "mongoose";
+import mongoose, { ObjectId, PipelineStage } from "mongoose";
 import { CoinAccount } from "../models/coins/coinAccount";
 import { profile } from "console";
 import { populate } from "dotenv";
@@ -1415,15 +1415,14 @@ interface UserQuery {
 
 // import { User } from './models/User'; // Adjust this import based on your project structure
 
+
+
 export const listAllUsers = asyncErrorHandler(async (req, res, next) => {
-  const { name, platform, page = '1', export: exportFlag } = req.query; // defaults: page = 1
-  let limit = 10;
-  // Convert exportFlag string to boolean
+  const { name, platform, page = '1', export: exportFlag } = req.query;
   const isExport = exportFlag === 'true';
-  if (isExport) {
-    limit = 500
-  }
-  const pageNumber = Number(page); // parse page to number
+
+  let limit = 10;
+  const pageNumber = Number(page);
   const skip = (pageNumber - 1) * limit;
 
   // Construct query filters
@@ -1436,10 +1435,10 @@ export const listAllUsers = asyncErrorHandler(async (req, res, next) => {
   }
 
   // Exclude admin users from the results
-  query.role = { $ne: 'admin' }; // Add this line to exclude admins
+  query.role = { $ne: 'admin' };
 
-  // Aggregation to sort users based on role
-  const users = await User.aggregate([
+  // Build the aggregation pipeline
+  const aggregationPipeline: PipelineStage[] = [
     { $match: query },
     {
       $addFields: {
@@ -1454,9 +1453,7 @@ export const listAllUsers = asyncErrorHandler(async (req, res, next) => {
         },
       },
     },
-    { $sort: { sortOrder: 1 } }, // Sort by the computed field
-    { $skip: skip },
-    { $limit: limit },
+    { $sort: { sortOrder: 1 } },
     {
       $project: {
         _id: 1,
@@ -1464,26 +1461,40 @@ export const listAllUsers = asyncErrorHandler(async (req, res, next) => {
         role: 1,
         platform: 1,
         profile: 1,
-        // Exclude sortOrder from the output to avoid error
-        // If you want to keep it, just include it in the projection
-        // sortOrder: 1, // Uncomment if you want to include it
       },
     },
-  ]);
+  ];
+
+  // If isExport is false, apply pagination logic (limit and skip)
+  if (!isExport) {
+    aggregationPipeline.push({ $skip: skip }, { $limit: limit });
+  }
+
+  // Fetch users using aggregation
+  const users = await User.aggregate(aggregationPipeline);
 
   if (!users || users.length === 0) {
     return res.status(200).json({
       success: false,
       message: "No user found",
       users: [],
-
     });
   }
 
-  // Get total count of users (for pagination calculation)
+  // If export is true, skip pagination info and return all users
+  if (isExport) {
+    return res.status(200).json({
+      success: true,
+      message: "Successfully exported all users",
+      users,
+    });
+  }
+
+  // Get total count of users for pagination calculation
   const totalUsers = await User.countDocuments(query);
   const totalPages = Math.ceil(totalUsers / limit);
 
+  // Respond with users and pagination info
   return res.status(200).json({
     success: true,
     message: "Successfully fetched users",
@@ -1496,6 +1507,87 @@ export const listAllUsers = asyncErrorHandler(async (req, res, next) => {
     },
   });
 });
+// export const listAllUsers = asyncErrorHandler(async (req, res, next) => {
+//   const { name, platform, page = '1', export: exportFlag } = req.query; // defaults: page = 1
+//   let limit = 10;
+//   // Convert exportFlag string to boolean
+//   const isExport = exportFlag === 'true';
+//   if (!isExport) {
+//     limit = 500
+//   }
+//   const pageNumber = Number(page); // parse page to number
+//   const skip = (pageNumber - 1) * limit;
+
+//   // Construct query filters
+//   const query: any = {};
+//   if (name) {
+//     query.name = { $regex: name, $options: 'i' };
+//   }
+//   if (platform) {
+//     query.platform = platform;
+//   }
+
+//   // Exclude admin users from the results
+//   query.role = { $ne: 'admin' }; // Add this line to exclude admins
+
+//   // Aggregation to sort users based on role
+//   const users = await User.aggregate([
+//     { $match: query },
+//     {
+//       $addFields: {
+//         sortOrder: {
+//           $switch: {
+//             branches: [
+//               { case: { $eq: ['$role', 'editor'] }, then: 1 },
+//               { case: { $eq: ['$role', 'customer'] }, then: 2 },
+//             ],
+//             default: 3, // for any other role
+//           },
+//         },
+//       },
+//     },
+//     { $sort: { sortOrder: 1 } }, // Sort by the computed field
+//     { $skip: skip },
+//     { $limit: limit },
+//     {
+//       $project: {
+//         _id: 1,
+//         name: 1,
+//         role: 1,
+//         platform: 1,
+//         profile: 1,
+//         // Exclude sortOrder from the output to avoid error
+//         // If you want to keep it, just include it in the projection
+//         // sortOrder: 1, // Uncomment if you want to include it
+//       },
+//     },
+//   ]);
+
+//   if (!users || users.length === 0) {
+//     return res.status(200).json({
+//       success: false,
+//       message: "No user found",
+//       users: [],
+
+//     });
+//   }
+
+//   // Get total count of users (for pagination calculation)
+//   const totalUsers = await User.countDocuments(query);
+//   const totalPages = Math.ceil(totalUsers / limit);
+
+//   return res.status(200).json({
+//     success: true,
+//     message: "Successfully fetched users",
+//     users,
+//     pagination: {
+//       totalUsers,
+//       totalPages,
+//       currentPage: pageNumber,
+//       limitPerPage: limit,
+//     },
+//   });
+// });
 
 
 
