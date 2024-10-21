@@ -1035,7 +1035,7 @@ export const getAllProducts = asyncErrorHandler(
           sellingPrice: variant.sellingPrice,
           discount: productDiscount,
           rating: product.productRating,
-          color: variant.color,
+          color: variant.color?.split("-")[0],
           brand: product.productBrand?.brandName || 'nobrand',
           outofstock: Number(variant?.quantity) === 0,
         };

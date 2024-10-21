@@ -119,6 +119,10 @@ const productSchema = new Schema(
     productColors: {
       type: [String]
     },
+    productColorsWithoutHex: {
+      type: [String],
+      default: []
+    },
     productRamAndStorage: {
       type: [RamAndStorage]
     },
@@ -218,7 +222,7 @@ productSchema.pre('save', function (next) {
   this.productVariance.forEach(variant => {
     // Normalize the `id` to be lowercase and replace spaces with hyphens
     if (variant.id) {
-      variant.id = variant.id.toLowerCase().replace(/\s+/g, '-');
+      variant.id = variant.id.toLowerCase().replace(/\s+/g, ' ');
     }
 
     // Set comboPrice to sellingPrice if comboPrice is not provided
