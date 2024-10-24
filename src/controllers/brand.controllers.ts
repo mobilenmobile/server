@@ -25,7 +25,7 @@ export const newBrand = asyncErrorHandler(
 
       const categoryNameTrimmedLowercase = categoryName.trim().toLowerCase();
       const category = await Category.findOne({ categoryName: categoryNameTrimmedLowercase });
-      
+
 
       if (existingBrand) {
 
@@ -89,7 +89,7 @@ export const newBrand = asyncErrorHandler(
         brandName,
         brandImgUrl: brandImgUrl ? brandImgUrl : null,
         brandLogoUrl: brandLogoUrl ? brandLogoUrl : null,
-        categoryArray
+        categories: categoryArray
       });
       return res.status(201).json({
         success: true,

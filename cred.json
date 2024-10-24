@@ -1,0 +1,27 @@
+[
+    {
+        "email": "wami276@aditize.com",
+        "project_public": "project_public_014780e97a200b09f5abce48c4d82a33",
+        "secret_key": "secret_key_6bf454d5d4952518ccb94be236f9"
+    },
+    {
+        "email": "another@example.com",
+        "project_public": "project_public_2",
+        "secret_key": "secret_key_2"
+    },
+    {
+        "email": "third@example.com",
+        "project_public": "project_public_3",
+        "secret_key": "secret_key_3"
+    },
+    {
+        "email": "fourth@example.com",
+        "project_public": "project_public_4",
+        "secret_key": "secret_key_4"
+    },
+    {
+        "email": "fifth@example.com",
+        "project_public": "project_public_5",
+        "secret_key": "secret_key_5"
+    }
+]
