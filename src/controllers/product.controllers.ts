@@ -196,16 +196,16 @@ export const getSingleProduct = asyncErrorHandler(async (req, res, next) => {
   }
 
   // Function to modify strings starting with "0-"
-  if (product?.productRamAndStorage && product?.productBrand?.brandName == 'apple') {
-    let modifiedRamAndStorage = product.productRamAndStorage.map((item: { id: string }) => {
-      if (item.id.startsWith("0-")) {
-        return item.id = item.id.substring(2); // Take substring from index 2 to end
-      } else {
-        return item; // Return unchanged if it doesn't start with "0-"
-      }
-    });
-    product.productRamAndStorage = modifiedRamAndStorage
-  }
+  // if (product?.productRamAndStorage && product?.productBrand?.brandName == 'apple') {
+  //   let modifiedRamAndStorage = product.productRamAndStorage.map((item: { id: string }) => {
+  //     if (item.id.startsWith("0-")) {
+  //       return item.id = item.id.substring(2); // Take substring from index 2 to end
+  //     } else {
+  //       return item; // Return unchanged if it doesn't start with "0-"
+  //     }
+  //   });
+  //   product.productRamAndStorage = modifiedRamAndStorage
+  // }
 
   // console.log(updateProduct)
   return res.status(200).json({
