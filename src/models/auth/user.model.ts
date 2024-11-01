@@ -53,11 +53,12 @@ const userSchema = new Schema(
       enum: ['mnm', 'mnmadmin'], // Define the roles here
       default: "mnm"
     },
-    role: {
-      type: String,
-      enum: ['admin', 'editor', 'customer'], // Define the roles here
-      default: 'customer', // Default role
-    },
+    // role: {
+    //   type: String,
+    //   enum: ['admin', 'editor', 'customer'], // Define the roles here
+    //   default: 'customer', // Default role
+    // },
+    role: { type: mongoose.Schema.Types.ObjectId, ref: 'Role' },
     email: {
       type: String,
       unique: [true, "Email already exists"],

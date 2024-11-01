@@ -14,6 +14,7 @@ import mongoose, { ObjectId, PipelineStage } from "mongoose";
 import { CoinAccount } from "../models/coins/coinAccount";
 import { profile } from "console";
 import { populate } from "dotenv";
+import { Role } from "../models/userRoleModel";
 
 
 
@@ -63,6 +64,16 @@ export const newUser = asyncErrorHandler(
         .json({ success: false, message: `email or mobile no already used` });
     }
 
+    let customerRole = await Role.findOne({ roleName: 'Customer' });
+
+    if (!customerRole) {
+      customerRole = await Role.create({
+        roleName: 'Customer',
+        permissions: [], // Define minimal or no permissions for the "Customer" role
+        isDefault: true,
+      });
+    }
+
     const profileData = {
       profileImageUrl: "/defaultprofileimage.png",
       profileName: name,
@@ -79,8 +90,10 @@ export const newUser = asyncErrorHandler(
       email,
       phoneNumber,
       profile: profileData,
-      platform: platform ?? 'mnm'
+      platform: platform ?? 'mnm',
+      role: customerRole._id,
     };
+
 
     const user = await User.create(userData);
     if (!user._id) {
@@ -93,6 +106,7 @@ export const newUser = asyncErrorHandler(
       });
 
     }
+    module.exports = Role; module.exports = Role;
     // userId: string, rewardType: string, orderId: string, coinsTobeAdded: number
 
     await IncreaseCoins(user._id, "signupBonus", "signup", 200)
@@ -104,9 +118,6 @@ export const newUser = asyncErrorHandler(
     });
   }
 );
-
-
-
 
 // -------------------------- find user--------------------------------------------------------------------
 export const findUser = asyncErrorHandler(
@@ -142,7 +153,7 @@ export const findUser = asyncErrorHandler(
 //------------------------api to get user details ----------------------------------
 export const getUser = asyncErrorHandler(async (req: Request, res, next) => {
   const uid = req.params.uid;
-  const user = await User.findOne({ uid }).populate("coupon")
+  const user = await User.findOne({ uid }).populate("coupon").populate('role')
 
   if (!user) {
     return next(new ErrorHandler("user doesnt exist", 400));
@@ -195,6 +206,35 @@ export const getUser = asyncErrorHandler(async (req: Request, res, next) => {
 
 //   });
 // });
+
+
+export const updateRole = asyncErrorHandler(async (req, res, next) => {
+  const { userId, roleId } = req.body;
+
+
+  const user = await User.findById(userId)
+  if (!user) {
+    return res.json({ success: false, message: "no user " })
+  }
+
+
+  const role = await Role.findById(roleId)
+  if (!role) {
+    return res.json({ success: false, message: "no role found" })
+  }
+
+  user.role = role._id;
+
+  await user.save();
+
+  return res.status(200).json({
+    success: true,
+    message: "Successfully updated profile",
+    userData: user
+  });
+});
+
+
 export const updateProfile = asyncErrorHandler(async (req, res, next) => {
   const { profile } = req.body;
 
@@ -203,9 +243,6 @@ export const updateProfile = asyncErrorHandler(async (req, res, next) => {
   if (!profile) {
     return next(new ErrorHandler("please provide all fields", 400));
   }
-
-
-
   const user = await User.findById(req.user._id);
   if (!user) {
     return next(new ErrorHandler("No user found by this id", 404));

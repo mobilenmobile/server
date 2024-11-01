@@ -22,6 +22,7 @@ import {
     updateCart, updateCouponCode,
     updateProfile,
     updateProfileImage,
+    updateRole,
     updateWishlist
 } from "../controllers/user.controllers.js";
 
@@ -36,6 +37,7 @@ userRouter.post("/new", newUserOnly, newUser);
 userRouter.get("/userDetails/:uid", authenticated, getUser);
 userRouter.get("/userDetails", UserInfo);
 userRouter.post("/userBasicInfo", findUser);
+userRouter.put("/updaterole", updateRole)
 
 //----------------------- USER COIN SECTION --------------------------------
 userRouter.get("/getCoinAccountDetails", authenticated, getCoinAccount);
