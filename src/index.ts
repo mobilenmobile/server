@@ -46,6 +46,7 @@ connectDB()
     // app.on("error", (err) => {
     //   console.log("server failed to start ", err);
     // });
+    
   })
   .catch((err) => {
     console.log("Mongodb connection failed !!!", err);

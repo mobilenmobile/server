@@ -67,7 +67,7 @@ export const getInventoryData = asyncErrorHandler(async (req, res, next) => {
 
     // 3. Fetch low stock products (optional if you still need this)
     const lowStockProducts = await Product.find({
-        'productVariance.quantity': { $lt: 5 },
+        'productVariance.quantity': { $lt: 0 }
     })
         .populate('productCategory', 'categoryName') // Populate categoryName for low stock products as well
         .select('productTitle productVariance productCategory');
@@ -76,7 +76,7 @@ export const getInventoryData = asyncErrorHandler(async (req, res, next) => {
     const formattedLowStockProducts = lowStockProducts.map((product) => {
         return {
             productTitle: product.productTitle,
-            categoryName: product.productCategory?.categoryName || 'Unknown',
+            categoryName: product.productCategory?.categoryName || '',
             remainingQuantities: product.productVariance
                 .filter((variant: any) => variant.quantity < 5)
                 .map((variant: any) => ({

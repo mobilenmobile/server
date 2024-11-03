@@ -1450,10 +1450,6 @@ interface UserQuery {
   name?: string;
 }
 
-// import { User } from './models/User'; // Adjust this import based on your project structure
-
-
-
 export const listAllUsers = asyncErrorHandler(async (req, res, next) => {
   const { name, platform, page = '1', export: exportFlag } = req.query;
   const isExport = exportFlag === 'true';
@@ -1462,58 +1458,74 @@ export const listAllUsers = asyncErrorHandler(async (req, res, next) => {
   const pageNumber = Number(page);
   const skip = (pageNumber - 1) * limit;
 
-  // Construct query filters
-  const query: any = {};
-  if (name) {
-    query.name = { $regex: name, $options: 'i' };
-  }
+  // Construct query filters with an explicit type for dynamic properties
+  const query: Record<string, any> = {};
+
   if (platform) {
     query.platform = platform;
   }
+  if (name) {
+    query.name = { $regex: name, $options: 'i' };
+  }
 
-  // Exclude admin users from the results
-  query.role = { $ne: 'admin' };
+  // Exclude users with role "admin"
+  const adminRole = await Role.findOne({ roleName: 'admin' });
+  if (adminRole) {
+    query.role = { $ne: adminRole._id };
+  }
 
   // Build the aggregation pipeline
   const aggregationPipeline: PipelineStage[] = [
-    { $match: query },
+    { $match: query } as PipelineStage,
+    {
+      $lookup: {
+        from: 'roles',
+        localField: 'role',
+        foreignField: '_id',
+        as: 'roleInfo',
+      },
+    } as PipelineStage,
+    { $unwind: '$roleInfo' } as PipelineStage,
     {
       $addFields: {
         sortOrder: {
           $switch: {
             branches: [
-              { case: { $eq: ['$role', 'editor'] }, then: 1 },
-              { case: { $eq: ['$role', 'customer'] }, then: 2 },
+              { case: { $eq: ['$roleInfo.roleName', 'editor'] }, then: 1 },
+              { case: { $eq: ['$roleInfo.roleName', 'customer'] }, then: 2 },
             ],
-            default: 3, // for any other role
+            default: 3,
           },
         },
       },
-    },
-    { $sort: { sortOrder: 1 } },
+    } as PipelineStage,
+    { $sort: { sortOrder: 1 } } as PipelineStage,
     {
       $project: {
+        uid: 1,
         _id: 1,
         name: 1,
-        role: 1,
         platform: 1,
         profile: 1,
+        email: 1,
+        phoneNumber: 1,
+        role: '$roleInfo.roleName',
       },
-    },
+    } as PipelineStage,
   ];
 
-  // If isExport is false, apply pagination logic (limit and skip)
+  // Apply pagination if export is false
   if (!isExport) {
-    aggregationPipeline.push({ $skip: skip }, { $limit: limit });
+    aggregationPipeline.push({ $skip: skip } as PipelineStage, { $limit: limit } as PipelineStage);
   }
 
-  // Fetch users using aggregation
+  // Fetch users using the aggregation pipeline
   const users = await User.aggregate(aggregationPipeline);
 
   if (!users || users.length === 0) {
     return res.status(200).json({
       success: false,
-      message: "No user found",
+      message: 'No user found',
       users: [],
     });
   }
@@ -1522,19 +1534,19 @@ export const listAllUsers = asyncErrorHandler(async (req, res, next) => {
   if (isExport) {
     return res.status(200).json({
       success: true,
-      message: "Successfully exported all users",
+      message: 'Successfully exported all users',
       users,
     });
   }
 
-  // Get total count of users for pagination calculation
+  // Get the total count of users for pagination
   const totalUsers = await User.countDocuments(query);
   const totalPages = Math.ceil(totalUsers / limit);
 
   // Respond with users and pagination info
   return res.status(200).json({
     success: true,
-    message: "Successfully fetched users",
+    message: 'Successfully fetched users',
     users,
     pagination: {
       totalUsers,
@@ -1544,129 +1556,30 @@ export const listAllUsers = asyncErrorHandler(async (req, res, next) => {
     },
   });
 });
-// export const listAllUsers = asyncErrorHandler(async (req, res, next) => {
-//   const { name, platform, page = '1', export: exportFlag } = req.query; // defaults: page = 1
-//   let limit = 10;
-//   // Convert exportFlag string to boolean
-//   const isExport = exportFlag === 'true';
-//   if (!isExport) {
-//     limit = 500
-//   }
-//   const pageNumber = Number(page); // parse page to number
-//   const skip = (pageNumber - 1) * limit;
-
-//   // Construct query filters
-//   const query: any = {};
-//   if (name) {
-//     query.name = { $regex: name, $options: 'i' };
-//   }
-//   if (platform) {
-//     query.platform = platform;
-//   }
-
-//   // Exclude admin users from the results
-//   query.role = { $ne: 'admin' }; // Add this line to exclude admins
-
-//   // Aggregation to sort users based on role
-//   const users = await User.aggregate([
-//     { $match: query },
-//     {
-//       $addFields: {
-//         sortOrder: {
-//           $switch: {
-//             branches: [
-//               { case: { $eq: ['$role', 'editor'] }, then: 1 },
-//               { case: { $eq: ['$role', 'customer'] }, then: 2 },
-//             ],
-//             default: 3, // for any other role
-//           },
-//         },
-//       },
-//     },
-//     { $sort: { sortOrder: 1 } }, // Sort by the computed field
-//     { $skip: skip },
-//     { $limit: limit },
-//     {
-//       $project: {
-//         _id: 1,
-//         name: 1,
-//         role: 1,
-//         platform: 1,
-//         profile: 1,
-//         // Exclude sortOrder from the output to avoid error
-//         // If you want to keep it, just include it in the projection
-//         // sortOrder: 1, // Uncomment if you want to include it
-//       },
-//     },
-//   ]);
-
-//   if (!users || users.length === 0) {
-//     return res.status(200).json({
-//       success: false,
-//       message: "No user found",
-//       users: [],
-
-//     });
-//   }
-
-//   // Get total count of users (for pagination calculation)
-//   const totalUsers = await User.countDocuments(query);
-//   const totalPages = Math.ceil(totalUsers / limit);
-
-//   return res.status(200).json({
-//     success: true,
-//     message: "Successfully fetched users",
-//     users,
-//     pagination: {
-//       totalUsers,
-//       totalPages,
-//       currentPage: pageNumber,
-//       limitPerPage: limit,
-//     },
-//   });
-// });
-
-
-
-
-// export const listAllUsers = asyncErrorHandler(async (req, res, next) => {
-//   // Fetch all users from the database
-//   // Fetch all users from the database, selecting only the _id and profileDetails fields
-//   const users = await User.find().select('_id profileDetails');
-
-//   if (!users || users.length === 0) {
-//     return next(new ErrorHandler("No users found", 204));
-//   }
-
-//   return res.status(200).json({
-//     success: true,
-//     message: "Successfully fetched users",
-//     users,
-//   });
-// });
 
 
 export const changeUserRole = asyncErrorHandler(async (req, res, next) => {
-  const { userId, newRole } = req.body;
+  const { userId, newRoleId } = req.body;
 
-  // Validate the newRole against defined roles
-  const validRoles = ['admin', 'editor', 'customer'];
-  if (!validRoles.includes(newRole)) {
-    return next(new ErrorHandler("Invalid role provided", 400));
+  const user = await User.findOne({uid:userId})
+  console.log("user",user)
+  if (!user) {
+    return next(new ErrorHandler("No User found", 400))
   }
 
-  // Find the user and update the role
-  const userToUpdate = await User.findById(userId);
-  if (!userToUpdate) {
-    return next(new ErrorHandler("User not found", 404));
+  const newRole = await Role.findById(newRoleId)
+
+  if (!newRole) {
+    return next(new ErrorHandler("Invalid role provided", 400))
   }
 
-  userToUpdate.role = newRole;
-  await userToUpdate.save();
+  user.role = newRole._id;
+
+  await user.save();
 
   return res.status(200).json({
     success: true,
     message: "User role updated successfully",
-    updatedUser: userToUpdate,
+    updatedUser: user,
   });
 });
