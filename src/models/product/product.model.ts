@@ -166,8 +166,12 @@ const productSchema = new Schema(
       type: Boolean,
       default: false,
     },
-
     // New fields for dimensions and weight
+    // Reference to Box schema for selected box
+    selectedBox: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Box", // Ensure "Box" model exists and is registered
+    },
     length: {
       type: Number,
       required: true,

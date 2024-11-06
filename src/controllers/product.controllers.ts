@@ -19,6 +19,7 @@ import {
 } from "../utils/cloudinary.js";
 import { FilterQuery } from "mongoose";
 import { subCategory } from "../models/subCategory/subCategory.model.js";
+import { Box } from "../models/boxModel.js";
 
 
 //----------------------xxxxxx ListOfApis xxxxxxxxx-------------------
@@ -65,6 +66,7 @@ export const newProduct = asyncErrorHandler(
       isArchived,
 
       // New fields for dimensions and weight
+      selectedBox,
       length,
       breadth,
       height,
@@ -92,6 +94,7 @@ export const newProduct = asyncErrorHandler(
     }
 
     const refCategory = await Category.findOne({ categoryName: category });
+    const refBox = await Box.findById(selectedBox)
 
     const newProduct = await Product.create({
       productCategory: refCategory._id,
@@ -113,6 +116,7 @@ export const newProduct = asyncErrorHandler(
       isArchived: isArchived ?? false,
       // productTitle: title,
       // New fields
+      selectedBox: refBox ?? null,
       length: Number(length),
       breadth: Number(breadth),
       height: Number(height),
@@ -185,7 +189,9 @@ export const getSingleProduct = asyncErrorHandler(async (req, res, next) => {
         path: 'productId',  // Field in ComboProducts to populate
         model: 'product'  // Ensure this matches the model name exactly
       }
-    })
+    }).populate(
+      'selectedBox'
+    )
     .exec()
   // .populate('productFreeProducts', {
   //   path: 'productId', // This should refer to the field in the referenced model
@@ -379,6 +385,7 @@ export const updateProduct = asyncErrorHandler(
       isArchived,
 
       // New fields for dimensions and weight
+      selectedBox,
       length,
       breadth,
       height,
@@ -397,11 +404,16 @@ export const updateProduct = asyncErrorHandler(
       console.log("brand", brand, brand.trim().toLowerCase())
       const refBrand = await Brand.findOne({ brandName: brand.trim().toLowerCase() });
       // console.log("refBrand " + refBrand);
+
       if (!refBrand) {
         return next(new ErrorHandler("Please provide the brand ", 400));
       }
       product.productBrand = refBrand._id;
     }
+
+
+    const refBox = await Box.findById(selectedBox)
+
     if (subcategory) product.productSubCategory = subcategory
     if (model) product.productModel = model
     if (productModel) product.productModel = productModel;
@@ -422,6 +434,7 @@ export const updateProduct = asyncErrorHandler(
     if (isArchived) product.isArchived = isArchived
     // console.log(JSON.parse(comboOfferProducts))
     // New fields for dimensions and weight
+    if (refBox) product.selectedBox = refBox._id
     if (length) product.length = Number(length);
     if (breadth) product.breadth = Number(breadth);
     if (height) product.height = Number(height);
