@@ -249,7 +249,6 @@ export const updateProfile = asyncErrorHandler(async (req, res, next) => {
   }
 
 
-
   // Parse profile only if it is provided
   const profileData = profile ? JSON.parse(profile) : {};
   // if(profileData =)
@@ -1540,7 +1539,9 @@ export const listAllUsers = asyncErrorHandler(async (req, res, next) => {
   }
 
   // Get the total count of users for pagination
-  const totalUsers = await User.countDocuments(query);
+  // const totalUsers = await User.countDocuments(query);
+   // Count only users with platform "mnm" for pagination
+   const totalUsers = await User.countDocuments({ ...query, platform: 'mnm' });
   const totalPages = Math.ceil(totalUsers / limit);
 
   // Respond with users and pagination info
