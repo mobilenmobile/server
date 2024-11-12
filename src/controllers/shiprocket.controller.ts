@@ -579,11 +579,18 @@ export const cancellShiprocketOrder = asyncErrorHandler(async (req, res, next) =
 // -----------------------!!!!!!!!!!!!! Track shipment !!!!!!!!!!!--------------------------
 export const trackShiprocketOrder = asyncErrorHandler(async (req, res, next) => {
 
-    const { awb } = req.body
-    if (!awb) {
-        return res.status(400).send({ success: false, message: 'awb is required' })
+    const { awb, shipmentid } = req.body
+
+    if (!awb && !shipmentid) {
+        return res.status(400).send({ success: false, message: 'provide valid shipment id' })
     }
-    const trackshipmentUrl = `https://apiv2.shiprocket.in/v1/external/courier/track/awb/${awb}`
+
+    let trackshipmentUrl;
+
+    if (!awb) {
+        trackshipmentUrl = `https://apiv2.shiprocket.in/v1/external/courier/track/shipment/${shipmentid}`
+    }
+    trackshipmentUrl = `https://apiv2.shiprocket.in/v1/external/courier/track/awb/${awb}`
 
     // const UserOrder = await Order.findOne({ _id: orderId }).populate("user")
     const ShipRocketCredentials = await ShipRocket.findOne({ email: "mobilenmobilebjnr1@gmail.com" })
@@ -618,6 +625,7 @@ export const trackShiprocketOrder = asyncErrorHandler(async (req, res, next) => 
     }
 
 });
+// -----------------------!!!!!!!!!!!!! Track shipment !!!!!!!!!!!--------------------------
 
 
 // -----------------------!!!!!!!!!!!!! Schedule Order Pickup !!!!!!!!!!!--------------------------

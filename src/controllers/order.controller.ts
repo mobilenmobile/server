@@ -449,6 +449,7 @@ export const getSingleOrderDetails = asyncErrorHandler(async (req, res, next) =>
     deliveryCharges: order.deliveryCharges,
     coinsCredited: order.coinsCredited,
     coinsDebited: order.coinsDebited,
+    shipmentId:order?.courierOrderDetails?.shipment_id,
     orderItems: orderItemsWithReviews
   }
   console.log("orderItemwithreviews", orderItemsWithReviews)
