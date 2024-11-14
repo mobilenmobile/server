@@ -168,7 +168,6 @@ export const getLatestProduct = asyncErrorHandler(async (req, res, next) => {
   });
 });
 
-
 //-----------------------------api to get single product-----------------------------------
 export const getSingleProduct = asyncErrorHandler(async (req, res, next) => {
   let product;
@@ -392,7 +391,7 @@ export const updateProduct = asyncErrorHandler(
       weight,
     } = req.body;
 
-    console.log("update-req-body", req.body);
+    console.log("update-req-body controller ===> ", req.body);
 
     const product = await Product.findById(id);
     if (!product) {
@@ -430,8 +429,11 @@ export const updateProduct = asyncErrorHandler(
     if (selectedFreeCategory) product.productSelectedFreeCategory = selectedFreeCategory ? JSON.parse(selectedFreeCategory) : null
     if (productVideoUrls) product.productVideoUrls = productVideoUrls ? JSON.parse(productVideoUrls) : null
     if (skinSelectedItems) product.ProductSkinSelectedItems = skinSelectedItems ? JSON.parse(skinSelectedItems) : null
-    if (isfeatured) product.isFeatured = isfeatured
-    if (isArchived) product.isArchived = isArchived
+    // featured or archived
+    // featured or archived
+    if (isfeatured !== undefined) product.isFeatured = isfeatured;
+    if (isArchived !== undefined) product.isArchived = isArchived; // Check for undefined explicitly
+
     // console.log(JSON.parse(comboOfferProducts))
     // New fields for dimensions and weight
     if (refBox) product.selectedBox = refBox._id
@@ -446,11 +448,10 @@ export const updateProduct = asyncErrorHandler(
     return res.status(200).json({
       success: true,
       message: "Product Updated Successfully",
-      product,
+      prod,
     });
   }
 );
-
 
 //--------------------------------api to delete product---------------------------------------
 export const deleteProduct = asyncErrorHandler(async (req, res, next) => {
@@ -601,46 +602,32 @@ export const getAllProducts = asyncErrorHandler(
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 20;
     const skip = (page - 1) * limit;
-    let baseQuery: FilterQuery<BaseQuery> = {};
-
+    // let baseQuery: FilterQuery<BaseQuery> = {};
+    let baseQuery: FilterQuery<BaseQuery> = {
+      isArchived: { $ne: true }  // Exclude archived products
+    };
     if (price) {
       baseQuery.price = {
         $lte: Number(price),
       };
     }
 
+    // Apply category filter if provided
+    console.log("category for search product", category)
     if (category) {
+      console.log("category for search product inside", category)
       const findCategory = await Category.findOne({ categoryName: category });
       if (findCategory) {
         baseQuery.productCategory = findCategory._id;
       }
     }
 
-    // const searchQuery = search && typeof search === 'string' ? {
-    //   $or: [
-    //     { productTitle: { $regex: search, $options: 'i' } },
-    //     { productSubCategory: { $regex: search, $options: 'i' } }
-    //   ]
-    // } : {};
+    // Apply isfeatured filter if provided
+    if (isfeatured) {
+      baseQuery.isFeatured = isfeatured === 'true';
+    }
     let searchQuery: FilterQuery<BaseQuery> = {};
 
-    // if (search && typeof search === 'string') {
-    //   // Split the search term by spaces and filter out "both"
-    //   const searchTerms = search
-    //     .split(' ')
-    //     .filter((term) => term.toLowerCase() !== 'both'); 
-
-    //   if (searchTerms.length > 0) {
-    //     searchQuery = {
-    //       $or: searchTerms.map((term) => ({
-    //         $or: [
-    //           { productTitle: { $regex: term, $options: 'i' } },
-    //           { productSubCategory: { $regex: term, $options: 'i' } },
-    //         ],
-    //       })),
-    //     };
-    //   }
-    // }
     if (search && typeof search === 'string') {
       // Split the search term by spaces and filter out "both"
       const searchTerms = search
@@ -1121,7 +1108,10 @@ export const getFilterAndSortProducts = asyncErrorHandler(async (req, res, next)
 
   console.log("---------------------------->>>>>>>>", req.body, "<<<<<<<<<---------------------------------");
 
-  const baseQuery: FilterQuery<BaseQuery> = {};
+  // const baseQuery: FilterQuery<BaseQuery> = {};
+  let baseQuery: FilterQuery<BaseQuery> = {
+    archived: { $ne: true }  // Exclude archived products
+  };
 
   if (searchText) {
     baseQuery.productTitle = {

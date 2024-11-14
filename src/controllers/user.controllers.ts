@@ -153,11 +153,13 @@ export const findUser = asyncErrorHandler(
 //------------------------api to get user details ----------------------------------
 export const getUser = asyncErrorHandler(async (req: Request, res, next) => {
   const uid = req.params.uid;
-  const user = await User.findOne({ uid }).populate("coupon").populate('role')
+
+  const user = await User.findOne({ uid }).populate('role').populate("coupon")
 
   if (!user) {
     return next(new ErrorHandler("user doesnt exist", 400));
   }
+  console.log("user==>", user)
 
   return res.status(200).json({
     success: true,
@@ -210,7 +212,6 @@ export const getUser = asyncErrorHandler(async (req: Request, res, next) => {
 
 export const updateRole = asyncErrorHandler(async (req, res, next) => {
   const { userId, roleId } = req.body;
-
 
   const user = await User.findById(userId)
   if (!user) {
@@ -1540,8 +1541,8 @@ export const listAllUsers = asyncErrorHandler(async (req, res, next) => {
 
   // Get the total count of users for pagination
   // const totalUsers = await User.countDocuments(query);
-   // Count only users with platform "mnm" for pagination
-   const totalUsers = await User.countDocuments({ ...query, platform: 'mnm' });
+  // Count only users with platform "mnm" for pagination
+  const totalUsers = await User.countDocuments({ ...query, platform: 'mnm' });
   const totalPages = Math.ceil(totalUsers / limit);
 
   // Respond with users and pagination info
@@ -1562,8 +1563,8 @@ export const listAllUsers = asyncErrorHandler(async (req, res, next) => {
 export const changeUserRole = asyncErrorHandler(async (req, res, next) => {
   const { userId, newRoleId } = req.body;
 
-  const user = await User.findOne({uid:userId})
-  console.log("user",user)
+  const user = await User.findOne({ uid: userId })
+  console.log("user", user)
   if (!user) {
     return next(new ErrorHandler("No User found", 400))
   }
