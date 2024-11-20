@@ -469,7 +469,6 @@ export const deleteProduct = asyncErrorHandler(async (req, res, next) => {
 
   await Product.findByIdAndDelete(product._id);
 
-  await ClearCache({ product: true, productId: String(product._id) });
   return res.status(200).json({
     success: true,
     message: "Product Deleted Successfully",
@@ -598,9 +597,12 @@ export const getAllAdminProducts = asyncErrorHandler(
 
 export const getAllProducts = asyncErrorHandler(
   async (req, res, next) => {
+    const fullUrl = req.protocol + '://' + req.get('host') + req.originalUrl;
+    console.log("API PATH FULL URL:-", fullUrl)
     const { search, sort, category, price, device, isfeatured } = req.query;
+    console.log("Search query:-", search, sort, category, price, device, isfeatured)
     const page = Number(req.query.page) || 1;
-    const limit = Number(req.query.limit) || 20;
+    const limit = Number(req.query.limit) || 12;
     const skip = (page - 1) * limit;
     // let baseQuery: FilterQuery<BaseQuery> = {};
     let baseQuery: FilterQuery<BaseQuery> = {
@@ -723,16 +725,17 @@ export const getAllProducts = asyncErrorHandler(
 
     const totalPage = Math.ceil(totalProducts / limit);
 
-    for (let i = flatProducts.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [flatProducts[i], flatProducts[j]] = [flatProducts[j], flatProducts[i]];
-    }
+    // for (let i = flatProducts.length - 1; i > 0; i--) {
+    //   const j = Math.floor(Math.random() * (i + 1));
+    //   [flatProducts[i], flatProducts[j]] = [flatProducts[j], flatProducts[i]];
+    // }
 
     return res.status(200).json({
       success: true,
       message: "All products fetched successfully",
       products: flatProducts,
       totalPage,
+      currentPage: Number(page),
       totalProducts,
     });
   }
