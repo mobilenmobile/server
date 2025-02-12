@@ -93,7 +93,10 @@ export const adminOnly = asyncErrorHandler(async (req, res, next) => {
   //   return next(new ErrorHandler("you are not authorized to perform this operation ", 401));
   // }
 
-  if (roleDetails?.roleName !== "admin") {
+  console.log("------------roleDetails----------------------",roleDetails)
+
+
+  if (roleDetails?.roleName?.trim().toLowerCase() !== "admin") {
     return next(new ErrorHandler("you don't have edit access", 401));
   }
 

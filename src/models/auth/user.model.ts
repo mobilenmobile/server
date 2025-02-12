@@ -67,8 +67,6 @@ const userSchema = new Schema(
     },
     phoneNumber: {
       type: String,
-      unique: [true, "mobileno already exists"],
-      required: [true, "Please enter mobile number"],
       validate: {
         validator: function (v: string) {
           return /^\d{10}$/.test(v);

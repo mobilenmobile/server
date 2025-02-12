@@ -6,6 +6,7 @@ const storage = multer.diskStorage({
     callback(null, "./public");
   },
   filename(req, file, callback) {
+    // console.log(`Uploaded File Size: ${req.file.size} bytes`); // Logs the size of the uploaded file
     const id = uuid();
     console.log(req, file)
     const extName = file.originalname.split(".").pop();

@@ -23,11 +23,8 @@ import { adminOnly, authenticated } from "../middleware/auth.middleware.js";
 const productRouter = express.Router();
 
 productRouter.post("/new", authenticated, fileUpload.array("productImages"), newProduct);
-productRouter.post(
-  "/previewImages",
-  fileUpload.array("productImages"),
-  previewImages
-);
+//upload image
+productRouter.post("/previewImages", fileUpload.array("productImages"), previewImages);
 
 productRouter.post("/deletePreviewImage", deletePreviewCloudinary);
 

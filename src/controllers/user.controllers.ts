@@ -76,9 +76,9 @@ export const newUser = asyncErrorHandler(
 
     const profileData = {
       profileImageUrl: "/defaultprofileimage.png",
-      profileName: name,
-      profileEmailId: email,
-      profilePhoneNo: phoneNumber,
+      profileName: name ?? "",
+      profileEmailId: email ?? "",
+      profilePhoneNo: phoneNumber ?? "",
       profileGender: "",
       profileLocation: "",
       profileAlternateMobileNo: ""
@@ -523,7 +523,7 @@ export const removeWishlistItem = asyncErrorHandler(async (req: Request, res, ne
 export const updateCart = asyncErrorHandler(async (req, res, next) => {
 
   const { productId, selectedVarianceId, quantity, customSkin, isCombo, skinProductDetails, selectedFreeProducts } = req.body
-  // console.log("-------------------- update cart------------------------", req.body)
+  console.log("-------------------- update cart------------------------", req.body)
   if (!customSkin) {
     if (!productId || !selectedVarianceId) {
       return next(new ErrorHandler("please enter all fields", 404));

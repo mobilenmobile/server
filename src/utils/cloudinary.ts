@@ -18,7 +18,6 @@ const uploadOnCloudinary = async (localFilePath: string) => {
 
     // file has been uploaded successfull
     //console.log("file is uploaded on cloudinary ", response.url);
-
     return response;
   } catch (error) {
     console.log(error);
@@ -27,19 +26,13 @@ const uploadOnCloudinary = async (localFilePath: string) => {
   }
 };
 
-// const uploadSingleCloudinary=async(localFile:any)=>{
-//   console.log("singleFilePath=>"+localFile);
-//   try{
-
-//   }
-//   catch(error){
-
-//   }
-
-// }
 
 const uploadMultipleCloudinary = async (localFiles: any) => {
   console.log("multipleFilepath =>" + localFiles);
+  if (!localFiles) {
+    throw new Error('Image File is not valid');
+    // return
+  }
 
   try {
     const uploadedImages = [];
@@ -56,12 +49,11 @@ const uploadMultipleCloudinary = async (localFiles: any) => {
     return uploadedImages;
   } catch (error) {
     console.log(error);
-
-    for (const file of localFiles) {
-      fs.unlinkSync(file.path);
-    }
-
-    return null;
+    // for (const file of localFiles) {
+    //   fs.unlinkSync(file.path);
+    // }
+    throw new Error("Failed to upload images")
+    // return null;
   }
 };
 

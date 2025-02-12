@@ -137,6 +137,7 @@ export const newProduct = asyncErrorHandler(
 //-----------------api to get image url by uploading on cloudinary------------------
 export const previewImages = asyncErrorHandler(async (req, res, next) => {
   const photos = req.files;
+  console.log("files is :-",req.files)
   // console.log("photos =>=>=>=>=>=>=>=>+.+>=>+<=>+>[.=>+.+=>=>=>=>=>=>", photos);
 
   if (photos?.length === 0) {
