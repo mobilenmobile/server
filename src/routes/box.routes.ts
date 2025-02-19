@@ -5,14 +5,15 @@ import {
     updateBox,
     deleteBox,
 } from '../controllers/box.controller';
+import { adminOnly, EditorOnly } from '../middleware/auth.middleware';
 
 const router = express.Router()
 
 
-router.post("/", createBox);
-router.get("/", getAllBoxes);
-router.get("/:id", getBoxById);
-router.put("/:id", updateBox);
-router.delete("/delete/:id", deleteBox);
+router.post("/", EditorOnly, createBox);
+router.get("/", EditorOnly, getAllBoxes);
+router.get("/:id", EditorOnly, getBoxById);
+router.put("/:id", EditorOnly, updateBox);
+router.delete("/delete/:id", EditorOnly, deleteBox);
 
 export default router;

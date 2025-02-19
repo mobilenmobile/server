@@ -24,10 +24,18 @@ import ErrorHandler from "../utils/errorHandler";
 export const addNewCategory = asyncErrorHandler(
   async (req: Request<{}, {}, NewCategoryRequestBody>, res, next) => {
     const { categoryName, categoryImgUrl, redeemedCoin } = req.body;
+
+    // Normalize the categoryName
+    const updatedCategoryName = categoryName
+      .toLowerCase()         // Convert to lowercase
+      .trim()                // Remove extra spaces from the sides
+      .replace(/\s+/g, ' '); // Replace multiple spaces with a single space
+
+
     const { categoryId } = req.query
     console.log(req.body)
     let categoryKeywordsArr;
-    if (!categoryName) {
+    if (!updatedCategoryName) {
       return next(new ErrorHandler("please provide category name.", 400));
     }
 
@@ -35,8 +43,8 @@ export const addNewCategory = asyncErrorHandler(
     const exisitingCategory = await Category.findOne({ _id: categoryId })
     console.log(exisitingCategory, "category eixsitn")
     if (exisitingCategory) {
-      if (categoryName) {
-        exisitingCategory.categoryName = categoryName
+      if (updatedCategoryName) {
+        exisitingCategory.categoryName = updatedCategoryName
 
       }
       if (redeemedCoin) {
@@ -56,7 +64,7 @@ export const addNewCategory = asyncErrorHandler(
     else {
 
       const category = await Category.create({
-        categoryName,
+        categoryName:updatedCategoryName,
         redeemedCoin,
         categoryImgUrl: categoryImgUrl ? categoryImgUrl : "",
       });

@@ -22,13 +22,13 @@ import { adminOnly, authenticated } from "../middleware/auth.middleware.js";
 
 const productRouter = express.Router();
 
-productRouter.post("/new", authenticated, fileUpload.array("productImages"), newProduct);
-//upload image
-productRouter.post("/previewImages", fileUpload.array("productImages"), previewImages);
+productRouter.post("/new", newProduct);
 
-productRouter.post("/deletePreviewImage", deletePreviewCloudinary);
+//############### IMAGE RELATED ROUTES ###############################
+productRouter.post("/previewImages",fileUpload.array("productImages"), previewImages);
+productRouter.post("/deletePreviewImage",deletePreviewCloudinary);
 
-
+// ################### MNM CLIENT ROUTES ############################ 
 productRouter.get("/latest", getLatestProduct);
 productRouter.get("/getsingleproduct/:id", getSingleProduct);
 productRouter.get("/getsingleproductdetails/:id", getSingleProductDetails);
@@ -38,12 +38,11 @@ productRouter.post("/skinfilterandsort", getFilterAndSortSkinProducts);
 productRouter.get("/getlimitedproductsbybrand", getLimitedProductsByBrands);
 productRouter.post("/getsimilarproducts", getSimilarProducts);
 
-// ---------------------- Admin routes-----------------------------------------------
+// ----------------------MNM ADMIN ROUTES-----------------------------------------------
 productRouter.get("/getAllAdminProducts", getAllAdminProducts);
 productRouter.post("/updateproduct/:id", authenticated, updateProduct);
 productRouter.delete("/deleteproduct/:id", authenticated, deleteProduct);
 productRouter.delete("/deleteproductdirectly/:id", authenticated, deleteProductDirectly);
-productRouter.post("/deletePreviewImage", authenticated, deletePreviewCloudinary);
 
 
 

@@ -18,8 +18,26 @@ const skinProductDetails = new Schema({
     uploadImgArr: {
         type: [String]
     }
-
 })
+
+
+const deviceDetailsSchema = new Schema(
+    {
+        category: {
+            type: String,
+            required: true
+        },
+        brand: {
+            type: String,
+            required: true
+        },
+        model: {
+            type: String,
+            required: true
+        }
+    },
+    { _id: false } // ✅ Prevents MongoDB from generating an _id for this subdocument
+);
 
 const cartSchema = new Schema(
     {
@@ -50,6 +68,9 @@ const cartSchema = new Schema(
         },
         skinProductDetails: {
             type: skinProductDetails
+        },
+        deviceDetails: {
+            type: deviceDetailsSchema, // ✅ Ensures `deviceDetails` follows the structured format without `_id`
         },
         quantity: {
             type: Number,

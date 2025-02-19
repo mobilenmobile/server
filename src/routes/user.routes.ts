@@ -26,7 +26,7 @@ import {
     updateWishlist
 } from "../controllers/user.controllers.js";
 
-import { authenticated, EditorOnly, newUserOnly, UserInfo } from "../middleware/auth.middleware.js";
+import { adminOnly, authenticated, EditorOnly, newUserOnly, UserInfo } from "../middleware/auth.middleware.js";
 import { getCoinAccount, setUseCoinBalance } from "../controllers/coin.controller.js";
 
 
@@ -57,26 +57,32 @@ userRouter.post("/updateWishlist", authenticated, updateWishlist)
 userRouter.put("/removewishlistitem", authenticated, removeWishlistItem)
 
 // -------------------------- cart related routes --------------------------------
+
+//unauthenticated user cart item details
 userRouter.post("/getUnauthenticatedCartDetails", getUnAuthenticatedCartDetails)
-userRouter.post("/storeCartItemInDb", authenticated, storeCartItemsInDb)
-userRouter.get("/getcartitems", authenticated, getCartDetails)
+
+//authenticated user cart routes
 userRouter.post("/updateCart", authenticated, updateCart)
-userRouter.post("/removeComboItem", authenticated, removeComboItem)
+userRouter.get("/getcartitems", authenticated, getCartDetails)
 
-userRouter.post("/removeFreeItem", authenticated, removeFreeItem)
+//shift all offline cart item into db
+userRouter.post("/storeCartItemInDb", authenticated, storeCartItemsInDb)
 
-userRouter.delete("/removecartitem/:id", authenticated, removeCartItem)
 userRouter.post("/decreasecartproductquantity", authenticated, decreaseCartProductQuantity)
+userRouter.delete("/removecartitem/:id", authenticated, removeCartItem)
 userRouter.delete("/clearcart", authenticated, clearCart)
+
+//remove combo and free product from cart
+userRouter.post("/removeComboItem", authenticated, removeComboItem)
+userRouter.post("/removeFreeItem", authenticated, removeFreeItem)
 
 // ------------------------   buy now related routes-------------------------------------------
 
-userRouter.post("/getBuyNowCartDetails", authenticated, getBuyNowCartDetails)
-
+// userRouter.post("/getBuyNowCartDetails", authenticated, getBuyNowCartDetails)
 
 // ====================== admin user =============================
-userRouter.get("/getallusers", listAllUsers)
-userRouter.post("/changeroles", changeUserRole);
+userRouter.get("/getallusers", adminOnly, listAllUsers)
+userRouter.post("/changeroles", adminOnly, changeUserRole);
 
 
 export default userRouter;

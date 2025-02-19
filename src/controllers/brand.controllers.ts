@@ -25,7 +25,7 @@ export const newBrand = asyncErrorHandler(
 
       const categoryNameTrimmedLowercase = categoryName.trim().toLowerCase();
       const category = await Category.findOne({ categoryName: categoryNameTrimmedLowercase });
-
+      if (!category) return next(new ErrorHandler("category not found", 400));
 
       if (existingBrand) {
 
@@ -104,7 +104,9 @@ export const newBrand = asyncErrorHandler(
 export const getAllBrand = asyncErrorHandler(
   async (req: Request<{}, {}, SearchBrandRequestQuery>, res, next) => {
     const { categoryName } = req.query;
-    console.log(req.query, "query")
+
+    if (!categoryName) return next(new ErrorHandler("category not found", 400));
+
     const baseQuery = { categories: "" };
 
     if (categoryName) {

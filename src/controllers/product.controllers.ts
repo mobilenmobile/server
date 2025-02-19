@@ -41,10 +41,8 @@ import { Box } from "../models/boxModel.js";
 //----------------------xxxxxx List-Of-Apis-End xxxxxxxxx-------------------
 
 //------------------api to create new product-----------
-export const newProduct = asyncErrorHandler(
-  async (req: Request, res, next) => {
-    // console.log("----------------", req.body, "----------------");
-    const {
+export const newProduct = asyncErrorHandler(async (req, res, next) => {
+  const {
       category,
       subcategory,
       brand,
@@ -64,74 +62,189 @@ export const newProduct = asyncErrorHandler(
       skinSelectedItems,
       isfeatured,
       isArchived,
-
-      // New fields for dimensions and weight
       selectedBox,
       length,
       breadth,
       height,
       weight,
+      productWiseQty, // ✅ Added this field
+  } = req.body;
 
-    } = req.body;
+  console.log("📥 Received request body:", req.body);
 
-    // console.log("new product req body=>", JSON.parse(colors))
-
-    // if (!brand || !category || !productModel) {
-    //   return next(new ErrorHandler("provide all product fields", 400));
-    // }
-    // Validate required fields
-    if (!brand || !category || !productModel || !length || !breadth || !height || !weight) {
+  // ✅ Validate required fields
+  if (!brand || !category || !productModel || !length || !breadth || !height || !weight) {
       return next(new ErrorHandler("Provide all required product fields", 400));
-    }
-    // console.log(brand);
-    console.log("brand", brand, brand.trim())
-    const refBrand = await Brand.findOne({ brandName: brand.trim() });
-    const refBrand2 = await Brand.find({ brandName: brand });
-    console.log(refBrand, refBrand2)
+  }
 
-    if (!refBrand) {
-      return next(new ErrorHandler("Please provide the brand ", 400));
-    }
+ 
 
-    const refCategory = await Category.findOne({ categoryName: category });
-    const refBox = await Box.findById(selectedBox)
+  // ✅ Fetch references for category and brand
+  const refBrand = await Brand.findOne({ brandName: brand.trim() });
+  if (!refBrand) {
+      return next(new ErrorHandler("Please provide a valid brand", 400));
+  }
 
-    const newProduct = await Product.create({
+  const refCategory = await Category.findOne({ categoryName: category.trim() });
+  if (!refCategory) {
+      return next(new ErrorHandler("Please provide a valid category", 400));
+  }
+
+  const refBox = selectedBox ? await Box.findById(selectedBox) : null;
+
+  // ✅ Ensure JSON.parse() does not crash if input is missing
+  let parsedVariance, parsedColors, parsedRamAndStorage, parsedComboProducts, parsedFreeProducts, parsedVideoUrls, parsedSkinItems, parsedProductWiseQty;
+  
+  try {
+      parsedVariance = variance ? JSON.parse(variance) : [];
+      parsedColors = colors ? JSON.parse(colors) : [];
+      parsedRamAndStorage = ramAndStorage ? JSON.parse(ramAndStorage) : [];
+      parsedComboProducts = comboProducts ? JSON.parse(comboProducts) : [];
+      parsedFreeProducts = freeProducts ? JSON.parse(freeProducts) : [];
+      parsedVideoUrls = productVideoUrls ? JSON.parse(productVideoUrls) : [];
+      parsedSkinItems = skinSelectedItems ? JSON.parse(skinSelectedItems) : [];
+
+      // ✅ Parse `ProductWiseQty` properly
+      parsedProductWiseQty = productWiseQty ? JSON.parse(productWiseQty) : {};
+  } catch (error) {
+      return next(new ErrorHandler("Invalid JSON format in request body", 400));
+  }
+
+  // ✅ Check if `req.user` exists
+  // if (!req.user || !req.user._id) {
+  //     return next(new ErrorHandler("User authentication required", 401));
+  // }
+
+  
+
+  // ✅ Create the product
+  const newProduct = await Product.create({
       productCategory: refCategory._id,
       productSubCategory: subcategory ?? null,
       productBrand: refBrand._id,
-      productModel: productModel,
-      productTitle: productTitle,
-      productDescription: description,
-      productSkinPattern: pattern,
-      productHeadsetType: headsetType,
-      productVariance: JSON.parse(variance),
-      productColors: JSON.parse(colors),
-      productRamAndStorage: JSON.parse(ramAndStorage),
-      productComboProducts: comboProducts && JSON.parse(comboProducts),
-      productFreeProducts: freeProducts && JSON.parse(freeProducts),
-      productVideoUrls: productVideoUrls ? JSON.parse(productVideoUrls) : null,
-      ProductSkinSelectedItems: skinSelectedItems ? JSON.parse(skinSelectedItems) : null,
+      productModel: productModel.trim(),
+      productTitle: productTitle.trim(),
+      productDescription: description?.trim() ?? "",
+      productSkinPattern: pattern?.trim() ?? "",
+      productHeadsetType: headsetType?.trim() ?? "",
+      productVariance: parsedVariance,
+      productColors: parsedColors,
+      productRamAndStorage: parsedRamAndStorage,
+      productComboProducts: parsedComboProducts,
+      productFreeProducts: parsedFreeProducts,
+      productVideoUrls: parsedVideoUrls,
+      ProductSkinSelectedItems: parsedSkinItems,
       isFeatured: isfeatured ?? false,
       isArchived: isArchived ?? false,
-      // productTitle: title,
-      // New fields
-      selectedBox: refBox ?? null,
+      selectedBox: refBox ? refBox._id : null,
       length: Number(length),
       breadth: Number(breadth),
       height: Number(height),
       weight: Number(weight),
+      ProductWiseQty: parsedProductWiseQty, // ✅ Added this field
+      createdBy: "67245e70ce1c9fdf5de1ce59"
+  });
 
-      //user ref
-      createdBy: req.user._id
-    });
-    return res.status(200).json({
+  return res.status(201).json({
       success: true,
-      message: "product created successfully",
-      newProduct
-    });
-  }
-);
+      message: "Product created successfully",
+      product: newProduct
+  });
+});
+
+// export const newProduct = asyncErrorHandler(
+//   async (req: Request, res, next) => {
+//     // console.log("----------------", req.body, "----------------");
+//     const {
+//       category,
+//       subcategory,
+//       brand,
+//       productModel,
+//       productTitle,
+//       description,
+//       pattern,
+//       headsetType,
+//       variance,
+//       colors,
+//       ramAndStorage,
+//       comboProducts,
+//       freeProducts,
+//       selectedComboCategory,
+//       selectedFreeCategory,
+//       productVideoUrls,
+//       skinSelectedItems,
+//       isfeatured,
+//       isArchived,
+
+//       // New fields for dimensions and weight
+//       selectedBox,
+//       length,
+//       breadth,
+//       height,
+//       weight,
+
+//     } = req.body;
+
+//     console.log(req.body)
+
+//     // console.log("new product req body=>", JSON.parse(colors))
+
+//     // if (!brand || !category || !productModel) {
+//     //   return next(new ErrorHandler("provide all product fields", 400));
+//     // }
+//     // Validate required fields
+//     if (!brand || !category || !productModel || !length || !breadth || !height || !weight) {
+//       return next(new ErrorHandler("Provide all required product fields", 400));
+//     }
+//     // console.log(brand);
+//     console.log("brand", brand, brand.trim())
+//     const refBrand = await Brand.findOne({ brandName: brand.trim() });
+//     const refBrand2 = await Brand.find({ brandName: brand });
+//     console.log(refBrand, refBrand2)
+
+//     if (!refBrand) {
+//       return next(new ErrorHandler("Please provide the brand ", 400));
+//     }
+
+//     const refCategory = await Category.findOne({ categoryName: category });
+//     const refBox = await Box.findById(selectedBox)
+
+//     const newProduct = await Product.create({
+//       productCategory: refCategory._id,
+//       productSubCategory: subcategory ?? null,
+//       productBrand: refBrand._id,
+//       productModel: productModel,
+//       productTitle: productTitle,
+//       productDescription: description,
+//       productSkinPattern: pattern,
+//       productHeadsetType: headsetType,
+//       productVariance: JSON.parse(variance),
+//       productColors: JSON.parse(colors),
+//       productRamAndStorage: JSON.parse(ramAndStorage),
+//       productComboProducts: comboProducts && JSON.parse(comboProducts),
+//       productFreeProducts: freeProducts && JSON.parse(freeProducts),
+//       productVideoUrls: productVideoUrls ? JSON.parse(productVideoUrls) : null,
+//       ProductSkinSelectedItems: skinSelectedItems ? JSON.parse(skinSelectedItems) : null,
+//       isFeatured: isfeatured ?? false,
+//       isArchived: isArchived ?? false,
+//       // productTitle: title,
+//       // New fields
+//       selectedBox: refBox ?? null,
+//       length: Number(length),
+//       breadth: Number(breadth),
+//       height: Number(height),
+//       weight: Number(weight),
+
+//       //user ref
+//       createdBy: req.user._id
+//     });
+//     return res.status(200).json({
+//       success: true,
+//       message: "product created successfully",
+//       newProduct
+//     });
+//   }
+// );
 
 
 //-----------------api to get image url by uploading on cloudinary------------------
@@ -1644,8 +1757,8 @@ export const getFilterAndSortProducts = asyncErrorHandler(async (req, res, next)
 export const getFilterAndSortSkinProducts = asyncErrorHandler(async (req, res, next) => {
 
   const {
-    device,
-    sortBy
+    device="smartphone",
+    sortBy="priceLowToHigh"
   } = req.body
 
 
@@ -1717,7 +1830,7 @@ export const getFilterAndSortSkinProducts = asyncErrorHandler(async (req, res, n
     })
   }
 
-  const lastsortby = sortBy.length - 1
+  const lastsortby = sortBy?.length - 1
   // Apply sorting  
   if (sortBy[lastsortby] == 'priceLowToHigh') {
     // console.log("---filtering based pricelowtohigh")
@@ -1746,6 +1859,5 @@ export function calculateDiscount(boxPrice?: string, sellingPrice?: string) {
   discountPercentage = Math.floor(discountPercentage);
   return discountPercentage;
 }
-
 
 

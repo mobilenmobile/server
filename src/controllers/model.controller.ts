@@ -1,3 +1,4 @@
+import { Types } from "mongoose";
 import { asyncErrorHandler } from "../middleware/error.middleware";
 import { Brand } from "../models/brand/brand.model";
 import { Model } from "../models/brand/model.model";
@@ -44,57 +45,104 @@ import ErrorHandler from "../utils/errorHandler";
 //     }
 // );
 
-// Controller to create a new model
-export const newModel = asyncErrorHandler(
-    async (req, res, next) => {
-        const { modelName, brandName, categoryName } = req.body;
 
-        // Validate required fields
-        if (!brandName || !categoryName) {
-            return next(new ErrorHandler("Brand name and category name are required", 400));
-        }
 
-        // Check if category exists by name
-        const category = await Category.findOne({ categoryName: categoryName });
+export const deleteTodayModels = async () => {
+    try {
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+        const todayEnd = new Date();
+        todayEnd.setHours(23, 59, 59, 999);
+
+        // Find the smartphone category
+        const category = await Category.findOne({ categoryName: "smartphone" });
+
         if (!category) {
-            return next(new ErrorHandler("Category not found", 404));
+            console.log("Smartphone category not found");
+            return;
         }
 
-        // Check if brand exists by name and matches the found category
-        const brand = await Brand.findOne({
-            brandName: new RegExp(`^${brandName}$`, 'i'),
-            categories: category._id  // Ensure the brand has the category
+        // Find and delete models created today under smartphone category
+        const result = await Model.deleteMany({
+            category: category._id,
+            createdAt: { $gte: todayStart, $lte: todayEnd }
         });
 
-        if (!brand) {
-            return next(new ErrorHandler("Brand not found", 404));
-        }
-
-        // Check if model already exists for the brand and category
-        const existingModel = await Model.findOne({
-            modelName,
-            brand: brand._id,
-            category: category._id
-        });
-
-        if (existingModel) {
-            return next(new ErrorHandler('Model name already exists for this brand and category', 400));
-        }
-
-        // Create the new model
-        const model = await Model.create({
-            modelName,
-            brand: brand._id,
-            category: category._id
-        });
-
-        return res.status(201).json({
-            success: true,
-            message: "New model created successfully",
-            data: model,
-        });
+        console.log(`Deleted ${result.deletedCount} models created today under the smartphone category`);
+    } catch (error) {
+        console.error("Error deleting models:", error);
     }
-);
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+// Controller to create a new model
+export const newModel = asyncErrorHandler(async (req, res, next) => {
+    const { modelName, brandName, categoryName } = req.body;
+
+    // Validate required fields
+    if (!brandName || !categoryName) {
+        return next(new ErrorHandler("Brand name and category name are required", 400));
+    }
+
+    // Normalize inputs by converting to lowercase and trimming extra spaces
+    const normalize = (str: string) => str.toLowerCase().replace(/\s+/g, ' ').trim();
+
+    const normalizedCategoryName = normalize(categoryName);
+    const normalizedBrandName = normalize(brandName);
+    const normalizedModelName = normalize(modelName);
+
+    // Check if category exists by normalized name
+    const category = await Category.findOne({ categoryName: normalizedCategoryName });
+    if (!category) {
+        return next(new ErrorHandler("Category not found", 404));
+    }
+
+    // Check if brand exists by normalized name and matches the found category
+    const brand = await Brand.findOne({
+        brandName: new RegExp(`^${normalizedBrandName}$`, 'i'),
+        categories: category._id // Ensure the brand has the category
+    });
+
+    if (!brand) {
+        return next(new ErrorHandler("Brand not found", 404));
+    }
+
+    // Check if model already exists for the brand and category
+    const existingModel = await Model.findOne({
+        modelName: normalizedModelName,
+        brand: brand._id,
+        category: category._id
+    });
+
+    if (existingModel) {
+        return next(new ErrorHandler('Model name already exists for this brand and category', 400));
+    }
+
+    // Create the new model
+    const model = await Model.create({
+        modelName: normalizedModelName,
+        brand: brand._id,
+        category: category._id
+    });
+
+    return res.status(201).json({
+        success: true,
+        message: "New model created successfully",
+        data: model
+    });
+});
+;
 
 
 // /-----------------Api to delete brand----------------------------------------
@@ -198,8 +246,6 @@ export const searchModelsv2 = asyncErrorHandler(
         try {
             // Find models based on the query
             const models = await Model.find(query)
-
-
             return res.status(200).json({
                 success: true,
                 data: models,
@@ -248,3 +294,168 @@ export const searchModels = asyncErrorHandler(
         }
     }
 );
+
+
+//get formatted data to show at skin page
+interface FormattedResponse {
+    [category: string]: { [brand: string]: string[] };
+}
+
+
+
+
+export const getFormattedModels = asyncErrorHandler(async (req, res, next) => {
+    try {
+        const categoryNames = ["smartphone", "accessories", "skin"];
+
+        // Fetch categories and convert to ObjectIds
+        const categories = await Category.find({
+            categoryName: { $in: categoryNames }
+        });
+
+        if (!categories.length) {
+            return next(new ErrorHandler("No categories found", 404));
+        }
+
+        // Create category mapping
+        const categoryMap = categories.reduce((map, category) => {
+            map[category._id.toString()] = category.categoryName.toLowerCase();
+            return map;
+        }, {} as Record<string, string>);
+
+        // Convert category IDs to ObjectIds for proper matching
+        const categoryIds = categories.map(cat => new Types.ObjectId(cat._id));
+
+        const result = await Model.aggregate([
+            {
+                $match: {
+                    category: { $in: categoryIds }  // Use ObjectIds for matching
+                }
+            },
+            {
+                $lookup: {
+                    from: "brands",
+                    localField: "brand",
+                    foreignField: "_id",
+                    as: "brandData"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$brandData",
+                    preserveNullAndEmptyArrays: false  // Skip documents with no brand match
+                }
+            },
+            {
+                $group: {
+                    _id: {
+                        categoryId: "$category",
+                        brandName: "$brandData.brandName"
+                    },
+                    models: {
+                        $push: "$modelName"
+                    }
+                }
+            },
+            {
+                $project: {
+                    _id: 0,
+                    category: "$_id.categoryId",
+                    brand: "$_id.brandName",
+                    models: 1
+                }
+            }
+        ]);
+
+        // Format the response
+        const formattedResponse: Record<string, Record<string, string[]>> = {};
+
+        result.forEach(({ category, brand, models }) => {
+            const categoryKey = categoryMap[category.toString()];
+
+            if (!formattedResponse[categoryKey]) {
+                formattedResponse[categoryKey] = {};
+            }
+
+            formattedResponse[categoryKey][brand] = models;
+        });
+
+        // Check if we have any data
+        const hasData = Object.keys(formattedResponse).length > 0;
+
+        if (!hasData) {
+            return next(new ErrorHandler("No models found", 404));
+        }
+
+        return res.status(200).json({
+            success: true,
+            data: formattedResponse
+        });
+
+    } catch (err) {
+        console.error('Error in getFormattedModels:', err);
+        return next(new ErrorHandler("Error fetching models", 500));
+    }
+});
+
+// export const getFormattedModels = asyncErrorHandler(async (req, res, next) => {
+//     try {
+//         const categoryNames = ["smartphone", "laptop", "tablet"];
+
+//         const categories = await Category.find({ categoryName: { $in: categoryNames } });
+//         console.log("categories", categories)
+//         if (!categories.length) {
+//             return next(new ErrorHandler("No categories found", 404));
+//         }
+
+//         const categoryMap: Record<string, string> = categories.reduce((map, category) => {
+//             map[category.categoryName.toLowerCase()] = category._id.toString();
+//             return map;
+//         }, {} as Record<string, string>);
+
+//         console.log("categorymap ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^", categoryMap)
+
+//         const result = await Model.aggregate([
+//             { $match: { category: { $in: Object.values(categoryMap) } } },
+//             { $lookup: { from: "brands", localField: "brand", foreignField: "_id", as: "brandData" } },
+//             { $unwind: "$brandData" },
+//             {
+//                 $group: {
+//                     _id: { category: "$category", brandName: "$brandData.brandName" },
+//                     models: { $push: "$modelName" }
+//                 }
+//             },
+//             { $lookup: { from: "categories", localField: "_id.category", foreignField: "_id", as: "categoryData" } },
+//             { $unwind: "$categoryData" },
+//             {
+//                 $project: {
+//                     _id: 0,
+//                     category: "$categoryData.categoryName",
+//                     brand: "$_id.brandName",
+//                     models: 1
+//                 }
+//             }
+//         ]);
+
+//         // **✅ Fix: Use defined type**
+//         let formattedResponse: FormattedResponse = {};
+
+//         result.forEach(({ category, brand, models }) => {
+//             const categoryKey = category.toLowerCase();
+
+//             if (!formattedResponse[categoryKey]) {
+//                 formattedResponse[categoryKey] = {};
+//             }
+
+//             formattedResponse[categoryKey][brand] = models;
+//         });
+
+//         return res.status(200).json({
+//             success: true,
+//             data: formattedResponse
+//         });
+
+//     } catch (err) {
+//         return next(new ErrorHandler("Error fetching models", 500));
+//     }
+// });

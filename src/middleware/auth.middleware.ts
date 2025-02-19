@@ -93,7 +93,7 @@ export const adminOnly = asyncErrorHandler(async (req, res, next) => {
   //   return next(new ErrorHandler("you are not authorized to perform this operation ", 401));
   // }
 
-  console.log("------------roleDetails----------------------",roleDetails)
+  // console.log("------------roleDetails----------------------",roleDetails)
 
 
   if (roleDetails?.roleName?.trim().toLowerCase() !== "admin") {
@@ -136,7 +136,7 @@ export const EditorOnly = asyncErrorHandler(async (req, res, next) => {
   if (!user) return next(new ErrorHandler("your id is invalid", 401));
   const roleDetails = await Role.findOne({ _id: user.role })
   //check if user is not admin or editor don't give edit access
-  if ((roleDetails?.roleName !== "editor") && (roleDetails?.roleName !== "admin")) {
+  if ((roleDetails?.roleName.toLowerCase() !== "editor") && (roleDetails?.roleName.toLowerCase() !== "admin")) {
     return next(new ErrorHandler("you don't have edit access", 401));
   }
   req.user = user;

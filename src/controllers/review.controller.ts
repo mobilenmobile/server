@@ -133,24 +133,23 @@ export const updateReview = asyncErrorHandler(
 
 //-------------------------api to get all reviews-------------------------------------------
 
-
 export const allReviews = asyncErrorHandler(async (req, res, next) => {
     const id = (req.params as { id: string }).id;
-
+    
     if (!id) {
         return next(new ErrorHandler("Incorrect product ID", 400));
     }
-
+    
     // Pipeline to get aggregated statistics
     const aggregationPipeline = [
         {
             $match: {
-                reviewProduct: new mongoose.Types.ObjectId(id) // Match reviews where reviewProduct equals paramsId
+                reviewProduct: new mongoose.Types.ObjectId(id)
             }
         },
         {
             $lookup: {
-                from: 'users', // Collection name for users
+                from: 'users',
                 localField: 'reviewUser',
                 foreignField: '_id',
                 as: 'user'
@@ -168,6 +167,8 @@ export const allReviews = asyncErrorHandler(async (req, res, next) => {
                 fiveStarCount: { $sum: { $cond: [{ $eq: ['$reviewRating', 5] }, 1, 0] } },
                 fourStarCount: { $sum: { $cond: [{ $eq: ['$reviewRating', 4] }, 1, 0] } },
                 threeStarCount: { $sum: { $cond: [{ $eq: ['$reviewRating', 3] }, 1, 0] } },
+                twoStarCount: { $sum: { $cond: [{ $eq: ['$reviewRating', 2] }, 1, 0] } },
+                oneStarCount: { $sum: { $cond: [{ $eq: ['$reviewRating', 1] }, 1, 0] } },
                 imageUrls: { $push: '$reviewImgGallery' }
             }
         },
@@ -175,26 +176,28 @@ export const allReviews = asyncErrorHandler(async (req, res, next) => {
             $project: {
                 _id: 0,
                 totalRatings: 1,
-                averageRating: { $round: ['$averageRating', 0] }, // Round the number
+                averageRating: { $round: ['$averageRating', 0] },
                 reviewsCount: 1,
                 fiveStarCount: 1,
                 fourStarCount: 1,
                 threeStarCount: 1,
+                twoStarCount: 1,
+                oneStarCount: 1,
                 imageUrls: { $reduce: { input: '$imageUrls', initialValue: [], in: { $concatArrays: ['$$value', '$$this'] } } }
             }
         }
     ];
-
+    
     // Pipeline to get all detailed reviews
     const detailedReviewsPipeline = [
         {
             $match: {
-                reviewProduct: new mongoose.Types.ObjectId(id) // Match reviews where reviewProduct equals paramsId
+                reviewProduct: new mongoose.Types.ObjectId(id)
             }
         },
         {
             $lookup: {
-                from: 'users', // Collection name for users
+                from: 'users',
                 localField: 'reviewUser',
                 foreignField: '_id',
                 as: 'user'
@@ -216,11 +219,11 @@ export const allReviews = asyncErrorHandler(async (req, res, next) => {
             }
         }
     ];
-
+    
     // Execute the aggregation pipelines
     const [stats] = await Review.aggregate(aggregationPipeline);
     const detailedReviews = await Review.aggregate(detailedReviewsPipeline);
-
+    
     if (!stats) {
         return res.status(200).json({
             success: true,
@@ -231,11 +234,13 @@ export const allReviews = asyncErrorHandler(async (req, res, next) => {
             fiveStarCount: 0,
             fourStarCount: 0,
             threeStarCount: 0,
+            twoStarCount: 0,
+            oneStarCount: 0,
             imageUrls: [],
             allReviews: []
         });
     }
-
+    
     return res.status(200).json({
         success: true,
         message: "Reviews fetched successfully",
@@ -243,6 +248,116 @@ export const allReviews = asyncErrorHandler(async (req, res, next) => {
         allReviews: detailedReviews
     });
 });
+
+// export const allReviews = asyncErrorHandler(async (req, res, next) => {
+//     const id = (req.params as { id: string }).id;
+
+//     if (!id) {
+//         return next(new ErrorHandler("Incorrect product ID", 400));
+//     }
+
+//     // Pipeline to get aggregated statistics
+//     const aggregationPipeline = [
+//         {
+//             $match: {
+//                 reviewProduct: new mongoose.Types.ObjectId(id) // Match reviews where reviewProduct equals paramsId
+//             }
+//         },
+//         {
+//             $lookup: {
+//                 from: 'users', // Collection name for users
+//                 localField: 'reviewUser',
+//                 foreignField: '_id',
+//                 as: 'user'
+//             }
+//         },
+//         {
+//             $unwind: '$user'
+//         },
+//         {
+//             $group: {
+//                 _id: null,
+//                 totalRatings: { $sum: { $cond: [{ $gte: ['$reviewRating', 1] }, 1, 0] } },
+//                 averageRating: { $avg: '$reviewRating' },
+//                 reviewsCount: { $sum: { $cond: [{ $gt: [{ $strLenCP: '$reviewDescription' }, 0] }, 1, 0] } },
+//                 fiveStarCount: { $sum: { $cond: [{ $eq: ['$reviewRating', 5] }, 1, 0] } },
+//                 fourStarCount: { $sum: { $cond: [{ $eq: ['$reviewRating', 4] }, 1, 0] } },
+//                 threeStarCount: { $sum: { $cond: [{ $eq: ['$reviewRating', 3] }, 1, 0] } },
+//                 imageUrls: { $push: '$reviewImgGallery' }
+//             }
+//         },
+//         {
+//             $project: {
+//                 _id: 0,
+//                 totalRatings: 1,
+//                 averageRating: { $round: ['$averageRating', 0] }, // Round the number
+//                 reviewsCount: 1,
+//                 fiveStarCount: 1,
+//                 fourStarCount: 1,
+//                 threeStarCount: 1,
+//                 imageUrls: { $reduce: { input: '$imageUrls', initialValue: [], in: { $concatArrays: ['$$value', '$$this'] } } }
+//             }
+//         }
+//     ];
+
+//     // Pipeline to get all detailed reviews
+//     const detailedReviewsPipeline = [
+//         {
+//             $match: {
+//                 reviewProduct: new mongoose.Types.ObjectId(id) // Match reviews where reviewProduct equals paramsId
+//             }
+//         },
+//         {
+//             $lookup: {
+//                 from: 'users', // Collection name for users
+//                 localField: 'reviewUser',
+//                 foreignField: '_id',
+//                 as: 'user'
+//             }
+//         },
+//         {
+//             $unwind: '$user'
+//         },
+//         {
+//             $project: {
+//                 _id: 1,
+//                 reviewProduct: 1,
+//                 reviewImgGallery: 1,
+//                 reviewRating: 1,
+//                 reviewDescription: 1,
+//                 updatedAt: 1,
+//                 'user.name': 1,
+//                 'user.email': 1
+//             }
+//         }
+//     ];
+
+//     // Execute the aggregation pipelines
+//     const [stats] = await Review.aggregate(aggregationPipeline);
+//     const detailedReviews = await Review.aggregate(detailedReviewsPipeline);
+
+//     if (!stats) {
+//         return res.status(200).json({
+//             success: true,
+//             message: "No reviews found",
+//             totalRatings: 0,
+//             averageRating: 0,
+//             reviewsCount: 0,
+//             fiveStarCount: 0,
+//             fourStarCount: 0,
+//             threeStarCount: 0,
+//             imageUrls: [],
+//             allReviews: []
+//         });
+//     }
+
+//     return res.status(200).json({
+//         success: true,
+//         message: "Reviews fetched successfully",
+//         ...stats,
+//         allReviews: detailedReviews
+//     });
+// });
 
 // export const allReviews = asyncErrorHandler(async (req, res, next) => {
 
@@ -357,6 +472,14 @@ export const getSingleProductReview = asyncErrorHandler(async (req, res, next) =
     if (!id) {
         return next(new ErrorHandler("incorrect product id", 400));
     }
+
+    const product = await Product.findById(id);
+
+    if (!product) {
+        return next(new ErrorHandler("product not found", 404));
+    }
+
+
     const review = await Review.findOne({ reviewProduct: id, reviewUser: req.user._id })
 
     if (!review) {

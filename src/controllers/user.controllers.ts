@@ -48,8 +48,8 @@ export const newUser = asyncErrorHandler(
   async (req: Request<{}, {}, NewUserRequestBody>, res, next) => {
     const { name, uid, email, phoneNumber, platform } = req.body;
     console.log("creating new user ------------->", req.body)
-    if (!email || !phoneNumber || !uid) {
-      return next(new ErrorHandler("please provide email,phone and uid", 400));
+    if (!email || !uid) {
+      return next(new ErrorHandler("please provide email and uid", 400));
     }
 
     // const userExist = await User.findOne({ email });
@@ -520,39 +520,101 @@ export const removeWishlistItem = asyncErrorHandler(async (req: Request, res, ne
 
 
 //---------------------api to update cart----------------------------------------------------------
-export const updateCart = asyncErrorHandler(async (req, res, next) => {
+// export const updateCart = asyncErrorHandler(async (req, res, next) => {
 
-  const { productId, selectedVarianceId, quantity, customSkin, isCombo, skinProductDetails, selectedFreeProducts } = req.body
-  console.log("-------------------- update cart------------------------", req.body)
+//   const { productId, selectedVarianceId, quantity, customSkin, isCombo, skinProductDetails, selectedFreeProducts } = req.body
+//   console.log("-------------------- update cart------------------------", req.body)
+//   if (!customSkin) {
+//     if (!productId || !selectedVarianceId) {
+//       return next(new ErrorHandler("please enter all fields", 404));
+//     }
+
+//     const product = await Product.findById(productId);
+//     if (!product) {
+//       return next(new ErrorHandler("No product found with this id", 404));
+//     }
+//     const selectedVariantData = product.productVariance.find((variant: { id: string; }) => {
+//       return variant.id.replace(/\s+/g, "") == selectedVarianceId.replace(/\s+/g, "")
+//     })
+
+//     if (selectedVariantData?.quantity == '0' || selectedVariantData?.quantity == 0) {
+//       return next(new ErrorHandler("product is out of stock", 404));
+//     }
+
+//   }
+
+//   const cartItem = await cart.findOne({ productId, selectedVarianceId, user: req.user._id });
+
+
+//   if (cartItem && cartItem.quantity < 10) {
+//     cartItem.quantity = cartItem.quantity + 1
+//     await cartItem.save()
+//   }
+
+//   // console.log(skinProductDetails)
+//   // console.log(JSON.parse(selectedFreeProducts))
+
+//   if (!cartItem) {
+//     await cart.create({
+//       user: req.user._id,
+//       productId,
+//       selectedVarianceId,
+//       customSkin,
+//       isCombo,
+//       skinProductDetails: skinProductDetails ? JSON.parse(skinProductDetails) : null,
+//       selectedFreeProducts: selectedFreeProducts ? JSON.parse(selectedFreeProducts) : null,
+//       quantity
+//     })
+//   }
+
+//   return res.status(200).json({
+//     success: true,
+//     message: "Successfully updated cart",
+//     cartItem
+//   });
+
+// });
+
+export const updateCart = asyncErrorHandler(async (req, res, next) => {
+  const {
+    productId,
+    selectedVarianceId,
+    quantity,
+    customSkin,
+    isCombo,
+    skinProductDetails,
+    selectedFreeProducts,
+    deviceDetails
+  } = req.body;
+
+  console.log("-------------------- update cart------------------------", req.user._id);
+
   if (!customSkin) {
     if (!productId || !selectedVarianceId) {
-      return next(new ErrorHandler("please enter all fields", 404));
+      return next(new ErrorHandler("Please enter all fields", 404));
     }
 
     const product = await Product.findById(productId);
     if (!product) {
-      return next(new ErrorHandler("No product found with this id", 404));
+      return next(new ErrorHandler("No product found with this ID", 404));
     }
+
     const selectedVariantData = product.productVariance.find((variant: { id: string; }) => {
-      return variant.id.replace(/\s+/g, "") == selectedVarianceId.replace(/\s+/g, "")
-    })
+      return variant.id.replace(/\s+/g, "") === selectedVarianceId.replace(/\s+/g, "");
+    });
 
-    if (selectedVariantData?.quantity == '0' || selectedVariantData?.quantity == 0) {
-      return next(new ErrorHandler("product is out of stock", 404));
+    if (selectedVariantData?.quantity == "0" || selectedVariantData?.quantity == 0) {
+      return next(new ErrorHandler("Product is out of stock", 404));
     }
-
   }
 
-  const cartItem = await cart.findOne({ productId, selectedVarianceId, user: req.user._id });
-
+  const cartItem = await cart.findOne({ productId, selectedVarianceId, user: "672da610708d9db90bff4973" });
 
   if (cartItem && cartItem.quantity < 10) {
-    cartItem.quantity = cartItem.quantity + 1
-    await cartItem.save()
+    cartItem.quantity = cartItem.quantity + 1;
+    cartItem.deviceDetails = deviceDetails ? JSON.parse(deviceDetails) : null; // ✅ Update device details
+    await cartItem.save();
   }
-
-  // console.log(skinProductDetails)
-  // console.log(JSON.parse(selectedFreeProducts))
 
   if (!cartItem) {
     await cart.create({
@@ -563,8 +625,9 @@ export const updateCart = asyncErrorHandler(async (req, res, next) => {
       isCombo,
       skinProductDetails: skinProductDetails ? JSON.parse(skinProductDetails) : null,
       selectedFreeProducts: selectedFreeProducts ? JSON.parse(selectedFreeProducts) : null,
+      deviceDetails: (deviceDetails && deviceDetails.length > 0) ? JSON.parse(deviceDetails) : null, // ✅ Add device details
       quantity
-    })
+    });
   }
 
   return res.status(200).json({
@@ -572,8 +635,8 @@ export const updateCart = asyncErrorHandler(async (req, res, next) => {
     message: "Successfully updated cart",
     cartItem
   });
-
 });
+
 
 //----------------api to decrease product quantity in cart------------------------------------------------
 export const decreaseCartProductQuantity = asyncErrorHandler(async (req, res, next) => {
@@ -623,7 +686,7 @@ export const getCartItems = asyncErrorHandler(async (req: Request, res, next) =>
   const wishlistItems = await cart.find({ user: req.user._id }).populate("productId");
   const cartItemsData = wishlistItems.map((item) => {
 
-    // console.log(item)
+    console.log("-------------------------------------------------------------------------cart item data-----------------------------------------", item)
 
     if (item.productId.productVariance) {
       const variantData = item.productId.productVariance.find((variant: any) => {
@@ -647,6 +710,7 @@ export const getCartItems = asyncErrorHandler(async (req: Request, res, next) =>
           quantity: item.quantity,
           productId: item.productId._id,
           selectedVarianceId: item.selectedVarianceId,
+          deviceDetails: item.deviceDetails,
           discount: productDiscount,
         }
       }
@@ -825,6 +889,7 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
               // isCombo: item?.isCombo || false,
               // productComboProducts: item?.productId?.productComboProducts ? item?.productId?.productComboProducts : [],
               skinProductDetails: item?.skinProductDetails || [],
+              deviceDetails: item?.deviceDetails
             }
           }
         })
@@ -884,6 +949,7 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
               // isCombo: item?.isCombo || false,
               // productComboProducts: item?.productId?.productComboProducts ? item?.productId?.productComboProducts : [],
               skinProductDetails: item?.skinProductDetails || [],
+              deviceDetails: item?.deviceDetails
             }
           }
         })
@@ -913,6 +979,7 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
         productFreeProducts: item.selectedFreeProducts ? item.selectedFreeProducts : [],
         // selectedFreeProducts: item.selectedFreeProducts ? item.selectedFreeProducts : [],
         skinProductDetails: item?.skinProductDetails || [],
+        deviceDetails: item?.deviceDetails
       }
     }
   })
@@ -1241,6 +1308,13 @@ export const storeCartItemsInDb = asyncErrorHandler(async (req: Request, res, ne
 
   // console.log("-------------------? save cart item in db", req.body)
   const { cartData } = req.body
+  console.log("check if array is valid cartdata", Array.isArray(cartData))
+
+  if (!cartData || !Array.isArray(cartData)) {
+    return next(new ErrorHandler("provide correct data", 204))
+  }
+
+
   // console.log("-----cartData----", cartData)
   for (const item of cartData) {
     const cartItem = new cart({

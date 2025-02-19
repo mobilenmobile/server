@@ -449,7 +449,8 @@ export const getSingleOrderDetails = asyncErrorHandler(async (req, res, next) =>
     deliveryCharges: order.deliveryCharges,
     coinsCredited: order.coinsCredited,
     coinsDebited: order.coinsDebited,
-    shipmentId:order?.courierOrderDetails?.shipment_id,
+    shipmentId: order?.courierOrderDetails?.shipment_id,
+    shipmentDetails: order?.courierOrderDetails,
     orderItems: orderItemsWithReviews
   }
   console.log("orderItemwithreviews", orderItemsWithReviews)
@@ -459,6 +460,9 @@ export const getSingleOrderDetails = asyncErrorHandler(async (req, res, next) =>
     orderDetails,
   });
 });
+
+
+
 export const getAdminSingleOrderDetails = asyncErrorHandler(async (req, res, next) => {
   const { id } = req.params;
   const order = await Order.findById(id).populate("user");
@@ -473,68 +477,124 @@ export const getAdminSingleOrderDetails = asyncErrorHandler(async (req, res, nex
 });
 
 //--------------------api to process order------------------------------------------------
+
 export const processOrder = asyncErrorHandler(async (req, res, next) => {
   const { id } = req.params;
-  const order = await Order.findById(id);
+  const { stage } = req.query;
 
-  if (!order) {
-    return next(new ErrorHandler("order not found", 404));
+  if (!stage || typeof stage != "string") {
+    return next(new ErrorHandler("Stage is Not Valid", 404));
   }
-  console.log(order, "------and---------", order.orderStatuses.length)
 
-  let orderStatus = order.orderStatuses[order.orderStatuses.length - 1]
-  console.log(orderStatus)
+  const order = await Order.findById(id);
+  if (!order) {
+    return next(new ErrorHandler("Order not found", 404));
+  }
+
+  console.log(order, "------and---------", order.orderStatuses.length);
+  let orderStatus = order.orderStatuses[order.orderStatuses.length - 1];
+  console.log(orderStatus);
 
   if (!orderStatus) {
-    return next(new ErrorHandler("status not found", 404));
+    return next(new ErrorHandler("Status not found", 404));
   }
 
-  switch (orderStatus.status) {
-    case "pending":
-      order.orderStatuses.push({
-        date: new Date(),
-        status: 'packed'
-      });
-      break;
-    case "placed":
-      order.orderStatuses.push({
-        date: new Date(),
-        status: 'packed'
-      });
-      break;
-    case "packed":
-      order.orderStatuses.push({
-        date: new Date(),
-        status: 'shipped'
-      });
-      break;
-    case "shipped":
-      order.orderStatuses.push({
-        date: new Date(),
-        status: 'outfordelivery'
-      });
-      break;
-    case "outfordelivery":
-      order.orderStatuses.push({
-        date: new Date(),
-        status: 'delivered'
-      });
-      break;
-    case "delivered":
-      break;
-    // default:
-    //   order.orderStatuses.push({
-    //     date: new Date(),
-    //     status: 'delivered'
-    //   });
-    //   break;
+  // Define valid stages as a literal type
+  const validStages = [
+    "placed",
+    "packed",
+    "shipped",
+    "outfordelivery",
+    "delivered"
+  ] as const;
+
+  type OrderStage = typeof validStages[number];
+
+  // Type assertion: Ensure that 'stage' is one of the valid stages
+  const typedStage = stage as OrderStage;
+
+  if (!validStages.includes(typedStage)) {
+    return next(new ErrorHandler("Invalid stage", 400));
   }
+
+  // Add type assertion for currentStage
+  const currentStage = orderStatus.status as OrderStage;
+
+  // Push the new status to the order's status list
+  order.orderStatuses.push({
+    date: new Date(),
+    status: typedStage
+  });
+
   await order.save();
   return res.status(200).json({
     success: true,
-    message: "Order processed Successfully",
+    message: "Order processed successfully",
   });
 });
+
+// export const processOrder = asyncErrorHandler(async (req, res, next) => {
+//   const { id,stage } = req.params;
+//   const order = await Order.findById(id);
+
+//   if (!order) {
+//     return next(new ErrorHandler("order not found", 404));
+//   }
+//   console.log(order, "------and---------", order.orderStatuses.length)
+
+//   let orderStatus = order.orderStatuses[order.orderStatuses.length - 1]
+//   console.log(orderStatus)
+
+//   if (!orderStatus) {
+//     return next(new ErrorHandler("status not found", 404));
+//   }
+
+//   switch (stage) {
+//     case "pending":
+//       order.orderStatuses.push({
+//         date: new Date(),
+//         status: 'packed'
+//       });
+//       break;
+//     case "placed":
+//       order.orderStatuses.push({
+//         date: new Date(),
+//         status: 'packed'
+//       });
+//       break;
+//     case "packed":
+//       order.orderStatuses.push({
+//         date: new Date(),
+//         status: 'shipped'
+//       });
+//       break;
+//     case "shipped":
+//       order.orderStatuses.push({
+//         date: new Date(),
+//         status: 'outfordelivery'
+//       });
+//       break;
+//     case "outfordelivery":
+//       order.orderStatuses.push({
+//         date: new Date(),
+//         status: 'delivered'
+//       });
+//       break;
+//     case "delivered":
+//       break;
+//     // default:
+//     //   order.orderStatuses.push({
+//     //     date: new Date(),
+//     //     status: 'delivered'
+//     //   });
+//     //   break;
+//   }
+//   await order.save();
+//   return res.status(200).json({
+//     success: true,
+//     message: "Order processed Successfully",
+//   });
+// });
 
 //--------------------api to cancell order---------------------------------------------------
 
@@ -655,7 +715,7 @@ export const cancellOrder = asyncErrorHandler(async (req, res, next) => {
 
 
 export const deleteOrder = asyncErrorHandler(async (req, res, next) => {
-  const { id } = req.params;
+ 
   const { shipRocketId, orderId } = req.body;
   console.log(req.body)
 
@@ -663,7 +723,15 @@ export const deleteOrder = asyncErrorHandler(async (req, res, next) => {
     return res.status(400).send({ success: false, message: 'Both orderId is required' });
   }
 
+  const orderInDb = await Order.findById(orderId)
+
+  if (!orderInDb) {
+    return res.status(400).send({ success: false, message: 'order does not exist in db' });
+  }
+
+
   const ShipRocketCredentials = await ShipRocket.findOne({ email: "mobilenmobilebjnr1@gmail.com" });
+
   if (!ShipRocketCredentials) {
     return res.status(404).json({ success: false, message: "ShipRocket credentials not found" });
   }
