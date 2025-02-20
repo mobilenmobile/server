@@ -35,7 +35,6 @@ export const addNewOffer = asyncErrorHandler(
 
     if (couponId) {
       existingOffer = await Offer.findById(couponId)
-
     }
 
 
@@ -169,12 +168,11 @@ export const AdminSearchAllOffer = asyncErrorHandler(
   }
 );
 
-
 export const searchAllOffer = asyncErrorHandler(
   async (req: Request<{}, {}, SearchOfferQuery>, res, next) => {
-    const { couponId, state } = req.query;
+    const { couponId, state, amount } = req.query;
     const currentDate = new Date();
-
+    
     let baseQuery: any = {
       offerIsActive: true,
       offerStartDate: { $lte: currentDate },
@@ -185,29 +183,72 @@ export const searchAllOffer = asyncErrorHandler(
       baseQuery._id = couponId;
     }
 
-    if (state) {new Date();
+    if (state) {
+      baseQuery.offerDiscountState = state;
     }
 
-    console.log('Base Query:', baseQuery);
+    if (amount) {
+      const numericAmount = Number(amount);
+      
+      // Use MongoDB's $expr to convert strings to numbers during comparison
+      baseQuery.$expr = {
+        $and: [
+          { $lte: [{ $toDouble: "$offerLimit.minLimit" }, numericAmount] },
+          { $gte: [{ $toDouble: "$offerLimit.maxLimit" }, numericAmount] }
+        ]
+      };
+    }
+
+    console.log('Base Query:', JSON.stringify(baseQuery, null, 2));
+    
     const offers = await Offer.find(baseQuery);
-
-    console.log('Offers found:', offers);
-
-    if (!offers.length) {
-      return res.status(201).json({
-        success: true,
-        message: "No Offer available",
-        offers
-      });
-    }
+    console.log('Offers found:', JSON.stringify(offers, null, 2));
 
     return res.status(200).json({
       success: true,
-      message: "Offers found successfully",
+      message: offers.length ? "Offers found successfully" : "No Offer available",
       offers
     });
   }
 );
+// export const searchAllOffer = asyncErrorHandler(
+//   async (req: Request<{}, {}, SearchOfferQuery>, res, next) => {
+//     const { couponId, state } = req.query;
+//     const currentDate = new Date();
+
+//     let baseQuery: any = {
+//       offerIsActive: true,
+//       offerStartDate: { $lte: currentDate },
+//       offerEndDate: { $gte: currentDate }
+//     };
+
+//     if (couponId) {
+//       baseQuery._id = couponId;
+//     }
+
+//     if (state) {new Date();
+//     }
+
+//     console.log('Base Query:', baseQuery);
+//     const offers = await Offer.find(baseQuery);
+
+//     console.log('Offers found:', offers);
+
+//     if (!offers.length) {
+//       return res.status(201).json({
+//         success: true,
+//         message: "No Offer available",
+//         offers
+//       });
+//     }
+
+//     return res.status(200).json({
+//       success: true,
+//       message: "Offers found successfully",
+//       offers
+//     });
+//   }
+// );
 
 //-------------------api to delete offer-----------------------------------------------
 

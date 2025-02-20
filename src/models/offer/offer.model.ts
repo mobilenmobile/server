@@ -22,12 +22,9 @@ export const OfferSchema = new Schema(
       type: Date,
       required: true
     },
-
-
     offerCouponCode: {
       type: String,
       required: true
-
     },
     offerDiscountCategory: [
       {
