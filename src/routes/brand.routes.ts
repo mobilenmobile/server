@@ -8,7 +8,7 @@ import {
 import express from "express";
 import { fileUpload } from "../middleware/multer.middleware";
 import { adminOnly, EditorOnly } from "../middleware/auth.middleware";
-import { deleteModel, getFormattedModels, newModel, searchModels, searchModelsv2 } from "../controllers/model.controller";
+import { deleteModel, getFormattedModels, newModel, searchModels, searchModelsv2, updateModel } from "../controllers/model.controller";
 
 const router = express.Router();
 
@@ -23,6 +23,7 @@ router.delete("/:brandId",EditorOnly, deleteBrand);
 
 // -------------------- new model--------------------
 router.post('/newmodel', newModel);
+router.put('/updatemodel/:id', updateModel);
 router.get('/searchmodels', searchModelsv2);
 router.get('/getallmodels', getFormattedModels);
 router.delete("/deletemodel/:modelId",EditorOnly, deleteModel);

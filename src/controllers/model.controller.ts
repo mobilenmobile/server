@@ -141,10 +141,81 @@ export const newModel = asyncErrorHandler(async (req, res, next) => {
         message: "New model created successfully",
         data: model
     });
+})
+
+
+//update model 
+export const updateModel = asyncErrorHandler(async (req, res, next) => {
+    const { id } = req.params;
+    const { modelName, brandName, categoryName } = req.body;
+
+    // Check if the model exists
+    const existingModel = await Model.findById(id);
+    if (!existingModel) {
+        return next(new ErrorHandler("Model not found", 404));
+    }
+
+    // Normalize inputs by converting to lowercase and trimming extra spaces
+    const normalize = (str: string) => str.toLowerCase().replace(/\s+/g, ' ').trim();
+
+    // Only normalize fields that are provided
+    const normalizedModelName = modelName ? normalize(modelName) : undefined;
+    const normalizedBrandName = brandName ? normalize(brandName) : undefined;
+    const normalizedCategoryName = categoryName ? normalize(categoryName) : undefined;
+
+    let updatedFields: any = {};
+
+    // If category name is provided, verify it exists
+    if (normalizedCategoryName) {
+        const category = await Category.findOne({ categoryName: normalizedCategoryName });
+        if (!category) {
+            return next(new ErrorHandler("Category not found", 404));
+        }
+        updatedFields.category = category._id;
+    }
+
+    // If brand name is provided, verify it exists and is associated with the category
+    if (normalizedBrandName) {
+        const category = updatedFields.category || existingModel.category;
+        const brand = await Brand.findOne({
+            brandName: new RegExp(`^${normalizedBrandName}$`, 'i'),
+            categories: category
+        });
+
+        if (!brand) {
+            return next(new ErrorHandler("Brand not found or not associated with the category", 404));
+        }
+        updatedFields.brand = brand._id;
+    }
+
+    // If model name is provided, check for duplicates
+    if (normalizedModelName) {
+        const duplicateModel = await Model.findOne({
+            modelName: normalizedModelName,
+            brand: updatedFields.brand || existingModel.brand,
+            category: updatedFields.category || existingModel.category,
+            _id: { $ne: id } // Exclude current model from duplicate check
+        });
+
+        if (duplicateModel) {
+            return next(new ErrorHandler('Model name already exists for this brand and category', 400));
+        }
+        updatedFields.modelName = normalizedModelName;
+    }
+
+    // Update the model with new fields
+    const updatedModel = await Model.findByIdAndUpdate(
+        id,
+        { $set: updatedFields },
+        { new: true, runValidators: true }
+    );
+
+    return res.status(200).json({
+        success: true,
+        message: "Model updated successfully",
+        data: updatedModel
+    });
 });
-;
-
-
 // /-----------------Api to delete brand----------------------------------------
 
 export const deleteModel = asyncErrorHandler(
@@ -306,7 +377,7 @@ interface FormattedResponse {
 
 export const getFormattedModels = asyncErrorHandler(async (req, res, next) => {
     try {
-        const categoryNames = ["smartphone", "accessories", "skin"];
+        const categoryNames = ["smartphone", "laptop"];
 
         // Fetch categories and convert to ObjectIds
         const categories = await Category.find({
