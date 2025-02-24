@@ -144,6 +144,34 @@ export const newModel = asyncErrorHandler(async (req, res, next) => {
 })
 
 
+export const getSingleModel = asyncErrorHandler(async (req, res, next) => {
+    const { id } = req.params;
+
+    // Find model and populate related fields
+    const model = await Model.findById(id)
+        .populate('category', 'categoryName description') // Populate category with specific fields
+        .populate('brand', 'brandName description logo') // Populate brand with specific fields
+        .lean(); // Convert to plain JavaScript object for better performance
+
+    // Check if model exists
+    if (!model) {
+        return next(new ErrorHandler("Model not found", 404));
+    }
+
+    // Add any additional business logic or data transformations here
+    // For example, you might want to:
+    // - Add computed fields
+    // - Format dates
+    // - Filter sensitive information
+    // - Add related data from other collections
+
+    return res.status(200).json({
+        success: true,
+        message: "Model details retrieved successfully",
+        data: model
+    });
+});
+
 //update model 
 export const updateModel = asyncErrorHandler(async (req, res, next) => {
     const { id } = req.params;
