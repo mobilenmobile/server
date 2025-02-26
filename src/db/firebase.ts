@@ -1,6 +1,8 @@
 // lib/firebase.ts
 import admin from "firebase-admin";
 import { getAuth } from "firebase-admin/auth";
+// import { getFirestore, Timestamp } from "firebase-admin/firestore";
+// import functions from "firebase-functions";
 
 const { privateKey } = JSON.parse(process.env.FIREBASE_PRIVATE_KEY || "")
 
@@ -18,6 +20,9 @@ export const firebase = admin.apps.length
   ? admin.app()
   : admin.initializeApp(config);
 
+
+
+// ----------------------- otp send -------------------------
 
 //--------------------- function to access uid of user if authenticated----------------------------------------  
 export const getUid = async (authToken: string): Promise<{ authenticated: boolean, uid: string; }> => {

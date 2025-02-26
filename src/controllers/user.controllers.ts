@@ -119,6 +119,32 @@ export const newUser = asyncErrorHandler(
   }
 );
 
+
+export const checkIfUserExist = asyncErrorHandler(
+  async (req: Request<{}, {}, { phoneNumber: string }>, res: Response, next: NextFunction) => {
+    const { phoneNumber } = req.body;
+
+    // Validate phone number format (must be a 10-digit numeric string)
+    if (!/^\d{10}$/.test(phoneNumber)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid phone number. It must be a 10-digit numeric string.",
+      });
+    }
+
+    // Check if the phone number exists in the database
+    const user = await User.findOne({ phoneNumber });
+
+    return res.status(200).json({
+      success: true,
+      userExist: !!user, // Returns true if user exists, false otherwise
+    });
+  }
+);
+
+
+
+
 // -------------------------- find user--------------------------------------------------------------------
 export const findUser = asyncErrorHandler(
   async (req: Request<{}, {}, { email?: string; phoneNumber?: string }>, res: Response, next: NextFunction) => {

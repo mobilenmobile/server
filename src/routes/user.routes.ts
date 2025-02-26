@@ -2,6 +2,7 @@ import express from "express";
 
 import {
     changeUserRole,
+    checkIfUserExist,
     clearCart,
     decreaseCartProductQuantity,
     findUser,
@@ -37,6 +38,7 @@ userRouter.post("/new", newUserOnly, newUser);
 userRouter.get("/userDetails/:uid", authenticated, getUser);
 userRouter.get("/userDetails", UserInfo);
 userRouter.post("/userBasicInfo", findUser);
+userRouter.post("/userExist", checkIfUserExist);
 userRouter.put("/updaterole", updateRole)
 
 //----------------------- USER COIN SECTION --------------------------------

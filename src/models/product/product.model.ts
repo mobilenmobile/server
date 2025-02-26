@@ -81,15 +81,37 @@ const ComboProducts = new Schema({
 });
 
 
+// const ProductWiseQtySchema = new Schema({
+//     brand: {
+//         type: String, // e.g., "Apple", "Samsung"
+//         required: true,
+//     },
+//     models: [
+//         {
+//             modelName: { type: String, required: true }, // e.g., "iPhone 15 Pro Max"
+//             quantity: { type: Number, required: true }, // e.g., 20
+//         },
+//     ],
+// });
+
 const ProductWiseQtySchema = new Schema({
-    brand: {
-        type: String, // e.g., "Apple", "Samsung"
+    
+    category: {
+        type: String, // e.g., "smartphones", "tablets"
         required: true,
+        _id: false, // Disables _id generation for brand objects
     },
-    models: [
+    brands: [
         {
-            modelName: { type: String, required: true }, // e.g., "iPhone 15 Pro Max"
-            quantity: { type: Number, required: true }, // e.g., 20
+            _id: false, // Disables _id generation for brand objects
+            brandName: { type: String, required: true }, // e.g., "Apple", "Samsung"
+            models: [
+                {
+                    _id: false, // Disables _id generation for model objects
+                    modelName: { type: String, required: true }, // e.g., "iPhone 15 Pro Max"
+                    quantity: { type: Number, required: true }, // e.g., 20
+                },
+            ],
         },
     ],
 });

@@ -43,71 +43,70 @@ import { Box } from "../models/boxModel.js";
 //------------------api to create new product-----------
 export const newProduct = asyncErrorHandler(async (req, res, next) => {
   const {
-      category,
-      subcategory,
-      brand,
-      productModel,
-      productTitle,
-      description,
-      pattern,
-      headsetType,
-      variance,
-      colors,
-      ramAndStorage,
-      comboProducts,
-      freeProducts,
-      selectedComboCategory,
-      selectedFreeCategory,
-      productVideoUrls,
-      skinSelectedItems,
-      isfeatured,
-      isArchived,
-      selectedBox,
-      length,
-      breadth,
-      height,
-      weight,
-      productWiseQty, // ✅ Added this field
+    category,
+    subcategory,
+    brand,
+    productModel,
+    productTitle,
+    description,
+    pattern,
+    headsetType,
+    variance,
+    colors,
+    ramAndStorage,
+    comboProducts,
+    freeProducts,
+    selectedComboCategory,
+    selectedFreeCategory,
+    productVideoUrls,
+    skinSelectedItems,
+    isfeatured,
+    isArchived,
+    selectedBox,
+    length,
+    breadth,
+    height,
+    weight,
+    ProductWiseQty, // ✅ Added this field
   } = req.body;
 
   console.log("📥 Received request body:", req.body);
 
   // ✅ Validate required fields
   if (!brand || !category || !productModel || !length || !breadth || !height || !weight) {
-      return next(new ErrorHandler("Provide all required product fields", 400));
+    return next(new ErrorHandler("Provide all required product fields", 400));
   }
-
- 
 
   // ✅ Fetch references for category and brand
   const refBrand = await Brand.findOne({ brandName: brand.trim() });
   if (!refBrand) {
-      return next(new ErrorHandler("Please provide a valid brand", 400));
+    return next(new ErrorHandler("Please provide a valid brand", 400));
   }
 
   const refCategory = await Category.findOne({ categoryName: category.trim() });
   if (!refCategory) {
-      return next(new ErrorHandler("Please provide a valid category", 400));
+    return next(new ErrorHandler("Please provide a valid category", 400));
   }
 
   const refBox = selectedBox ? await Box.findById(selectedBox) : null;
 
   // ✅ Ensure JSON.parse() does not crash if input is missing
   let parsedVariance, parsedColors, parsedRamAndStorage, parsedComboProducts, parsedFreeProducts, parsedVideoUrls, parsedSkinItems, parsedProductWiseQty;
-  
+  let formattedProductWiseQty;
   try {
-      parsedVariance = variance ? JSON.parse(variance) : [];
-      parsedColors = colors ? JSON.parse(colors) : [];
-      parsedRamAndStorage = ramAndStorage ? JSON.parse(ramAndStorage) : [];
-      parsedComboProducts = comboProducts ? JSON.parse(comboProducts) : [];
-      parsedFreeProducts = freeProducts ? JSON.parse(freeProducts) : [];
-      parsedVideoUrls = productVideoUrls ? JSON.parse(productVideoUrls) : [];
-      parsedSkinItems = skinSelectedItems ? JSON.parse(skinSelectedItems) : [];
+    parsedVariance = variance ? JSON.parse(variance) : [];
+    parsedColors = colors ? JSON.parse(colors) : [];
+    parsedRamAndStorage = ramAndStorage ? JSON.parse(ramAndStorage) : [];
+    parsedComboProducts = comboProducts ? JSON.parse(comboProducts) : [];
+    parsedFreeProducts = freeProducts ? JSON.parse(freeProducts) : [];
+    parsedVideoUrls = productVideoUrls ? JSON.parse(productVideoUrls) : [];
+    parsedSkinItems = skinSelectedItems ? JSON.parse(skinSelectedItems) : [];
 
-      // ✅ Parse `ProductWiseQty` properly
-      parsedProductWiseQty = productWiseQty ? JSON.parse(productWiseQty) : {};
+    // ✅ Parse `ProductWiseQty` properly
+    parsedProductWiseQty = ProductWiseQty ? JSON.parse(ProductWiseQty) : {};
+    formattedProductWiseQty = formatProductWiseQty(parsedProductWiseQty)
   } catch (error) {
-      return next(new ErrorHandler("Invalid JSON format in request body", 400));
+    return next(new ErrorHandler("Invalid JSON format in request body", 400));
   }
 
   // ✅ Check if `req.user` exists
@@ -115,40 +114,40 @@ export const newProduct = asyncErrorHandler(async (req, res, next) => {
   //     return next(new ErrorHandler("User authentication required", 401));
   // }
 
-  
+
 
   // ✅ Create the product
   const newProduct = await Product.create({
-      productCategory: refCategory._id,
-      productSubCategory: subcategory ?? null,
-      productBrand: refBrand._id,
-      productModel: productModel.trim(),
-      productTitle: productTitle.trim(),
-      productDescription: description?.trim() ?? "",
-      productSkinPattern: pattern?.trim() ?? "",
-      productHeadsetType: headsetType?.trim() ?? "",
-      productVariance: parsedVariance,
-      productColors: parsedColors,
-      productRamAndStorage: parsedRamAndStorage,
-      productComboProducts: parsedComboProducts,
-      productFreeProducts: parsedFreeProducts,
-      productVideoUrls: parsedVideoUrls,
-      ProductSkinSelectedItems: parsedSkinItems,
-      isFeatured: isfeatured ?? false,
-      isArchived: isArchived ?? false,
-      selectedBox: refBox ? refBox._id : null,
-      length: Number(length),
-      breadth: Number(breadth),
-      height: Number(height),
-      weight: Number(weight),
-      ProductWiseQty: parsedProductWiseQty, // ✅ Added this field
-      createdBy: "67245e70ce1c9fdf5de1ce59"
+    productCategory: refCategory._id,
+    productSubCategory: subcategory ?? null,
+    productBrand: refBrand._id,
+    productModel: productModel.trim(),
+    productTitle: productTitle.trim(),
+    productDescription: description?.trim() ?? "",
+    productSkinPattern: pattern?.trim() ?? "",
+    productHeadsetType: headsetType?.trim() ?? "",
+    productVariance: parsedVariance,
+    productColors: parsedColors,
+    productRamAndStorage: parsedRamAndStorage,
+    productComboProducts: parsedComboProducts,
+    productFreeProducts: parsedFreeProducts,
+    productVideoUrls: parsedVideoUrls,
+    ProductSkinSelectedItems: parsedSkinItems,
+    isFeatured: isfeatured ?? false,
+    isArchived: isArchived ?? false,
+    selectedBox: refBox ? refBox._id : null,
+    length: Number(length),
+    breadth: Number(breadth),
+    height: Number(height),
+    weight: Number(weight),
+    ProductWiseQty: formattedProductWiseQty, // ✅ Added this field
+    createdBy: "67245e70ce1c9fdf5de1ce59"
   });
 
   return res.status(201).json({
-      success: true,
-      message: "Product created successfully",
-      product: newProduct
+    success: true,
+    message: "Product created successfully",
+    product: newProduct
   });
 });
 
@@ -250,7 +249,7 @@ export const newProduct = asyncErrorHandler(async (req, res, next) => {
 //-----------------api to get image url by uploading on cloudinary------------------
 export const previewImages = asyncErrorHandler(async (req, res, next) => {
   const photos = req.files;
-  console.log("files is :-",req.files)
+  console.log("files is :-", req.files)
   // console.log("photos =>=>=>=>=>=>=>=>+.+>=>+<=>+>[.=>+.+=>=>=>=>=>=>", photos);
 
   if (photos?.length === 0) {
@@ -334,6 +333,10 @@ export const getSingleProduct = asyncErrorHandler(async (req, res, next) => {
   });
 });
 
+
+
+
+
 export const getSingleProductDetails = asyncErrorHandler(async (req, res, next) => {
   const id = req.params.id;
 
@@ -365,6 +368,11 @@ export const getSingleProductDetails = asyncErrorHandler(async (req, res, next) 
   }
   let transformedComboProducts: any = []
   let transformedFreeProducts: any = []
+  let transformedProductWiseQty: any = []
+
+  if (product.ProductWiseQty.length > 0) {
+    transformedProductWiseQty = convertToProductWiseQty(product.ProductWiseQty)
+  }
 
   if (product?.productComboProducts.length > 0) {
     // console.log("product combo products ==> ", product.productComboProducts)
@@ -467,10 +475,67 @@ export const getSingleProductDetails = asyncErrorHandler(async (req, res, next) 
     product: {
       ...product.toObject(), // Convert product to a plain object
       productComboProducts: transformedComboProducts,
-      productFreeProducts: transformedFreeProducts
+      productFreeProducts: transformedFreeProducts,
+      smartPhoneModels: transformedProductWiseQty,
     }
   });
 });
+
+// Defining the types for better type safety
+interface fModel {
+  modelName: string;
+  quantity: number;
+}
+
+interface fBrand {
+  brandName: string;
+  models: fModel[];
+}
+
+interface InputData {
+  category: string;
+  brands: fBrand[];
+}
+
+interface fProductWiseQty {
+  brand: string;
+  models: {
+    modelName: string;
+    quantity: number;
+  }[];
+}
+
+// Function to convert the data
+function convertToProductWiseQty(data: InputData[]): fProductWiseQty[] {
+  const smartphoneData: fProductWiseQty[] = [];
+  console.log("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$", data)
+  try {
+    // Loop through the data array
+    for (const item of data) {
+      // Check if the category is 'smartphone'
+      if (item.category === 'smartphone') {
+        // Loop through the brands and map each brand to the format
+        item.brands.forEach(brand => {
+          const transformedData: fProductWiseQty = {
+            brand: brand.brandName,  // brand is a string here
+            models: brand.models.map(model => ({
+              modelName: model.modelName,
+              quantity: model.quantity
+            }))
+          };
+          smartphoneData.push(transformedData);
+        });
+      }
+    }
+
+  } catch (error) {
+
+  } finally {
+    return smartphoneData;
+  }
+}
+
+
 
 //------------------------api to update product for admin only-------------------------------
 export const updateProduct = asyncErrorHandler(
@@ -503,6 +568,7 @@ export const updateProduct = asyncErrorHandler(
       breadth,
       height,
       weight,
+      ProductWiseQty, // ✅ Added this field
     } = req.body;
 
     console.log("update-req-body controller ===> ", req.body);
@@ -521,11 +587,26 @@ export const updateProduct = asyncErrorHandler(
       if (!refBrand) {
         return next(new ErrorHandler("Please provide the brand ", 400));
       }
+
       product.productBrand = refBrand._id;
     }
 
 
     const refBox = await Box.findById(selectedBox)
+    let parsedProductWiseQty
+    let formattedProductWiseQty;
+    try {
+      // ✅ Parse `ProductWiseQty` properly
+      if (ProductWiseQty) {
+        parsedProductWiseQty = ProductWiseQty ? JSON.parse(ProductWiseQty) : {};
+        console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! productwiseqty", ProductWiseQty)
+        formattedProductWiseQty = formatProductWiseQty(parsedProductWiseQty)
+        console.log("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^", formattedProductWiseQty)
+      }
+
+    } catch (error) {
+      return next(new ErrorHandler("Failed to parse product qty", 400));
+    }
 
     if (subcategory) product.productSubCategory = subcategory
     if (model) product.productModel = model
@@ -555,6 +636,8 @@ export const updateProduct = asyncErrorHandler(
     if (breadth) product.breadth = Number(breadth);
     if (height) product.height = Number(height);
     if (weight) product.weight = Number(weight);
+    if (formattedProductWiseQty) product.ProductWiseQty = formattedProductWiseQty
+
     product.updatedBy = req.user._id;
 
     const prod = await product.save();
@@ -566,6 +649,73 @@ export const updateProduct = asyncErrorHandler(
     });
   }
 );
+
+// Interface for FrontendData, representing the raw input data from the frontend
+type FrontendData = {
+  deviceCategory: string;  // e.g., "smartphone"
+  deviceBrand: string;     // e.g., "infinix"
+  deviceModel: string;     // e.g., "infinix note 40 pro 5g"
+  deviceModelQuantity: number;  // e.g., 12
+}[];
+
+// Interface for ProductWiseQty, representing the transformed data grouped by category and brand
+interface ProductWiseQty {
+  category: string;  // e.g., "smartphone"
+  brands: Brand[];   // Array of brands within the category
+}
+
+// Interface for Brand, representing a brand and its models
+interface Brand {
+  brandName: string;  // e.g., "infinix"
+  models: Model[];    // Array of models under the brand
+}
+
+// Interface for Model, representing the individual product model and its quantity
+interface Model {
+  modelName: string;  // e.g., "infinix note 40 pro 5g"
+  quantity: number;   // e.g., 12
+}
+
+
+
+function formatProductWiseQty(frontendData: FrontendData) {
+  // Transform the data to match ProductWiseQtySchema format
+  const transformedData: ProductWiseQty[] = frontendData.reduce((acc: ProductWiseQty[], item) => {
+    // Find if the category already exists in the accumulator
+    let category = acc.find(c => c.category === item.deviceCategory);
+
+    if (!category) {
+      // If category doesn't exist, create a new entry for that category
+      category = {
+        category: item.deviceCategory,
+        brands: []  // Initialize an empty brands array for this category
+      };
+      acc.push(category);
+    }
+
+    // Find if the brand already exists within the category
+    let brand = category.brands.find(b => b.brandName === item.deviceBrand);
+
+    if (!brand) {
+      // If brand doesn't exist, create a new entry for that brand
+      brand = {
+        brandName: item.deviceBrand,
+        models: []  // Initialize an empty models array for this brand
+      };
+      category.brands.push(brand);
+    }
+
+    // Add the model and quantity to the brand
+    brand.models.push({
+      modelName: item.deviceModel,
+      quantity: item.deviceModelQuantity
+    });
+
+    return acc;
+  }, []);
+
+  return transformedData;
+}
 
 //--------------------------------api to delete product---------------------------------------
 export const deleteProduct = asyncErrorHandler(async (req, res, next) => {
@@ -1757,8 +1907,8 @@ export const getFilterAndSortProducts = asyncErrorHandler(async (req, res, next)
 export const getFilterAndSortSkinProducts = asyncErrorHandler(async (req, res, next) => {
 
   const {
-    device="smartphone",
-    sortBy="priceLowToHigh"
+    device = "smartphone",
+    sortBy = "priceLowToHigh"
   } = req.body
 
 

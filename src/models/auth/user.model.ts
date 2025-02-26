@@ -67,12 +67,14 @@ const userSchema = new Schema(
     },
     phoneNumber: {
       type: String,
+      unique: true, // Ensures phone numbers are unique
       validate: {
         validator: function (v: string | null) {
           return v === null || v === "" || /^\d{10}$/.test(v);
         },
         message: (props: { value: string }) => `${props.value} is not a valid 10-digit mobile number!`
       },
+      required: [true, "Please enter mobile number"],
       default: null
     },
     profile: { type: ProfileSchema, default: DefaultProfileData },
