@@ -135,9 +135,12 @@ export const checkIfUserExist = asyncErrorHandler(
     // Check if the phone number exists in the database
     const user = await User.findOne({ phoneNumber });
 
+
     return res.status(200).json({
       success: true,
-      userExist: !!user, // Returns true if user exists, false otherwise
+      userExist: !!user, // Returns true if user exists, false otherwise,
+      step: user ? "step3" : "step2",
+      mobileNumber:phoneNumber
     });
   }
 );
