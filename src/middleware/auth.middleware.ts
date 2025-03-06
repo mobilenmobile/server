@@ -69,7 +69,7 @@ export const adminOnly = asyncErrorHandler(async (req, res, next) => {
   const authToken =
     req.cookies?.accessToken ||
     req.header("Authorization")?.replace("Bearer ", "");
-  // console.log("authtoken type =>  ", typeof authToken, "and", authToken);
+  console.log("authtoken type =>  ", typeof authToken, "and", authToken);
 
   if (!authToken) return next(new ErrorHandler("Token not present", 401));
   if (typeof authToken !== "string") {
@@ -78,9 +78,9 @@ export const adminOnly = asyncErrorHandler(async (req, res, next) => {
 
   const verifyAuth = await getUid(authToken);
 
-  // console.log("------------------- xxxxx------------------");
-  // console.log(verifyAuth, "and uid is ", verifyAuth.uid);
-  // console.log("------------------- xxxxx------------------");
+  console.log("------------------- xxxxx------------------");
+  console.log(verifyAuth, "and uid is ", verifyAuth.uid);
+  console.log("------------------- xxxxx------------------");
 
   if (verifyAuth.uid.length < 1)
     return next(new ErrorHandler("Token is invalid ", 401));

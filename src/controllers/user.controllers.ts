@@ -139,8 +139,8 @@ export const checkIfUserExist = asyncErrorHandler(
     return res.status(200).json({
       success: true,
       userExist: !!user, // Returns true if user exists, false otherwise,
-      step: user ? "step3" : "step2",
-      mobileNumber:phoneNumber
+      step: user ? "login" : "signup",
+      mobileNumber: phoneNumber
     });
   }
 );
@@ -637,7 +637,7 @@ export const updateCart = asyncErrorHandler(async (req, res, next) => {
     }
   }
 
-  const cartItem = await cart.findOne({ productId, selectedVarianceId, user: "672da610708d9db90bff4973" });
+  const cartItem = await cart.findOne({ productId, selectedVarianceId, user: req.user._id });
 
   if (cartItem && cartItem.quantity < 10) {
     cartItem.quantity = cartItem.quantity + 1;

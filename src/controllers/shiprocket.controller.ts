@@ -300,7 +300,7 @@ export const shipRocketGenerateManifest = asyncErrorHandler(async (req, res, nex
     console.log("generate manifest body data ------------>", generatemanifestBodyData)
     try {
         const response = await axios.post(createAwbUrl, generatemanifestBodyData, config)
-        console.log('Response data for generate manifest:', response.data);
+        console.log('Response data for generate manifest:',response, response.data);
         return res.status(200).json({ success: true, message: "successfully generated manifest", data: response.data })
     } catch (error: any) {
         if (error.response) {
@@ -350,7 +350,7 @@ export const shipRocketPrintManifest = asyncErrorHandler(async (req, res, next) 
     console.log("print manifest body data ------------>", printManifestBodyData)
     try {
         const response = await axios.post(printManifestUrl, printManifestBodyData, config)
-        console.log('Response data for manifest:', response.data);
+        console.log('Response data for manifest:', response,response.data);
         return res.status(200).json({ success: true, message: "successfully generated manifest", data: response.data })
     } catch (error: any) {
         if (error.response) {
