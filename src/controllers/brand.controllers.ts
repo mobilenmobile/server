@@ -42,7 +42,7 @@ export const newBrand = asyncErrorHandler(
       }
       else {
         const brand = await Brand.create({
-          brandName,
+          brandName:brandNameTrimmedLowercase,
           brandImgUrl: null,
           brandLogoUrl: null,
           categories: [category._id]

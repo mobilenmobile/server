@@ -10,6 +10,7 @@ import mongoose, { startSession } from "mongoose";
 import { ShipRocket } from "../models/shiprocket/shiprocket.model.js";
 import { createOrderBody } from "./shiprocket.controller.js";
 import axios from "axios";
+import productSoldHistory from "../models/product/productSoldHistory.js";
 
 
 
@@ -176,6 +177,42 @@ export const newOrder = asyncErrorHandler(
         };
 
         await newOrder.save({ session });
+
+        //Dashboard Analytic
+        //store order history to maintain
+        // Create all product sold history documents in a single batch operation
+
+        const productHistoryDocs = newOrder.orderItems.map((orderItem: any) => {
+          // Ensure all fields have proper MongoDB ObjectId types
+          return {
+            order_id: newOrder._id,
+            product_id: orderItem._id,
+            variant_id: orderItem.selectedVarianceId ? orderItem.selectedVarianceId : null,
+            user_id: req.user._id,
+            coupon_used_id: newOrder.couponcode ? newOrder.couponcode : null,
+            coin_used: coinAccount.useCoinForPayment ? newOrder.coinsDebited : 0,
+            amount_at_which_prod_sold: Number(newOrder.finalAmount || 0),
+            discount_applied: Number(newOrder.total - newOrder.discountedTotal || 0),
+            payment_method: JSON.parse(paymentMethod).type === "online" ? "online" : "COD",
+            category_id: orderItem.categoryId,
+            subcategory_id: orderItem.subcategoryId ? orderItem.subcategoryId : null,
+            sold_at: new Date()
+          };
+        });
+
+        // Use insertMany for better performance but handle validation errors
+        try {
+          if (productHistoryDocs.length > 0) {
+            await productSoldHistory.insertMany(productHistoryDocs, { session });
+            console.log("Product sold history created successfully");
+          }
+        } catch (error) {
+          console.error("Error creating product sold history:", error);
+          // You might want to log the documents that failed validation
+          console.error("Failed documents:", JSON.stringify(productHistoryDocs));
+          throw error; // This will trigger the transaction rollback
+        }
+
 
       } catch (error: any) {
         console.log("error occured in creating shiprocket order------------>", error)
@@ -715,7 +752,7 @@ export const cancellOrder = asyncErrorHandler(async (req, res, next) => {
 
 
 export const deleteOrder = asyncErrorHandler(async (req, res, next) => {
- 
+
   const { shipRocketId, orderId } = req.body;
   console.log(req.body)
 

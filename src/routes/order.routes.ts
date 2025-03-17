@@ -1,7 +1,7 @@
 import express from "express"
 import { cancellOrder, deleteOrder, getAdminSingleOrderDetails, getAllAdminOrders, getAllOrders, getSingleOrderDetails, newOrder, processOrder } from "../controllers/order.controller"
 import { adminOnly, authenticated, EditorOnly } from "../middleware/auth.middleware"
-import { newInvoice } from "../controllers/Invoice.controller"
+
 
 const orderRouter = express.Router()
 
@@ -19,6 +19,6 @@ orderRouter.get("/getOrderDetails/:id", getAdminSingleOrderDetails)
 
 // -------------------------Invoice route-------------------------------
 // This route is not working as we are using invoice of shiprocket 
-orderRouter.post("/generateinvoice", newInvoice)
+// orderRouter.post("/generateinvoice", newInvoice)
 
 export default orderRouter
