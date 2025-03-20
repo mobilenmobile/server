@@ -841,22 +841,26 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
   // const cartItems = await cart.find({ user: req.user._id }).populate("productId");
   const cartItems = await cart.find({ user: req.user._id }).populate({
     path: 'productId',
-    populate: [{
-      path: 'productCategory',
-    },
+    populate: [
+      {
 
-    {
-      path: 'productComboProducts',
-      populate: {
-        path: 'productId'
+        path: 'productCategory',
+      },
+      {
+        path: 'productSubCategory',
+      },
+      {
+        path: 'productComboProducts',
+        populate: {
+          path: 'productId'
+        }
+      },
+      {
+        path: 'productFreeProducts',
+        populate: {
+          path: 'productId'
+        }
       }
-    },
-    {
-      path: 'productFreeProducts',
-      populate: {
-        path: 'productId'
-      }
-    }
     ],
   });
 
@@ -872,6 +876,9 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
     finalTotal: 0,
     productTotal: 0,
   }
+
+  console.log(cartItems)
+
   //mapping through cartItems to structure the data
   const cartItemsData = cartItems.map((item) => {
     if (item.productId.productVariance) {
@@ -902,6 +909,8 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
               keyid: `${item._id}${variantData?.id.replace(/\s+/g, "")}`,
               categoryId: item.productId?.productCategory?._id,
               category: item.productId?.productCategory?.categoryName,
+              subCategoryId: item.productId?.productSubCategory?._id,
+              subCategory: item.productId?.productSubCategory?.subCategoryName,
               productTitle: item.productId.productTitle,
               thumbnail: variantData?.thumbnail,
               boxPrice: variantData?.boxPrice || 0,  // Ensure a valid number
@@ -962,6 +971,8 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
               keyid: `${item._id}${variantData?.id.replace(/\s+/g, "")}`,
               categoryId: item.productId?.productCategory?._id,
               category: item.productId?.productCategory?.categoryName,
+              subCategoryId: item.productId?.productSubCategory?._id,
+              subCategory: item.productId?.productSubCategory?.subCategoryName,
               productTitle: item.productId.productTitle,
               thumbnail: variantData?.thumbnail,
               boxPrice: variantData?.boxPrice || 0,  // Ensure a valid number
@@ -989,6 +1000,8 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
         keyid: `${item._id}${variantData?.id.replace(/\s+/g, "")}`,
         categoryId: item.productId?.productCategory?._id,
         category: item.productId?.productCategory?.categoryName,
+        subCategoryId: item.productId?.productSubCategory?._id,
+        subCategory: item.productId?.productSubCategory?.subCategoryName,
         productTitle: item.productId.productTitle,
         thumbnail: variantData?.thumbnail,
         boxPrice: variantData?.boxPrice,
@@ -1068,7 +1081,7 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
 
         case 'percentage':
           couponDiscount = Math.round((Number(appliedCoupon.offerDiscountValue) * totals.DiscountedTotal) / 100);
-          couponDiscount = Math.min(2000, couponDiscount); // Cap discount at 2000
+          couponDiscount = Math.min(2400, couponDiscount); // Cap discount at 2000
           break;
 
         case 'fixedamount':
@@ -1131,7 +1144,7 @@ export const getUnAuthenticatedCartDetails = asyncErrorHandler(async (req: Reque
 
 
   const cartItems = await Promise.all(cart.map(async (cartItem: { productId: any; }) => {
-    const product = await Product.findById(cartItem.productId).populate('productCategory').populate({
+    const product = await Product.findById(cartItem.productId).populate('productCategory').populate('productSubCategory').populate({
       path: 'productComboProducts',
       populate: {
         path: 'productId'
@@ -1144,7 +1157,7 @@ export const getUnAuthenticatedCartDetails = asyncErrorHandler(async (req: Reque
     })
 
 
-    // console.log("------------product--------", product);
+    console.log("------------product--------", product);
     if (product) {
       return {
         ...cartItem,
@@ -1188,6 +1201,8 @@ export const getUnAuthenticatedCartDetails = asyncErrorHandler(async (req: Reque
               keyid: `${item._id}${variantData?.id.replace(/\s+/g, "")}`,
               categoryId: item.productId?.productCategory?._id,
               category: item.productId?.productCategory?.categoryName,
+              subCategoryId: item.productId?.productSubCategory?._id,
+              subCategory: item.productId?.productSubCategory?.subCategoryName,
               productTitle: item.productId.productTitle,
               thumbnail: variantData?.thumbnail,
               boxPrice: variantData?.boxPrice,
@@ -1235,6 +1250,8 @@ export const getUnAuthenticatedCartDetails = asyncErrorHandler(async (req: Reque
               keyid: `${item._id}${variantData?.id.replace(/\s+/g, "")}`,
               categoryId: item.productId?.productCategory?._id,
               category: item.productId?.productCategory?.categoryName,
+              subCategoryId: item.productId?.productSubCategory?._id,
+              subCategory: item.productId?.productSubCategory?.subCategoryName,
               productTitle: item.productId.productTitle,
               thumbnail: variantData?.thumbnail,
               boxPrice: variantData?.boxPrice,
@@ -1267,6 +1284,8 @@ export const getUnAuthenticatedCartDetails = asyncErrorHandler(async (req: Reque
         keyid: `${item.productId._id}${variantData?.id.replace(/\s+/g, "")}`,
         categoryId: item.productId?.productCategory?._id,
         category: item.productId?.productCategory?.categoryName,
+        subCategoryId: item.productId?.productSubCategory?._id,
+        subCategory: item.productId?.productSubCategory?.subCategoryName,
         productTitle: item.productId.productTitle,
         thumbnail: variantData?.thumbnail,
         boxPrice: variantData?.boxPrice,

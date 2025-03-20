@@ -5,10 +5,12 @@ import { Request } from "express";
 import {
   CategoryBaseQuery,
   NewCategoryRequestBody,
+  NewSubCategoryRequestBody,
   SearchCategoryQuery,
   deleteCategoryQuery,
 } from "../types/types";
 import ErrorHandler from "../utils/errorHandler";
+import { subCategory } from "../models/subCategory/subCategory.model";
 
 //----------------------xxxxxx List-Of-Apis xxxxxxxxx-------------------
 
@@ -64,7 +66,7 @@ export const addNewCategory = asyncErrorHandler(
     else {
 
       const category = await Category.create({
-        categoryName:updatedCategoryName,
+        categoryName: updatedCategoryName,
         redeemedCoin,
         categoryImgUrl: categoryImgUrl ? categoryImgUrl : "",
       });
@@ -76,6 +78,49 @@ export const addNewCategory = asyncErrorHandler(
     }
 
   }
+);
+export const addNewSubCategory = asyncErrorHandler(
+  async (req: Request<{}, {}, NewSubCategoryRequestBody>, res, next) => {
+    const { categoryName, subCategoryName } = req.body;
+
+    // Normalize the categoryName
+    const CategoryName = categoryName
+      .toLowerCase()         // Convert to lowercase
+      .trim()                // Remove extra spaces from the sides
+      .replace(/\s+/g, ' '); // Replace multiple spaces with a single space
+    // Normalize the categoryName
+    const normalizedSubCategoryName = subCategoryName
+      .toLowerCase()         // Convert to lowercase
+      .trim()                // Remove extra spaces from the sides
+      .replace(/\s+/g, ' '); // Replace multiple spaces with a single space
+
+
+
+    console.log(req.body)
+
+    if (!categoryName) {
+      return next(new ErrorHandler("please provide category name.", 400));
+    }
+
+
+    const exisitingCategory = await Category.findOne({ categoryName: categoryName })
+    // console.log(exisitingCategory, "category eixsitn")
+    if (!exisitingCategory) {
+      return next(new ErrorHandler("No category found.", 400));
+    }
+
+    const category = await subCategory.create({
+      categoryId: exisitingCategory._id,
+      subCategoryName: normalizedSubCategoryName,
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: "New category created successfully",
+      category
+    });
+  }
+
 );
 
 //------------------api to search category------------------------------------------

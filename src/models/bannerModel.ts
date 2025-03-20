@@ -1,37 +1,25 @@
 import mongoose, { Schema } from 'mongoose';
-// import { Store } from './Store';
 
 const bannerSchema = new Schema({
     _id: { type: Schema.Types.ObjectId, auto: true },
 
     homeBanner: {
-        mainImage: {
-            type: String
-        },
-        otherImages: [{ type: String }]
-
+        mainImage: { imgUrl: { type: String }, redirectUrl: { type: String } },
+        otherImages: [{ imgUrl: { type: String }, redirectUrl: { type: String } }],
     },
     skinBanner: {
-        mainImage: {
-            type: String
-        },
-        otherImages: [{ type: String }]
-
+        mainImage: { imgUrl: { type: String }, redirectUrl: { type: String } },
+        otherImages: [{ imgUrl: { type: String }, redirectUrl: { type: String } }],
     },
     accessoriesBanner: {
-        mainImage: {
-            type: String
-        },
-        otherImages: [{ type: String }]
-
+        mainImage: { imgUrl: { type: String }, redirectUrl: { type: String } },
+        otherImages: [{ imgUrl: { type: String }, redirectUrl: { type: String } }],
     },
-
 
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now },
 });
 
-const Banner = mongoose.models.Banner || mongoose.model("Banner", bannerSchema)
-// const User = mongoose.models.users || mongoose.model("users", userSchema);
+const Banner = mongoose.models.Banner || mongoose.model("Banner", bannerSchema);
 
 export default Banner;

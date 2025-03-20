@@ -129,8 +129,9 @@ const productSchema = new Schema(
             required: [true, "product category is required"],
         },
         productSubCategory: {
-            type: String,
-            default: ''
+            type: Schema.Types.ObjectId,
+            ref: "subCategory",
+            required: [true, "product category is required"],
         },
         productBrand: {
             type: Schema.Types.ObjectId,

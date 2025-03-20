@@ -11,6 +11,7 @@ import { ShipRocket } from "../models/shiprocket/shiprocket.model.js";
 import { createOrderBody } from "./shiprocket.controller.js";
 import axios from "axios";
 import productSoldHistory from "../models/product/productSoldHistory.js";
+import { User } from "../models/auth/user.model.js";
 
 
 
@@ -145,57 +146,73 @@ export const newOrder = asyncErrorHandler(
       console.log("Order created successfully:", newOrder);
 
       // ----------------------------------- !!!! shiprocket order creation !!!!!-----------------------------------
-      const orderId = newOrder._id
-      const UserOrder = await Order.findOne({ _id: orderId }).populate("user")
-      const ShipRocketCredentials = await ShipRocket.findOne({ email: "mobilenmobilebjnr1@gmail.com" })
-      if (!ShipRocketCredentials) {
-        return res.status(404).json({ message: "ShipRocket credentials not found" })
-      }
-      const config = {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${ShipRocketCredentials.token}`
-        }
-      };
-      const createOrderUrl = "https://apiv2.shiprocket.in/v1/external/orders/create/adhoc"
 
-      const creatorderbodydata = createOrderBody(newOrder)
 
-      console.log("createorderbodydata------------>", creatorderbodydata)
+      // const ShipRocketCredentials = await ShipRocket.findOne({ email: "mobilenmobilebjnr1@gmail.com" })
+      // if (!ShipRocketCredentials) {
+      //   return res.status(404).json({ message: "ShipRocket credentials not found" })
+      // }
+      // const config = {
+      //   headers: {
+      //     'Content-Type': 'application/json',
+      //     'Authorization': `Bearer ${ShipRocketCredentials.token}`
+      //   }
+      // };
+      // const createOrderUrl = "https://apiv2.shiprocket.in/v1/external/orders/create/adhoc"
+
+      // const creatorderbodydata = createOrderBody(newOrder)
+
+      // console.log("createorderbodydata------------>", creatorderbodydata)
       try {
-        const response = await axios.post(createOrderUrl, creatorderbodydata, config)
-        console.log({ success: true, message: 'shipRocket Order Created', data: response.data })
+        // const response = await axios.post(createOrderUrl, creatorderbodydata, config)
+        // console.log({ success: true, message: 'shipRocket Order Created', data: response.data })
         // Store courier order details in the order
-        newOrder.courierOrderDetails = {
-          order_id: response.data.order_id,
-          channel_order_id: response.data.channel_order_id,
-          shipment_id: response.data.shipment_id,
-          status: response.data.status,
-          awb_code: response.data.awb_code,
-          courier_company_id: response.data.courier_company_id,
-          courier_name: response.data.courier_name
-        };
+        // newOrder.courierOrderDetails = {
+        //   order_id: response.data.order_id,
+        //   channel_order_id: response.data.channel_order_id,
+        //   shipment_id: response.data.shipment_id,
+        //   status: response.data.status,
+        //   awb_code: response.data.awb_code,
+        //   courier_company_id: response.data.courier_company_id,
+        //   courier_name: response.data.courier_name
+        // };
+        // ------------------------------------------ shiprocket order creation ends here -----------------------------------------------
 
         await newOrder.save({ session });
+        //remove user coupon after order
+        const user = await User.findById(req.user._id);
+
+        if (!user) {
+          return next(new ErrorHandler("No user found by this id", 404));
+        }
+
+        user.coupon = null
+
+        await user.save({ session });
 
         //Dashboard Analytic
         //store order history to maintain
         // Create all product sold history documents in a single batch operation
+
+
 
         const productHistoryDocs = newOrder.orderItems.map((orderItem: any) => {
           // Ensure all fields have proper MongoDB ObjectId types
           return {
             order_id: newOrder._id,
             product_id: orderItem._id,
+            product_title: orderItem.productTitle,
+            product_thumbnail: orderItem.thumbnail,
             variant_id: orderItem.selectedVarianceId ? orderItem.selectedVarianceId : null,
             user_id: req.user._id,
             coupon_used_id: newOrder.couponcode ? newOrder.couponcode : null,
-            coin_used: coinAccount.useCoinForPayment ? newOrder.coinsDebited : 0,
-            amount_at_which_prod_sold: Number(newOrder.finalAmount || 0),
-            discount_applied: Number(newOrder.total - newOrder.discountedTotal || 0),
+            coin_used: newOrder.coinsDebited,
+            product_qty_sold: orderItem.quantity,
+            amount_at_which_prod_sold: Number(orderItem.sellingPrice || 0),
+            discount_applied: Number(orderItem.boxPrice - orderItem.sellingPrice || 0),
             payment_method: JSON.parse(paymentMethod).type === "online" ? "online" : "COD",
             category_id: orderItem.categoryId,
-            subcategory_id: orderItem.subcategoryId ? orderItem.subcategoryId : null,
+            subcategory_id: orderItem.subCategoryId ? orderItem.subCategoryId : null,
             sold_at: new Date()
           };
         });

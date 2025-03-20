@@ -4,11 +4,13 @@ import mongoose, { Document, Schema } from "mongoose";
 export interface IProductSoldHistory extends Document {
     order_id: mongoose.Types.ObjectId;
     product_id: mongoose.Types.ObjectId;
+    product_title: string;
+    product_thumbnail: string;
+    product_qty_sold:number;
     variant_id: string;
     user_id: mongoose.Types.ObjectId;
     coupon_used_id: string;
     coin_used: number;
-    amount_at_which_prod_listed:number;
     amount_at_which_prod_sold: number;
     discount_applied: number;
     payment_method: "online" | "COD";
@@ -36,6 +38,14 @@ const ProductSoldHistorySchema = new Schema<IProductSoldHistory>(
             type: String,
             default: ""
         },
+        product_title: {
+            type: String,
+            default: ""
+        },
+        product_thumbnail: {
+            type: String,
+            default: ""
+        },
         user_id: {
             type: Schema.Types.ObjectId,
             ref: "User",
@@ -47,6 +57,11 @@ const ProductSoldHistorySchema = new Schema<IProductSoldHistory>(
             index: true, // Optimized for counting coupon usage
         },
         coin_used: {
+            type: Number,
+            default: 0,
+            min: 0, // Ensures coin usage is non-negative
+        },
+        product_qty_sold: {
             type: Number,
             default: 0,
             min: 0, // Ensures coin usage is non-negative

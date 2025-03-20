@@ -2,6 +2,7 @@ import axios from "axios";
 import { asyncErrorHandler } from "../middleware/error.middleware";
 import ErrorHandler from "../utils/errorHandler";
 import { Order } from "../models/order/order.model";
+import { ShipmentDataModel } from "../models/order/shipment.models";
 
 
 
@@ -265,7 +266,7 @@ export const createShipment = asyncErrorHandler(async (req, res, next) => {
     };
 
     try {
-    // Use the correct URL from the docs
+        // Use the correct URL from the docs
         const apiUrl = "https://track.delhivery.com/api/cmu/create.json"; // Production URL
 
         // IMPORTANT: The format and data must be sent as form data, not JSON
@@ -303,10 +304,19 @@ export const createShipment = asyncErrorHandler(async (req, res, next) => {
             }
         });
 
+        // if (response.data && response.data.success) {
+        //     // Save shipment data to database
+        //     const savedShipment = await ShipmentDataModel.saveShipment(shipmentData);
+        //     console.log("Shipment data saved to DB:", savedShipment);
+        // }
+
+        
+
+
         return res.status(200).json({
             success: true,
             // data: response.data.data || response.data,
-            data: shipmentData,
+            data: response.data,
             waybill: waybillNumber
         });
     } catch (error) {
@@ -317,7 +327,7 @@ export const createShipment = asyncErrorHandler(async (req, res, next) => {
             error: `${error}`
         });
     }
-   
+
 });
 
 //generate label

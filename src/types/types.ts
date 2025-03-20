@@ -9,7 +9,7 @@ export interface NewUserRequestBody {
   role?: string;
   phoneNumber?: string
   password: string;
-  platform?:string;
+  platform?: string;
 }
 
 export interface LoginRequestBody {
@@ -118,6 +118,10 @@ export interface NewCategoryRequestBody {
   categoryDescription: string;
   categoryKeywords: string;
   redeemedCoin: number;
+}
+export interface NewSubCategoryRequestBody {
+  categoryName: string;
+  subCategoryName: string;
 }
 
 export interface NewOfferRequestbody {
