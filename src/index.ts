@@ -2,6 +2,7 @@ import dotenv from "dotenv";
 import connectDB from "./db/index.js";
 import app from "./app.js";
 import { deleteTodayModels } from "./controllers/model.controller.js";
+import { storeSuggestions } from "./suggestion.js";
 
 dotenv.config({
   path: "./env",
@@ -38,6 +39,10 @@ function startServer(port: number) {
     }
   });
 }
+
+
+
+// storeSuggestions()
 
 connectDB()
   .then(() => {

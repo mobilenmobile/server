@@ -1,5 +1,5 @@
 import express from 'express';
-import { deleteBanner, getAllBanners, getBanners, newBanner, updateBanner } from '../controllers/banner.controller';
+import { deleteBanner, getAllBanners, newBanner, updateBanner } from '../controllers/banner.controller';
 
 
 const router = express.Router();
@@ -10,7 +10,7 @@ router.post('/', newBanner);
 // Get all banners
 router.get('/', getAllBanners); // New route
 // Get a banner by ID
-router.get('/:bannerId', getBanners);
+// router.get('/:bannerId', getBanners);
 
 // Update a banner by ID
 router.patch('/:bannerId', updateBanner);

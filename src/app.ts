@@ -19,7 +19,7 @@ import blogRoute from "./routes/blog.routes.js";
 import boxRoute from "./routes/box.routes.js"
 import rolesRoute from "./routes/userRoles.routes.js"
 import delhiveryRoute from "./routes/delhivery.routes.js"
-
+import suggestionRoute from "./routes/suggestion.routes.js"
 import NodeCache from "node-cache";
 
 import brandRoute from "./routes/brand.routes.js";
@@ -71,9 +71,13 @@ app.use("/api/v1/blog", blogRoute);
 app.use("/api/v1/boxes", boxRoute);
 app.use("/api/v1/roles", rolesRoute);
 app.use("/api/v1/delhivery", delhiveryRoute);
+app.use("/api/v1/suggestion", suggestionRoute);
 //Error middleware to be used below route
 //to cache err from routes
 app.use(errorMiddleware);
+
+
+
 
 export const myCache = new NodeCache();
 export default app;
