@@ -45,6 +45,7 @@ export const newProduct = asyncErrorHandler(async (req, res, next) => {
   const {
     category,
     subcategory,
+    keywords,
     brand,
     productModel,
     productTitle,
@@ -88,6 +89,12 @@ export const newProduct = asyncErrorHandler(async (req, res, next) => {
     return next(new ErrorHandler("Please provide a valid category", 400));
   }
 
+  const refSubCategory = await subCategory.findOne({ subCategoryName: subcategory.trim() });
+  if (!refSubCategory) {
+    return next(new ErrorHandler("Please provide a valid subcategory", 400));
+  }
+
+
   const refBox = selectedBox ? await Box.findById(selectedBox) : null;
 
   // ✅ Ensure JSON.parse() does not crash if input is missing
@@ -119,7 +126,8 @@ export const newProduct = asyncErrorHandler(async (req, res, next) => {
   // ✅ Create the product
   const newProduct = await Product.create({
     productCategory: refCategory._id,
-    productSubCategory: subcategory ?? null,
+    productSubCategory: refSubCategory._id ?? null,
+    productKeyword: keywords ?? "",
     productBrand: refBrand._id,
     productModel: productModel.trim(),
     productTitle: productTitle.trim(),
@@ -543,6 +551,7 @@ export const updateProduct = asyncErrorHandler(
     const id = (req.params as { id: string }).id;
     const {
       subcategory,
+      keywords = "",
       model,
       brand,
       productModel,
@@ -591,6 +600,13 @@ export const updateProduct = asyncErrorHandler(
       product.productBrand = refBrand._id;
     }
 
+    let refSubCategory
+    if (subcategory) {
+      refSubCategory = await subCategory.findOne({ subCategoryName: subcategory.trim() });
+      if (!refSubCategory) {
+        return next(new ErrorHandler("Please provide a valid subcategory", 400));
+      }
+    }
 
     const refBox = await Box.findById(selectedBox)
     let parsedProductWiseQty
@@ -608,7 +624,8 @@ export const updateProduct = asyncErrorHandler(
       return next(new ErrorHandler("Failed to parse product qty", 400));
     }
 
-    if (subcategory) product.productSubCategory = subcategory
+    if (subcategory) product.productSubCategory = refSubCategory._id
+    if (keywords) product.productKeyword = keywords
     if (model) product.productModel = model
     if (productModel) product.productModel = productModel;
     if (productTitle) product.productTitle = productTitle;
@@ -861,17 +878,19 @@ export const getAllAdminProducts = asyncErrorHandler(
 
 export const getAllProducts = asyncErrorHandler(
   async (req, res, next) => {
-    const fullUrl = req.protocol + '://' + req.get('host') + req.originalUrl;
-    console.log("API PATH FULL URL:-", fullUrl)
+    // const fullUrl = req.protocol + '://' + req.get('host') + req.originalUrl;
+    // console.log("API PATH FULL URL:-", fullUrl)
     const { search, sort, category, price, device, isfeatured } = req.query;
     console.log("Search query:-", search, sort, category, price, device, isfeatured)
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 12;
     const skip = (page - 1) * limit;
     // let baseQuery: FilterQuery<BaseQuery> = {};
+
     let baseQuery: FilterQuery<BaseQuery> = {
       isArchived: { $ne: true }  // Exclude archived products
     };
+
     if (price) {
       baseQuery.price = {
         $lte: Number(price),
@@ -881,7 +900,7 @@ export const getAllProducts = asyncErrorHandler(
     // Apply category filter if provided
     console.log("category for search product", category)
     if (category) {
-      console.log("category for search product inside", category)
+      // console.log("category for search product inside", category)
       const findCategory = await Category.findOne({ categoryName: category });
       if (findCategory) {
         baseQuery.productCategory = findCategory._id;
@@ -895,25 +914,24 @@ export const getAllProducts = asyncErrorHandler(
     let searchQuery: FilterQuery<BaseQuery> = {};
 
     if (search && typeof search === 'string') {
-      // Split the search term by spaces and filter out "both"
-      const searchTerms = search
-        .split(' ')
-        .filter((term) => term.toLowerCase() !== 'both');
+      // Make search more flexible by not requiring word boundaries
+      // and checking both partial matches and exact matches
+      const searchTerm = search.toLowerCase().trim();
 
-      if (searchTerms.length > 0) {
+      if (searchTerm) {
         searchQuery = {
-          $and: searchTerms.map((term) => ({
-            $or: [
-              { productTitle: { $regex: `\\b${term}\\b`, $options: 'i' } },  // Word boundary for exact word match
-              { productSubCategory: { $regex: `\\b${term}\\b`, $options: 'i' } },
-            ],
-          })),
+          $or: [
+            { productTitle: { $regex: searchTerm, $options: 'i' } },
+            { productKeyword: { $regex: searchTerm, $options: 'i' } },
+            // { productCategory: { $regex: searchTerm, $options: 'i' } },
+          ]
         };
       }
     }
+
     const combinedQuery = {
       ...baseQuery,
-      ...searchQuery
+      ...(Object.keys(searchQuery).length > 0 ? searchQuery : {})
     };
 
     const sortBy: any = {};

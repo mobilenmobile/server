@@ -12,8 +12,8 @@ export const getSuggestedKeywords = asyncErrorHandler(
         }
 
         // Fetch all products directly from the database
-        const products = await Product.find({}, "productTitle productKeyword");
-
+        const products = await Product.find({}, "productTitle productKeyword,productCategory").populate('productCategory', 'categoryName');
+        console.log(products)
         // Create a regex pattern to match words that start with or contain the search term
         const regex = new RegExp(`\\b${search}`, "i"); // Match words starting with 'search' (case-insensitive)
 
@@ -22,37 +22,40 @@ export const getSuggestedKeywords = asyncErrorHandler(
 
         // First check for direct matches in product titles
         products.forEach(product => {
-            if (regex.test(product.productTitle) ||
-                product.productTitle.toLowerCase().includes(search.toLowerCase())) {
+            if (matchedTitles.size >= 10) return
+            if (regex.test(product.productTitle)
+                || regex.test(product.productKeyword)
+                || regex.test(product.productCategory.categoryName)
+                || product.productTitle.toLowerCase().includes(search.toLowerCase())) {
                 matchedTitles.add(product.productTitle);
             }
         });
 
         // Then check keywords and add corresponding product title if found
-        products.forEach(product => {
-            // Skip if title already matched
-            if (matchedTitles.has(product.productTitle)) {
-                return;
-            }
+        // products.forEach(product => {
+        //     // Skip if title already matched
+        //     if (matchedTitles.has(product.productTitle)) {
+        //         return;
+        //     }
 
-            // Check if keyword matches based on its type
-            let keywordMatch = false;
+        //     // Check if keyword matches based on its type
+        //     let keywordMatch = false;
 
-            if (Array.isArray(product.productKeyword)) {
-                // Handle array of keywords
-                keywordMatch = product.productKeyword.some(
-                    (keyword: string) => regex.test(keyword) || keyword.toLowerCase().includes(search.toLowerCase())
-                );
-            } else if (typeof product.productKeyword === 'string') {
-                // Handle single string keyword
-                keywordMatch = regex.test(product.productKeyword) ||
-                    product.productKeyword.toLowerCase().includes(search.toLowerCase());
-            }
+        //     if (Array.isArray(product.productKeyword)) {
+        //         // Handle array of keywords
+        //         keywordMatch = product.productKeyword.some(
+        //             (keyword: string) => regex.test(keyword) || keyword.toLowerCase().includes(search.toLowerCase())
+        //         );
+        //     } else if (typeof product.productKeyword === 'string') {
+        //         // Handle single string keyword
+        //         keywordMatch = regex.test(product.productKeyword) ||
+        //             product.productKeyword.toLowerCase().includes(search.toLowerCase());
+        //     }
 
-            if (keywordMatch) {
-                matchedTitles.add(product.productTitle);
-            }
-        });
+        //     if (keywordMatch) {
+        //         matchedTitles.add(product.productTitle);
+        //     }
+        // });
 
         // Convert Set to Array for response
         const recommended = Array.from(matchedTitles);

@@ -151,6 +151,31 @@ export const searchCategory = asyncErrorHandler(
     });
   }
 );
+export const getAllSubCategory = asyncErrorHandler(
+  async (req: Request<{}, {}, {}, { categoryName?: string }>, res, next) => {
+    const { categoryName } = req.query;
+    console.log(categoryName)
+    const query: any = {};
+    if (categoryName) {
+      const category = await Category.findOne({ categoryName: categoryName });
+      if (!category) {
+        return res.status(404).json({
+          success: false,
+          message: "Category not found",
+        });
+      }
+      query.categoryId = category._id;
+    }
+
+    const subCategoryRes = await subCategory.find(query).populate("categoryId");
+
+    return res.status(200).json({
+      success: true,
+      message: "Subcategories found successfully",
+      subCategory: subCategoryRes,
+    });
+  }
+);
 
 //-------------------api to delete specfic category-----------------------------------
 export const deleteCategory = asyncErrorHandler(
