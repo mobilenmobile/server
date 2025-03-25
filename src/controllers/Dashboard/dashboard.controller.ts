@@ -15,7 +15,7 @@ const calculateGrowth = (current: number, previous: number): number => {
 const getDateRange = (startDate?: string, endDate?: string, dateRange?: string) => {
     let finalStartDate: Date;
     let finalEndDate: Date = new Date();
-    
+
     // If specific dates are provided, use them
     if (startDate && endDate) {
         finalStartDate = new Date(startDate);
@@ -37,14 +37,14 @@ const getDateRange = (startDate?: string, endDate?: string, dateRange?: string) 
         finalStartDate = new Date();
         finalStartDate.setDate(finalStartDate.getDate() - 30);
     }
-    
+
     // Calculate previous period for growth comparisons
     const periodLength = (finalEndDate.getTime() - finalStartDate.getTime());
     const prevEndDate = new Date(finalStartDate);
     prevEndDate.setDate(prevEndDate.getDate() - 1);
     const prevStartDate = new Date(prevEndDate);
     prevStartDate.setTime(prevStartDate.getTime() - periodLength);
-    
+
     return {
         startDate: finalStartDate,
         endDate: finalEndDate,
@@ -60,9 +60,9 @@ const asyncErrorHandler = (fn: (req: Request, res: Response) => Promise<any>) =>
             await fn(req, res);
         } catch (error) {
             console.error("Error in controller:", error);
-            res.status(500).json({ 
-                success: false, 
-                error: "An error occurred while processing your request" 
+            res.status(500).json({
+                success: false,
+                error: "An error occurred while processing your request"
             });
         }
     };
@@ -70,37 +70,37 @@ const asyncErrorHandler = (fn: (req: Request, res: Response) => Promise<any>) =>
 
 export const getAnalyticsData = asyncErrorHandler(async (req: Request, res: Response) => {
     const { startDate, endDate, dateRange, limit } = req.query;
-    
+
     // Parse date ranges - handles all three controller's date parsing in one place
     const dateRanges = getDateRange(
         startDate as string,
         endDate as string,
         dateRange as string
     );
-    
+
     const parsedStartDate = dateRanges.startDate;
     const parsedEndDate = dateRanges.endDate;
     const prevStartDate = dateRanges.prevStartDate;
     const prevEndDate = dateRanges.prevEndDate;
-    
+
     // Parse limit parameter
     const parsedLimit = limit ? parseInt(limit as string) : 5;
-    
+
     // Validate parameters
     if (isNaN(parsedStartDate.getTime()) || isNaN(parsedEndDate.getTime())) {
-        return res.status(400).json({ 
-            success: false, 
-            error: "Invalid date format. Please use YYYY-MM-DD format." 
+        return res.status(400).json({
+            success: false,
+            error: "Invalid date format. Please use YYYY-MM-DD format."
         });
     }
-    
+
     if (isNaN(parsedLimit) || parsedLimit <= 0) {
-        return res.status(400).json({ 
-            success: false, 
-            error: "Limit must be a positive number." 
+        return res.status(400).json({
+            success: false,
+            error: "Limit must be a positive number."
         });
     }
-    
+
     // SECTION 1: PRODUCT SALES STATISTICS
     // Aggregate pipeline to get top selling products with order counts
     const topProducts = await productSoldHistory.aggregate([
@@ -291,6 +291,9 @@ export const getAnalyticsData = asyncErrorHandler(async (req: Request, res: Resp
         }
     ]);
 
+
+
+
     // Get total returns count
     const totalReturns = await Order.countDocuments({
         createdAt: {
@@ -318,7 +321,7 @@ export const getAnalyticsData = asyncErrorHandler(async (req: Request, res: Resp
             }
         }
     ]);
-    
+
     // Get previous period returns count
     const previousReturns = await Order.countDocuments({
         createdAt: {
@@ -327,13 +330,13 @@ export const getAnalyticsData = asyncErrorHandler(async (req: Request, res: Resp
         },
         status: "returned"
     });
-    
+
     // Extract values from aggregation results
     const totalOrders = revenueData[0]?.totalOrders || 0;
     const totalRevenue = revenueData[0]?.totalRevenue || 0;
     const previousOrders = previousRevenueData[0]?.totalOrders || 0;
     const previousRevenue = previousRevenueData[0]?.totalRevenue || 0;
-    
+
     // Calculate percentage changes
     const ordersPercentChange = calculateGrowth(totalOrders, previousOrders);
     const returnsPercentChange = calculateGrowth(totalReturns, previousReturns);
@@ -385,7 +388,7 @@ export const getAnalyticsData = asyncErrorHandler(async (req: Request, res: Resp
             $project: {
                 productName: "$productDetails.productTitle",
                 price: "$firstVariance.sellingprice",
-                thumbnail: "$firstVariance.thumbnail",
+                // thumbnail: "$firstVariance.thumbnail",
                 totalViews: 1
             }
         },
@@ -449,6 +452,181 @@ export const getAnalyticsData = asyncErrorHandler(async (req: Request, res: Resp
         { $limit: 1 },
     ]);
 
+    // const productAnalytics = await productSoldHistory.aggregate([
+    //     // Filter by date range
+    //     {
+    //         $match: {
+    //             sold_at: {
+    //                 $gte: parsedStartDate,
+    //                 $lte: parsedEndDate
+    //             }
+    //         }
+    //     },
+    //     // Group by category and subcategory
+    //     {
+    //         $group: {
+    //             _id: {
+    //                 category: "$category_id",
+    //                 subcategory: "$subcategory_id"
+    //             },
+    //             totalRevenue: {
+    //                 $sum: {
+    //                     $multiply: ["$product_qty_sold", "$amount_at_which_prod_sold"]
+    //                 }
+    //             },
+    //             totalQuantitySold: { $sum: "$product_qty_sold" },
+    //             products: {
+    //                 $push: {
+    //                     productId: "$product_id",
+    //                     title: "$product_title",
+    //                     quantity: "$product_qty_sold",
+    //                     productPrice: "$amount_at_which_prod_sold",
+    //                     revenue: { $multiply: ["$product_qty_sold", "$amount_at_which_prod_sold"] }
+    //                 }
+    //             }
+    //         }
+    //     },
+    //     // Lookup category details
+    //     {
+    //         $lookup: {
+    //             from: "categories",
+    //             localField: "_id.category",
+    //             foreignField: "_id",
+    //             as: "categoryDetails"
+    //         }
+    //     },
+    //     // Lookup subcategory details
+    //     {
+    //         $lookup: {
+    //             from: "subcategories",
+    //             localField: "_id.subcategory",
+    //             foreignField: "_id",
+    //             as: "subcategoryDetails"
+    //         }
+    //     },
+    //     // Unwind category and subcategory details
+    //     {
+    //         $unwind: {
+    //             path: "$categoryDetails",
+    //             preserveNullAndEmptyArrays: true
+    //         }
+    //     },
+    //     {
+    //         $unwind: {
+    //             path: "$subcategoryDetails",
+    //             preserveNullAndEmptyArrays: true
+    //         }
+    //     },
+    //     // Sort products within each subcategory by revenue
+    //     {
+    //         $addFields: {
+    //             sortedProducts: {
+    //                 $slice: [
+    //                     { $sortArray: { input: "$products", sortBy: { revenue: -1 } } },
+    //                     parsedLimit
+    //                 ]
+    //             }
+    //         }
+    //     },
+    //     // Project final structure
+    //     {
+    //         $project: {
+    //             _id: 0,
+    //             categoryName: { $ifNull: ["$categoryDetails.categoryName", "Unknown Category"] },
+    //             subcategoryName: { $ifNull: ["$subcategoryDetails.subCategoryName", "Unknown Subcategory"] },
+    //             totalRevenue: 1,
+    //             totalQuantitySold: 1,
+    //             topProducts: "$sortedProducts"
+    //         }
+    //     }
+    // ]);
+
+    // Reorganize the data into the requested nested structure
+    const productAnalytics = await productSoldHistory.aggregate([
+        // Filter by date range
+        {
+            $match: {
+                sold_at: {
+                    $gte: parsedStartDate,
+                    $lte: new Date(new Date().setHours(23, 59, 59, 999)) //added so that order of current day also calculated
+                },
+                // Ensure only records with subcategory are included
+                subcategory_id: { $exists: true, $ne: null }
+            }
+        },
+        // Group by subcategory
+        {
+            $group: {
+                _id: "$subcategory_id",
+                totalRevenue: {
+                    $sum: {
+                        $multiply: ["$product_qty_sold", "$amount_at_which_prod_sold"]
+                    }
+                },
+                totalQuantitySold: { $sum: "$product_qty_sold" },
+                products: {
+                    $push: {
+                        productId: "$product_id",
+                        title: "$product_title",
+                        quantity: "$product_qty_sold",
+                        productPrice: "$amount_at_which_prod_sold",
+                        revenue: { $multiply: ["$product_qty_sold", "$amount_at_which_prod_sold"] }
+                    }
+                }
+            }
+        },
+        // Lookup subcategory details
+        {
+            $lookup: {
+                from: "subcategories",
+                localField: "_id",
+                foreignField: "_id",
+                as: "subcategoryDetails"
+            }
+        },
+        // Unwind subcategory details
+        {
+            $unwind: "$subcategoryDetails"
+        },
+        // Sort products within each subcategory by revenue
+        {
+            $addFields: {
+                sortedProducts: {
+                    $slice: [
+                        { $sortArray: { input: "$products", sortBy: { revenue: -1 } } },
+                        parsedLimit
+                    ]
+                }
+            }
+        },
+        // Project final structure
+        {
+            $project: {
+                _id: 0,
+                subcategoryName: "$subcategoryDetails.subCategoryName",
+                totalRevenue: 1,
+                totalQuantitySold: 1,
+                topProducts: "$sortedProducts"
+            }
+        }
+    ]);
+    // const restructuredProductData = productAnalytics.reduce((acc, item) => {
+    //     // Create category if not exists
+    //     if (!acc[item.categoryName]) {
+    //         acc[item.categoryName] = {};
+    //     }
+
+    //     // Add subcategory details
+    //     acc[item.categoryName][item.subcategoryName] = {
+    //         totalRevenue: item.totalRevenue,
+    //         totalQuantitySold: item.totalQuantitySold,
+    //         topProducts: item.topProducts
+    //     };
+
+    //     return acc;
+    // }, {});
+
+
     // Extract counts from Website Visit aggregation results
     const totalVisitsCount = totalVisits[0]?.totalVisits || 0;
     const totalAnonymousVisitsCount = totalAnonymousVisits[0]?.totalAnonymousVisits || 0;
@@ -472,34 +650,35 @@ export const getAnalyticsData = asyncErrorHandler(async (req: Request, res: Resp
             endDate: parsedEndDate
         },
         // Product Sales Data
-        sales: {
-            topProducts,
-            topCategories: topCategories.map(category => ({
-                name: category.categoryName,
-                totalSales: category.totalQuantitySold
-            })),
-            topSubcategories: {
-                totalSales: topSubcategories.reduce((sum, item) => sum + item.totalQuantitySold, 0),
-                categories: topSubcategories.map(subcat => ({
-                    name: subcat.subcategoryName,
-                    totalSales: subcat.totalQuantitySold
-                }))
-            },
-            statistics: {
-                orders: {
-                    total: totalOrders,
-                    percentChange: ordersPercentChange
-                },
-                returns: {
-                    total: totalReturns,
-                    percentChange: returnsPercentChange
-                },
-                revenue: {
-                    total: totalRevenue,
-                    percentChange: revenuePercentChange
-                }
-            }
-        },
+        // sales: {
+        //     topProducts,
+        //     topCategories: topCategories.map(category => ({
+        //         name: category.categoryName,
+        //         totalSales: category.totalQuantitySold
+        //     })),
+        //     topSubcategories: {
+        //         totalSales: topSubcategories.reduce((sum, item) => sum + item.totalQuantitySold, 0),
+        //         categories: topSubcategories.map(subcat => ({
+        //             name: subcat.subcategoryName,
+        //             totalSales: subcat.totalQuantitySold
+        //         }))
+        //     },
+        //     statistics: {
+        //         orders: {
+        //             total: totalOrders,
+        //             percentChange: ordersPercentChange
+        //         },
+        //         returns: {
+        //             total: totalReturns,
+        //             percentChange: returnsPercentChange
+        //         },
+        //         revenue: {
+        //             total: totalRevenue,
+        //             percentChange: revenuePercentChange
+        //         }
+        //     }
+        // },
+        productSales: productAnalytics,
         // Product Views Data
         productViews: {
             topViewedProducts

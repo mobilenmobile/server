@@ -295,6 +295,7 @@ export const getSingleProduct = asyncErrorHandler(async (req, res, next) => {
   const id = req.params.id;
   product = await Product.findById(id)
     .populate("productCategory")
+    .populate("productSubCategory")
     .populate("productBrand")
     .populate({
       path: 'productComboProducts',  // Field to populate
@@ -351,6 +352,7 @@ export const getSingleProductDetails = asyncErrorHandler(async (req, res, next) 
   // Fetch the product with populated fields
   const product = await Product.findById(id)
     .populate("productCategory")
+    .populate("productSubCategory")
     .populate("productBrand")
     .populate({
       path: 'productComboProducts',
