@@ -4,35 +4,64 @@ import { ControllerType } from "../types/types.js";
 import multer from "multer";
 
 export const errorMiddleware = (
-  err: ErrorHandler,
-  req: Request,
-  res: Response,
-  next: NextFunction
+    err: ErrorHandler | Error,
+    req: Request,
+    res: Response,
+    next: NextFunction
 ) => {
-  console.log(err);
-  if (err instanceof multer.MulterError) {
+    console.error('Error occurred:', err);
+
     // Multer-specific errors
-    if (err.code === "LIMIT_FILE_SIZE") {
-      return res.status(400).json({ success: false, message: "File size too large. Maximum size is 10 MB." });
+    if (err instanceof multer.MulterError) {
+        switch (err.code) {
+            case "LIMIT_FILE_SIZE":
+                return res.status(400).json({ 
+                    success: false, 
+                    message: "File size too large. Maximum size is 10 MB." 
+                });
+            case "LIMIT_FILE_COUNT":
+                return res.status(400).json({ 
+                    success: false, 
+                    message: "Too many files uploaded. Maximum file count exceeded." 
+                });
+            case "LIMIT_UNEXPECTED_FILE":
+                return res.status(400).json({ 
+                    success: false, 
+                    message: "Unexpected file field." 
+                });
+            default:
+                return res.status(500).json({ 
+                    success: false, 
+                    message: "File upload error." 
+                });
+        }
     }
-  } else if (err) {
-    // Other errors
-    return res.status(500).json({ success: false, message: "An error occurred during the upload." });
-  }
-  err.message ||= "Some error occured while performing the operation";
-  err.statusCode ||= 500;
-  if (err.name === "CastError") {
-    err.message = "Invalid Id";
-  }
-  return res.status(err.statusCode).json({
-    success: false,
-    message: err.message,
-  });
+
+    // Custom ErrorHandler instance
+    if (err instanceof ErrorHandler) {
+        return res.status(err.statusCode).json({
+            success: false,
+            message: err.message,
+        });
+    }
+
+    // Mongoose CastError
+    if (err.name === "CastError") {
+        return res.status(400).json({
+            success: false,
+            message: "Invalid ID format",
+        });
+    }
+
+    // Generic error handling
+    return res.status(500).json({
+        success: false,
+        message: err.message || "An unexpected error occurred during the operation",
+    });
 };
 
-
-export const asyncErrorHandler =
-  (func: ControllerType) =>
+export const asyncErrorHandler = 
+    (func: ControllerType) => 
     (req: Request, res: Response, next: NextFunction) => {
-      return Promise.resolve(func(req, res, next)).catch(next);
+        return Promise.resolve(func(req, res, next)).catch(next);
     };

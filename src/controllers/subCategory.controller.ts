@@ -6,6 +6,7 @@ import { Request } from "express";
 import ErrorHandler from "../utils/errorHandler";
 import { subCategory } from "../models/subCategory/subCategory.model";
 import { CategoryBaseQuery } from "../types/types";
+import { Category } from "../models/category/category.model";
 
 //----------------------xxxxxx List-Of-Apis xxxxxxxxx-------------------
 
@@ -18,15 +19,31 @@ import { CategoryBaseQuery } from "../types/types";
 //------------ api to create new category-----------------------------------------
 export const addNewsubCategory = asyncErrorHandler(
     async (req: Request, res, next) => {
-        const { categoryName, categoryDescription } = req.body;
-
-        if (!categoryName) {
+        const { categoryName, subCategoryName } = req.body;
+        console.log(req.body)
+        if (!categoryName || !subCategoryName) {
             return next(new ErrorHandler("please provide subcategory name", 400));
         }
 
+        const CategoryName = categoryName
+            .toLowerCase()         // Convert to lowercase
+            .trim()                // Remove extra spaces from the sides
+            .replace(/\s+/g, ' '); // Replace multiple spaces with a single space
+        const SubCategoryName = subCategoryName
+            .toLowerCase()         // Convert to lowercase
+            .trim()                // Remove extra spaces from the sides
+            .replace(/\s+/g, ' '); // Replace multiple spaces with a single space
+
+
+
+        const refCategory = await Category.findOne({ categoryName: CategoryName })
+        if (!refCategory) {
+            return next(new ErrorHandler("category not found", 404))
+        }
+
         const category = await subCategory.create({
-            subCategoryName: categoryName,
-            subCategoryDescription: categoryDescription,
+            categoryId: refCategory._id,
+            subCategoryName: SubCategoryName,
 
         });
         return res.status(201).json({
@@ -72,15 +89,15 @@ export const searchsubCategory = asyncErrorHandler(
 //-------------------api to delete specfic category-----------------------------------
 export const deletesubCategory = asyncErrorHandler(
     async (req: Request, res, next) => {
-        const { id } = req.body;
-
+        const { subCategoryId } = req.body;
+        
         console.log(req.body);
 
-        if (!id) {
+        if (!subCategoryId) {
             return res.status(400).json({ error: "provide id" });
         }
 
-        const deletesubCategory = await subCategory.findByIdAndDelete(id);
+        const deletesubCategory = await subCategory.findByIdAndDelete(subCategoryId);
 
         if (!deletesubCategory) {
             return res.status(400).json({ error: "subcategory doesnt exist" });

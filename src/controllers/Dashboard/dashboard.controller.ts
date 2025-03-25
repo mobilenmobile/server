@@ -6,10 +6,26 @@ import { WebsiteVisit } from '../../models/websiteVisit/websiteVisitModel';
 // Adjust imports as needed
 
 // Helper function for calculating growth percentages
-const calculateGrowth = (current: number, previous: number): number => {
-    if (previous === 0) return 0;
-    return Math.round(((current - previous) / previous) * 100);
-};
+// const calculateGrowth = (current: number, previous: number): number => {
+//     if (previous === 0) return 0;
+//     return Math.round(((current - previous) / previous) * 100);
+// };
+
+function calculateGrowth(currentValue: number, previousValue: number) {
+    // Handle division by zero case
+    if (previousValue === 0) {
+        return currentValue > 0 ? 100 : 0;
+    }
+
+    // Calculate percentage change and cap at 100
+    const percentChange = Math.min(
+        ((currentValue - previousValue) / previousValue) * 100,
+        100
+    );
+
+    // Ensure the result is rounded to two decimal places
+    return Math.round(percentChange * 100) / 100;
+}
 
 // Helper function to get date ranges based on input or defaults
 const getDateRange = (startDate?: string, endDate?: string, dateRange?: string) => {
@@ -387,7 +403,7 @@ export const getAnalyticsData = asyncErrorHandler(async (req: Request, res: Resp
         {
             $project: {
                 productName: "$productDetails.productTitle",
-                price: "$firstVariance.sellingprice",
+                // price: "$firstVariance.sellingprice",
                 // thumbnail: "$firstVariance.thumbnail",
                 totalViews: 1
             }
@@ -397,9 +413,9 @@ export const getAnalyticsData = asyncErrorHandler(async (req: Request, res: Resp
             $sort: { totalViews: -1 }
         },
         // Limit results
-        {
-            $limit: parsedLimit
-        }
+        // {
+        //     $limit: parsedLimit
+        // }
     ]);
 
     // SECTION 3: WEBSITE VISIT ANALYTICS
@@ -568,6 +584,7 @@ export const getAnalyticsData = asyncErrorHandler(async (req: Request, res: Resp
                     $push: {
                         productId: "$product_id",
                         title: "$product_title",
+                        thumbnail:"$product_thumbnail",
                         quantity: "$product_qty_sold",
                         productPrice: "$amount_at_which_prod_sold",
                         revenue: { $multiply: ["$product_qty_sold", "$amount_at_which_prod_sold"] }
@@ -588,12 +605,12 @@ export const getAnalyticsData = asyncErrorHandler(async (req: Request, res: Resp
         {
             $unwind: "$subcategoryDetails"
         },
-        // Sort products within each subcategory by revenue
+        // Sort products within each subcategory by product sold
         {
             $addFields: {
                 sortedProducts: {
                     $slice: [
-                        { $sortArray: { input: "$products", sortBy: { revenue: -1 } } },
+                        { $sortArray: { input: "$products", sortBy: { quantity: -1 } } },
                         parsedLimit
                     ]
                 }
@@ -679,6 +696,21 @@ export const getAnalyticsData = asyncErrorHandler(async (req: Request, res: Resp
         //     }
         // },
         productSales: productAnalytics,
+        orderStatistics: {
+            orders: {
+                total: totalOrders,
+                percentChange: ordersPercentChange
+            },
+            returns: {
+                total: totalReturns,
+                percentChange: returnsPercentChange
+            },
+            revenue: {
+                total: totalRevenue,
+                percentChange: revenuePercentChange
+            }
+        },
+
         // Product Views Data
         productViews: {
             topViewedProducts

@@ -928,7 +928,7 @@ export const getAllAdminOrders = asyncErrorHandler(async (req, res, next) => {
   // const userId = req.user._id; // Assuming req.user.id contains the user's ID
 
   // Find all orders for the user
-  const orders = await Order.find();
+  const orders = await Order.find().sort('-createdAt');
 
   if (!orders || orders.length === 0) {
     return res.status(404).json({ error: 'No orders found for the user' });
@@ -937,25 +937,25 @@ export const getAllAdminOrders = asyncErrorHandler(async (req, res, next) => {
   // placed packed shipped outfordelivery delivered cancelled
   // Define the desired order of statuses
 
-  const statusOrder = ['placed', 'packed', 'shipped', 'outfordelivery', 'delivered', 'cancelled'];
+  // const statusOrder = ['placed', 'packed', 'shipped', 'outfordelivery', 'delivered', 'cancelled'];
 
   // Function to determine the last status of an order
 
-  function getLastStatus(order: any) {
-    if (order.orderStatuses.length > 0) {
-      return order.orderStatuses[order.orderStatuses.length - 1].status;
-    }
-    return null; // Return null if no statuses are present
-  }
+  // function getLastStatus(order: any) {
+  //   if (order.orderStatuses.length > 0) {
+  //     return order.orderStatuses[order.orderStatuses.length - 1].status;
+  //   }
+  //   return null; // Return null if no statuses are present
+  // }
 
-  // Sorting orders based on the last status
-  orders.sort((a, b) => {
-    let lastStatusA = getLastStatus(a);
-    let lastStatusB = getLastStatus(b);
-    console.log(lastStatusA, lastStatusB)
-    // Sort orders based on the index of their last status in statusOrder
-    return statusOrder.indexOf(lastStatusA) - statusOrder.indexOf(lastStatusB);
-  });
+  // // Sorting orders based on the last status
+  // orders.sort((a, b) => {
+  //   let lastStatusA = getLastStatus(a);
+  //   let lastStatusB = getLastStatus(b);
+  //   console.log(lastStatusA, lastStatusB)
+  //   // Sort orders based on the index of their last status in statusOrder
+  //   return statusOrder.indexOf(lastStatusA) - statusOrder.indexOf(lastStatusB);
+  // });
 
   // console.log(orders)
   // console.log(sortedOrders)
