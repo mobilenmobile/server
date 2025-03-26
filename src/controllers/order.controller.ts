@@ -934,6 +934,14 @@ export const getAllAdminOrders = asyncErrorHandler(async (req, res, next) => {
     return res.status(404).json({ error: 'No orders found for the user' });
   }
 
+  const [orderReceived, orderCompleted, orderProcessed, orderCancelled, orderReturned] = await Promise.all([
+    Order.countDocuments({ orderStatusState: 'placed' }),
+    Order.countDocuments({ orderStatusState: 'delivered' }),
+    Order.countDocuments({ orderStatusState: 'processed' }),
+    Order.countDocuments({ orderStatusState: 'cancelled' }),
+    Order.countDocuments({ orderStatusState: 'returned' })
+  ])
+
   // placed packed shipped outfordelivery delivered cancelled
   // Define the desired order of statuses
 
@@ -964,7 +972,14 @@ export const getAllAdminOrders = asyncErrorHandler(async (req, res, next) => {
   return res.status(200).json({
     success: true,
     message: "order fetched Successfully",
-    orders
+    orders,
+    orderStatistics: {
+      orderReceived,
+      orderCompleted,
+      orderProcessed,
+      orderCancelled,
+      orderReturned
+    }
   });
 
 })

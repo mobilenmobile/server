@@ -11,7 +11,7 @@ export const userOrderAnalytic = asyncErrorHandler(async (req, res, next) => {
     const user = await User.findOne({ uid: userId })
     if (!user) return next(new ErrorHandler('User not found', 404))
 
-    const orders = await Order.find({ user: user._id }).select('_id createdAt orderStatusState finalAmount')
+    const orders = await Order.find({ user: user._id }).sort('-createdAt').select('_id createdAt orderStatusState finalAmount')
 
     res.status(200).json({
         allOrders: orders,
