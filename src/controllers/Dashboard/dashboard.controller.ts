@@ -86,7 +86,7 @@ const asyncErrorHandler = (fn: (req: Request, res: Response) => Promise<any>) =>
 
 export const getAnalyticsData = asyncErrorHandler(async (req: Request, res: Response) => {
     const { startDate, endDate, dateRange, limit } = req.query;
-
+    console.log(startDate)
     // Parse date ranges - handles all three controller's date parsing in one place
     const dateRanges = getDateRange(
         startDate as string,
@@ -99,18 +99,34 @@ export const getAnalyticsData = asyncErrorHandler(async (req: Request, res: Resp
     const prevStartDate = dateRanges.prevStartDate;
     const prevEndDate = dateRanges.prevEndDate;
 
-    // Parse limit parameter
-    const parsedLimit = limit ? parseInt(limit as string) : 5;
+
+    const parsedLimit = (() => {
+        // If limit is undefined or 'undefined' or empty string
+        if (!limit || limit === 'undefined' || limit === '') {
+            return 5; // Default limit
+        }
+
+        // Try parsing the limit
+        const parsed = parseInt(limit as string, 10);
+
+        // Return parsed value if valid, otherwise default
+        return !isNaN(parsed) && parsed > 0 ? parsed : 5;
+    })();
+
 
     // Validate parameters
     if (isNaN(parsedStartDate.getTime()) || isNaN(parsedEndDate.getTime())) {
+        // console.log("parsedstart date is wrong")
         return res.status(400).json({
             success: false,
             error: "Invalid date format. Please use YYYY-MM-DD format."
         });
     }
 
+    // console.log(limit + " and " + parsedLimit)
+
     if (isNaN(parsedLimit) || parsedLimit <= 0) {
+        console.log("limit err")
         return res.status(400).json({
             success: false,
             error: "Limit must be a positive number."
@@ -584,7 +600,7 @@ export const getAnalyticsData = asyncErrorHandler(async (req: Request, res: Resp
                     $push: {
                         productId: "$product_id",
                         title: "$product_title",
-                        thumbnail:"$product_thumbnail",
+                        thumbnail: "$product_thumbnail",
                         quantity: "$product_qty_sold",
                         productPrice: "$amount_at_which_prod_sold",
                         revenue: { $multiply: ["$product_qty_sold", "$amount_at_which_prod_sold"] }

@@ -2,7 +2,7 @@ import express, { Request, Response } from "express";
 const app = express();
 
 import cors from "cors";
-
+import requestIp from "request-ip";
 import { errorMiddleware } from "./middleware/error.middleware.js";
 import userRoute from "./routes/user.routes.js";
 import orderRoute from "./routes/order.routes.js";
@@ -29,6 +29,9 @@ import categoryRoute from "./routes/category.route.js";
 import subCategoryRoute from "./routes/subcategoryroutes.js";
 import offerRoute from "./routes/offer.routes.js";
 import cookieParser from "cookie-parser";
+import rateLimit from "express-rate-limit";
+import { ApiError } from "./utils/ApiError.js";
+import { params } from "firebase-functions";
 
 //Handle cors
 app.use(
@@ -38,8 +41,27 @@ app.use(
   })
 );
 
-//Required Middlewares
 
+// Required Middlewares
+// Rate limiter to avoid misuse of the service and avoid cost spikes
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 1000, // Limit each IP to 500 requests per `window` (here, per 15 minutes)
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  keyGenerator: (req) => {
+    return requestIp.getClientIp(req) || "unknown"; // Extract IP safely
+  },
+  handler: (_, __, ___, options) => {
+    throw new ApiError(
+      options.statusCode || 500,
+      `There are too many requests. You are only allowed ${options.max
+      } requests per ${options.windowMs / 60000} minutes`
+    );
+  },
+});
+
+app.use(limiter)
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(express.static("public"));
