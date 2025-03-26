@@ -29,6 +29,7 @@ import {
 
 import { adminOnly, authenticated, EditorOnly, newUserOnly, UserInfo } from "../middleware/auth.middleware.js";
 import { getCoinAccount, setUseCoinBalance } from "../controllers/coin.controller.js";
+import { userOrderAnalytic } from "../controllers/Dashboard/userAnalytic.controller.js";
 
 
 const userRouter = express.Router();
@@ -85,6 +86,7 @@ userRouter.post("/removeFreeItem", authenticated, removeFreeItem)
 // ====================== admin user =============================
 userRouter.get("/getallusers", adminOnly, listAllUsers)
 userRouter.post("/changeroles", adminOnly, changeUserRole);
+userRouter.get("/userOrderAnalytic/:userId", userOrderAnalytic)
 
 
 export default userRouter;

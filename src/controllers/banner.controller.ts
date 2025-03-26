@@ -16,10 +16,12 @@ export const newBanner = asyncErrorHandler(async (req: Request, res: Response) =
     const { page, mainImage, otherImages } = req.body;
     const { bannerId } = req.query;
 
+    console.log(req.body)
+
     if (mainImage && (!mainImage.imgUrl || !isValidUrl(mainImage.imgUrl))) {
         return res.status(400).json({ success: false, message: "Invalid mainImage URL" });
     }
-    if (mainImage?.redirectUrl && !isValidUrl(mainImage.redirectUrl)) {
+    if (!mainImage?.redirectUrl) {
         return res.status(400).json({ success: false, message: "Invalid mainImage redirect URL" });
     }
     if (otherImages && !Array.isArray(otherImages)) {
@@ -29,7 +31,7 @@ export const newBanner = asyncErrorHandler(async (req: Request, res: Response) =
         if (!img.imgUrl || !isValidUrl(img.imgUrl)) {
             return res.status(400).json({ success: false, message: "Invalid otherImages URL" });
         }
-        if (img.redirectUrl && !isValidUrl(img.redirectUrl)) {
+        if (!img.redirectUrl) {
             return res.status(400).json({ success: false, message: "Invalid otherImages redirect URL" });
         }
     }
@@ -67,7 +69,7 @@ export const updateBanner = asyncErrorHandler(async (req: Request, res: Response
     if (mainImage && (!mainImage.imgUrl || !isValidUrl(mainImage.imgUrl))) {
         return res.status(400).json({ success: false, message: "Invalid mainImage URL" });
     }
-    if (mainImage?.redirectUrl && !isValidUrl(mainImage.redirectUrl)) {
+    if (!mainImage?.redirectUrl) {
         return res.status(400).json({ success: false, message: "Invalid mainImage redirect URL" });
     }
     if (otherImages && !Array.isArray(otherImages)) {
@@ -77,9 +79,10 @@ export const updateBanner = asyncErrorHandler(async (req: Request, res: Response
         if (!img.imgUrl || !isValidUrl(img.imgUrl)) {
             return res.status(400).json({ success: false, message: "Invalid otherImages URL" });
         }
-        if (img.redirectUrl && !isValidUrl(img.redirectUrl)) {
+        if (!img.redirectUrl) {
             return res.status(400).json({ success: false, message: "Invalid otherImages redirect URL" });
         }
+
     }
 
     const banner = await Banner.findById(bannerId);
@@ -111,7 +114,7 @@ export const deleteBanner = asyncErrorHandler(async (req: Request, res: Response
     if (mainImage) banner[bannerField].mainImage = { imgUrl: "", redirectUrl: "" };
     if (otherImagesUrl) {
         banner[bannerField].otherImages = banner[bannerField].otherImages.filter(
-            (img:{imgUrl:string}) => img.imgUrl !== otherImagesUrl
+            (img: { imgUrl: string }) => img.imgUrl !== otherImagesUrl
         );
     }
 

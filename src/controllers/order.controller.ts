@@ -926,9 +926,9 @@ export const getAllOrders = asyncErrorHandler(async (req, res, next) => {
 export const getAllAdminOrders = asyncErrorHandler(async (req, res, next) => {
 
   // const userId = req.user._id; // Assuming req.user.id contains the user's ID
-
+  console.log("order controller called")
   // Find all orders for the user
-  const orders = await Order.find().sort('-createdAt').populate('user','profile');
+  const orders = await Order.find().sort('-createdAt').populate('user', 'profile');
 
   if (!orders || orders.length === 0) {
     return res.status(404).json({ error: 'No orders found for the user' });
