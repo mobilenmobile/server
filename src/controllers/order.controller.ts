@@ -925,12 +925,11 @@ export const getAllOrders = asyncErrorHandler(async (req, res, next) => {
 
 //-------------------api to get all orders----------------------------------------------------------------
 
-
 export const getAllAdminOrders = asyncErrorHandler(async (req, res, next) => {
   console.log("Order controller called");
 
   const { startDate, endDate, page = 1, orderStatus, searchText } = req.query;
-  const limit = 2;
+  const limit = 20;
 
   // Parse and validate page
   const parsedPage = (page && typeof page === "string") ? parseInt(page, 10) : 1;
@@ -945,52 +944,53 @@ export const getAllAdminOrders = asyncErrorHandler(async (req, res, next) => {
     return !isNaN(date.getTime()) ? date : null;
   };
 
-  // Define types for filters
-  interface DateFilter {
-    createdAt?: { $gte?: Date; $lte?: Date };
+  let start: Date | null = validateDate(startDate as string);
+  let end: Date | null = validateDate(endDate as string);
+
+  // Default to one-month range if dates are missing
+  if (!start && !end) {
+    end = new Date();
+    start = new Date();
+    start.setMonth(start.getMonth() - 1);
+  } else if (!start || !end) {
+    return res.status(400).json({ error: "Invalid start or end date provided" });
   }
 
-  interface StatusFilter {
-    orderStatusState?: string;
+  // Previous time frame calculation
+  const previousEnd = new Date(start);
+  const previousStart = new Date(previousEnd);
+  previousStart.setMonth(previousStart.getMonth() - 1);
+
+  // Define the structure of `orderStatuses`
+  interface OrderStatus {
+    status: string;
+    date: string;
   }
 
-  interface SearchFilter {
-    "orderItems.productTitle"?: { $regex: string; $options: string };
-  }
-
-  let dateFilter: DateFilter = {};
-  const start = validateDate(startDate as string);
-  const end = validateDate(endDate as string);
-
-  if (startDate || endDate) {
-    if (start && end) {
-      dateFilter.createdAt = { $gte: start, $lte: end };
-    } else {
-      return res.status(400).json({ error: "Invalid date format" });
-    }
-  }
-
-  // Validate required query parameters
-  if (!startDate && !endDate && !orderStatus && !searchText) {
-    return res.status(400).json({ error: "At least one query parameter must be provided." });
-  }
-
-  let statusFilter: StatusFilter = {};
-  if (orderStatus) {
-    statusFilter.orderStatusState = orderStatus as string;
-  }
-
-  let searchFilter: SearchFilter = {};
-  if (typeof searchText === "string" && searchText.trim()) {
-    searchFilter = {
-      "orderItems.productTitle": { $regex: searchText.trim(), $options: "i" }
-    };
-  }
-
-  // Combine filters
-  const filter = { ...dateFilter, ...statusFilter, ...searchFilter };
+  type OrderDocument = {
+    orderStatuses: OrderStatus[];
+    createdAt: Date;
+    [key: string]: any;
+  };
 
   try {
+    // Combine filters
+    const dateFilter = { "orderStatuses.date": { $gte: start.toISOString(), $lte: end.toISOString() } };
+
+    let statusFilter: Record<string, any> = {};
+    if (orderStatus) {
+      statusFilter["orderStatuses.status"] = orderStatus as string;
+    }
+
+    let searchFilter: Record<string, any> = {};
+    if (typeof searchText === "string" && searchText.trim()) {
+      searchFilter = {
+        "orderItems.productTitle": { $regex: searchText.trim(), $options: "i" }
+      };
+    }
+
+    const filter = { ...dateFilter, ...statusFilter, ...searchFilter };
+
     // Fetch orders and total products
     const [orders, totalProducts] = await Promise.all([
       Order.find(filter)
@@ -998,56 +998,56 @@ export const getAllAdminOrders = asyncErrorHandler(async (req, res, next) => {
         .populate("user", "profile")
         .skip(skip)
         .limit(limit),
-      Order.countDocuments(filter) // Total number of products matching the filter
+      Order.countDocuments(filter)
     ]);
 
     // Total products in the current page
     const currentPageTotalProducts = orders.length;
 
-    // Count orders for statistics within the timeframe
-    const [
-      orderReceived,
-      orderCompleted,
-      orderProcessed,
-      orderCancelled,
-      orderReturned,
-      previousOrderReceived
-    ] = await Promise.all([
-      Order.countDocuments({ orderStatusState: "placed", ...dateFilter }),
-      Order.countDocuments({ orderStatusState: "delivered", ...dateFilter }),
-      Order.countDocuments({ orderStatusState: "processed", ...dateFilter }),
-      Order.countDocuments({ orderStatusState: "cancelled", ...dateFilter }),
-      Order.countDocuments({ orderStatusState: "returned", ...dateFilter }),
-      startDate ? Order.countDocuments({ orderStatusState: "placed", createdAt: { $lt: start } }) : 0
-    ]);
+    // Helper function for status counts
+    const getStatusCounts = async (start: Date, end: Date) => {
+      const pipeline = [
+        { $unwind: "$orderStatuses" },
+        {
+          $match: {
+            "orderStatuses.date": { $gte: start.toISOString(), $lte: end.toISOString() }
+          }
+        },
+        {
+          $group: {
+            _id: "$orderStatuses.status",
+            count: { $sum: 1 }
+          }
+        }
+      ];
 
-    // Calculate growth/loss percentage
-    const calculateGrowth = (current: number, previous: number): number => {
-      if (previous === 0) return current > 0 ? 100 : 0;
-      return Math.round(((current - previous) / previous) * 100);
+      const result = await Order.aggregate(pipeline);
+      const counts: Record<string, number> = {};
+      result.forEach(({ _id, count }) => {
+        counts[_id] = count;
+      });
+      return counts;
     };
 
+    // Fetch status counts for the current and previous time frames
+    const currentCounts = await getStatusCounts(start, end);
+    const previousCounts = await getStatusCounts(previousStart, previousEnd);
+
+    // Calculate changes for each status
+    const statuses = ["placed", "delivered", "returned", "processed"];
+    const statusChanges = statuses.map((status) => {
+      const current = currentCounts[status] || 0;
+      const previous = previousCounts[status] || 0;
+      const change = current - previous;
+      const growth = previous === 0 ? (current > 0 ? 100 : 0) : Math.round(((current - previous) / previous) * 100);
+      return { status, current, previous, change, growth };
+    });
+
+    // Order Statistics
     const orderStatistics = {
-      orderReceived: {
-        count: orderReceived,
-        growth: calculateGrowth(orderReceived, previousOrderReceived)
-      },
-      orderCompleted: {
-        count: orderCompleted,
-        growth: calculateGrowth(orderCompleted, previousOrderReceived)
-      },
-      orderProcessed: {
-        count: orderProcessed,
-        growth: calculateGrowth(orderProcessed, previousOrderReceived)
-      },
-      orderCancelled: {
-        count: orderCancelled,
-        growth: calculateGrowth(orderCancelled, previousOrderReceived)
-      },
-      orderReturned: {
-        count: orderReturned,
-        growth: calculateGrowth(orderReturned, previousOrderReceived)
-      }
+      statusChanges,
+      totalProducts,
+      currentPageTotalProducts
     };
 
     // Success response
@@ -1068,6 +1068,153 @@ export const getAllAdminOrders = asyncErrorHandler(async (req, res, next) => {
     });
   }
 });
+
+
+
+
+
+// export const getAllAdminOrders = asyncErrorHandler(async (req, res, next) => {
+//   console.log("Order controller called");
+
+//   const { startDate, endDate, page = 1, orderStatus, searchText } = req.query;
+//   const limit = 20;
+
+//   // Parse and validate page
+//   const parsedPage = (page && typeof page === "string") ? parseInt(page, 10) : 1;
+//   if (isNaN(parsedPage) || parsedPage < 1) {
+//     return res.status(400).json({ error: "Invalid page value" });
+//   }
+//   const skip = (parsedPage - 1) * limit;
+
+//   // Helper function for date validation
+//   const validateDate = (dateStr: string): Date | null => {
+//     const date = new Date(dateStr);
+//     return !isNaN(date.getTime()) ? date : null;
+//   };
+
+//   // Define types for filters
+//   interface DateFilter {
+//     createdAt?: { $gte?: Date; $lte?: Date };
+//   }
+
+//   interface StatusFilter {
+//     orderStatusState?: string;
+//   }
+
+//   interface SearchFilter {
+//     "orderItems.productTitle"?: { $regex: string; $options: string };
+//   }
+
+//   let dateFilter: DateFilter = {};
+//   const start = validateDate(startDate as string);
+//   const end = validateDate(endDate as string);
+
+//   if (startDate || endDate) {
+//     if (start && end) {
+//       dateFilter.createdAt = { $gte: start, $lte: end };
+//     } else {
+//       return res.status(400).json({ error: "Invalid date format" });
+//     }
+//   }
+
+//   // Validate required query parameters
+//   if (!startDate && !endDate) {
+//     return res.status(400).json({ error: "At least one query parameter must be provided." });
+//   }
+
+//   let statusFilter: StatusFilter = {};
+//   if (orderStatus) {
+//     statusFilter.orderStatusState = orderStatus as string;
+//   }
+
+//   let searchFilter: SearchFilter = {};
+//   if (typeof searchText === "string" && searchText.trim()) {
+//     searchFilter = {
+//       "orderItems.productTitle": { $regex: searchText.trim(), $options: "i" }
+//     };
+//   }
+
+//   // Combine filters
+//   const filter = { ...dateFilter, ...statusFilter, ...searchFilter };
+
+//   try {
+//     // Fetch orders and total products
+//     const [orders, totalProducts] = await Promise.all([
+//       Order.find(filter)
+//         .sort("-createdAt")
+//         .populate("user", "profile")
+//         .skip(skip)
+//         .limit(limit),
+//       Order.countDocuments(filter) // Total number of products matching the filter
+//     ]);
+
+//     // Total products in the current page
+//     const currentPageTotalProducts = orders.length;
+
+//     // Count orders for statistics within the timeframe
+//     const [
+//       orderReceived,
+//       orderCompleted,
+//       orderProcessed,
+//       orderCancelled,
+//       orderReturned,
+//       previousOrderReceived
+//     ] = await Promise.all([
+//       Order.countDocuments({ orderStatusState: "placed", ...dateFilter }),
+//       Order.countDocuments({ orderStatusState: "delivered", ...dateFilter }),
+//       Order.countDocuments({ orderStatusState: "processed", ...dateFilter }),
+//       Order.countDocuments({ orderStatusState: "cancelled", ...dateFilter }),
+//       Order.countDocuments({ orderStatusState: "returned", ...dateFilter }),
+//       startDate ? Order.countDocuments({ orderStatusState: "placed", createdAt: { $lt: start } }) : 0
+//     ]);
+
+//     // Calculate growth/loss percentage
+//     const calculateGrowth = (current: number, previous: number): number => {
+//       if (previous === 0) return current > 0 ? 100 : 0;
+//       return Math.round(((current - previous) / previous) * 100);
+//     };
+
+//     const orderStatistics = {
+//       orderReceived: {
+//         count: orderReceived,
+//         growth: calculateGrowth(orderReceived, previousOrderReceived)
+//       },
+//       orderCompleted: {
+//         count: orderCompleted,
+//         growth: calculateGrowth(orderCompleted, previousOrderReceived)
+//       },
+//       orderProcessed: {
+//         count: orderProcessed,
+//         growth: calculateGrowth(orderProcessed, previousOrderReceived)
+//       },
+//       orderCancelled: {
+//         count: orderCancelled,
+//         growth: calculateGrowth(orderCancelled, previousOrderReceived)
+//       },
+//       orderReturned: {
+//         count: orderReturned,
+//         growth: calculateGrowth(orderReturned, previousOrderReceived)
+//       }
+//     };
+
+//     // Success response
+//     return res.status(200).json({
+//       success: true,
+//       message: "Orders fetched successfully",
+//       totalProducts,
+//       currentPageTotalProducts,
+//       page: parsedPage,
+//       orders,
+//       orderStatistics
+//     });
+//   } catch (err) {
+//     console.error("Error fetching orders:", err);
+//     return res.status(500).json({
+//       success: false,
+//       error: "Internal server error"
+//     });
+//   }
+// });
 
 
 
