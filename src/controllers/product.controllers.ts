@@ -809,12 +809,15 @@ export const getAllAdminProducts = asyncErrorHandler(
     const { searchQuery, category, sort, page = 1 } = req.query;
     const limit = 10; // Set a default limit for pagination
     const skip = (page - 1) * limit;
-    const baseQuery: any = {}; // Define base query for filtering
+    let baseQuery: any = {}; // Define base query for filtering
 
     if (searchQuery) {
-      baseQuery.productTitle = {
-        $regex: searchQuery,
-        $options: "i",
+      baseQuery = {
+        $or: [
+          { productTitle: { $regex: searchQuery, $options: 'i' } },
+          { productKeyword: { $regex: searchQuery, $options: 'i' } },
+          // { productCategory: { $regex: searchTerm, $options: 'i' } },
+        ]
       };
     }
 

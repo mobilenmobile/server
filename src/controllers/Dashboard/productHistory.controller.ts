@@ -1,6 +1,10 @@
+import mongoose from "mongoose";
 import { asyncErrorHandler } from "../../middleware/error.middleware";
+import { Category } from "../../models/category/category.model";
 import { Order } from "../../models/order/order.model";
+import { Product } from "../../models/product/product.model";
 import productSoldHistory from "../../models/product/productSoldHistory";
+import { subCategory } from "../../models/subCategory/subCategory.model";
 
 
 export const getProductStats = asyncErrorHandler(
@@ -323,6 +327,330 @@ export const getProductStats = asyncErrorHandler(
         }
     }
 );
+
+
+export const getSearchedProductStats = asyncErrorHandler(
+    async (req, res) => {
+        const { searchText, startDate, endDate, limit } = req.query;
+
+        try {
+            // Validate search text
+            if (!searchText || typeof searchText !== 'string') {
+                return res.status(400).json({ 
+                    success: false, 
+                    message: "Search text is required and must be a string" 
+                });
+            }
+
+            // Parse input parameters
+            const parsedLimit = limit ? parseInt(limit as string) : 100;
+            const trimmedSearchText = searchText.trim();
+
+            // Create regex for search
+            const searchRegex = new RegExp(trimmedSearchText, 'i');
+
+            // Prepare date conditions
+            const dateConditions: any = {};
+            if (startDate || endDate) {
+                if (startDate) dateConditions.$gte = new Date(startDate as string);
+                if (endDate) dateConditions.$lte = new Date(endDate as string);
+            }
+
+            // Aggregation pipeline for comprehensive product search
+            const productSearchPipeline = [
+                // Lookup categories
+                {
+                    $lookup: {
+                        from: 'categories', // Ensure this matches your collection name
+                        localField: 'productCategory',
+                        foreignField: '_id',
+                        as: 'category'
+                    }
+                },
+                // Lookup subcategories
+                {
+                    $lookup: {
+                        from: 'subcategories', // Ensure this matches your collection name
+                        localField: 'productSubCategory',
+                        foreignField: '_id',
+                        as: 'subcategory'
+                    }
+                },
+                // Unwind category and subcategory (optional, depends on your schema)
+                { $unwind: { path: '$category', preserveNullAndEmptyArrays: true } },
+                { $unwind: { path: '$subcategory', preserveNullAndEmptyArrays: true } },
+                // Match stage with comprehensive search
+                {
+                    $match: {
+                        $or: [
+                          
+                            { productTitle: { $regex: trimmedSearchText, $options: 'i' } },
+                            { 'category.categoryName': { $regex: trimmedSearchText, $options: 'i' } },
+                            { 'subcategory.subCategoryName': { $regex: trimmedSearchText, $options: 'i' } }
+                        ]
+                    }
+                },
+                // Project to reshape the document
+                {
+                    $project: {
+                        _id: 1,
+                        productTitle: 1,
+                        productCategory: 1,
+                        productSubCategory: 1,
+                        productVariance: 1,
+                        categoryName: '$categoryDetails.categoryName',
+                        subcategoryName: '$subcategoryDetails.subCategoryName'
+                    }
+                },
+                // Limit results
+                { $limit: parsedLimit }
+            ];
+
+            // Execute product search
+            const matchedProducts = await Product.aggregate(productSearchPipeline);
+            console.log("### matched",matchedProducts)
+            // If no products found, return empty result
+            if (matchedProducts.length === 0) {
+                return res.status(200).json({
+                    success: true,
+                    totalProducts: 0,
+                    products: [],
+                    overallTotals: {
+                        totalSell: 0,
+                        totalRevenue: 0
+                    }
+                });
+            }
+
+            // Prepare product statistics with sales history
+            const productStatsPromises = matchedProducts.map(async (product) => {
+               
+
+                // Find all sales records for this product
+                const salesStats = await productSoldHistory.aggregate([
+                    { $match: { product_id: product._id } }, // Match all records for this product
+                    {
+                        $group: {
+                            _id: "$product_id",
+                            productTitle: { $first: "$product_title" },
+                            totalQuantitySold: { $sum: "$product_qty_sold" },
+                            totalRevenue: { $sum: "$amount_at_which_prod_sold" },
+                            totalDiscountApplied: { $sum: "$discount_applied" },
+                            totalCoinUsed: { $sum: "$coin_used" },
+                            totalOrders: { $sum: 1 },
+                            averageSellingPrice: { $avg: "$amount_at_which_prod_sold" }
+                        }
+                    }
+                ]);
+
+                // console.log(,salesStats)
+                console.log(product._id , "##",product.productTitle,"### salesStats",salesStats)
+
+                // Return product details with sales stats
+                return {
+                    salesStatistics: salesStats[0] || {
+                        totalQuantitySold: 0,
+                        totalRevenue: 0,
+                        totalDiscountApplied: 0,
+                        totalCoinUsed: 0,
+                        totalOrders: 0,
+                        averageSellingPrice: 0
+                    },
+                    productDetails: {
+                        _id: product._id,
+                        title: product.productTitle,
+                        category: product.categoryName || '',
+                        subcategory: product.subcategoryName || '',
+                        thumbnail: product.productVariance?.[0]?.thumbnail || ''
+                    },
+                   
+                };
+            });
+
+            // Calculate overall totals
+            const overallTotalsQuery: any = {
+                $or: matchedProducts.map(product => ({ product_id: product._id }))
+            };
+
+            // Add date conditions if provided
+            // if (Object.keys(dateConditions).length > 0) {
+            //     overallTotalsQuery.sold_at = dateConditions;
+            // }
+
+            const overallTotals = await productSoldHistory.aggregate([
+                { $match: overallTotalsQuery },
+                {
+                    $group: {
+                        _id: null,
+                        totalSell: { $sum: "$product_qty_sold" },
+                        totalRevenue: { $sum: "$amount_at_which_prod_sold" }
+                    }
+                }
+            ]);
+console.log("## ",overallTotals)
+            // Resolve all product statistics
+            const productStatistics = await Promise.all(productStatsPromises);
+// console.log("## ",productStatistics)
+            // Return response
+            res.status(200).json({
+                success: true,
+                overallTotals: overallTotals[0] || {
+                    totalSell: 0,
+                    totalRevenue: 0
+                },
+                totalProducts: productStatistics.length,
+                products: productStatistics,
+            });
+
+        } catch (error) {
+            console.error("Error searching product stats:", error);
+            res.status(500).json({ 
+                success: false, 
+                error: "Failed to search product statistics" 
+            });
+        }
+    }
+);
+
+// export const getSearchedProductStats = asyncErrorHandler(
+//     async (req, res) => {
+//         const { searchText, startDate, endDate, limit } = req.query;
+
+//         try {
+//             // Validate search text
+//             if (!searchText || typeof searchText !== 'string') {
+//                 return res.status(400).json({ 
+//                     success: false, 
+//                     message: "Search text is required and must be a string" 
+//                 });
+//             }
+
+//             // Parse input parameters
+//             const parsedLimit = limit ? parseInt(limit as string) : 5;
+//             const trimmedSearchText = searchText.trim();
+
+//             // First, search in products collection
+//             const productSearchQuery = {
+//                 $or: [
+//                     { productTitle: { $regex: trimmedSearchText, $options: 'i' } },
+//                     { productKeyword: { $regex: trimmedSearchText, $options: 'i' } }
+//                 ]
+//             };
+
+//             const matchedProducts = await Product.find(productSearchQuery).limit(parsedLimit);
+
+//             // If no products found, return empty result
+//             if (matchedProducts.length === 0) {
+//                 return res.status(200).json({
+//                     success: true,
+//                     totalProducts: 0,
+//                     products: [],
+//                     overallTotals: {
+//                         totalSell: 0,
+//                         totalRevenue: 0
+//                     }
+//                 });
+//             }
+
+//             // Prepare date conditions
+//             const dateConditions: any = {};
+//             if (startDate || endDate) {
+//                 if (startDate) dateConditions.$gte = new Date(startDate as string);
+//                 if (endDate) dateConditions.$lte = new Date(endDate as string);
+//             }
+
+//             // Calculate overall totals first
+//             const overallTotalsQuery: any = {
+//                 $or: matchedProducts.map(product => ({ product_id: product._id }))
+//             };
+//             if (Object.keys(dateConditions).length > 0) {
+//                 overallTotalsQuery.sold_at = dateConditions;
+//             }
+
+//             const overallTotals = await productSoldHistory.aggregate([
+//                 { $match: overallTotalsQuery },
+//                 {
+//                     $group: {
+//                         _id: null,
+//                         totalSell: { $sum: "$product_qty_sold" },
+//                         totalRevenue: { $sum: "$amount_at_which_prod_sold" }
+//                     }
+//                 }
+//             ]);
+
+//             // Prepare product statistics
+//             const productStatsPromises = matchedProducts.map(async (product) => {
+//                 // Search in product sold history for this specific product
+//                 const soldHistoryQuery: any = { 
+//                     product_id: product._id 
+//                 };
+
+//                 // Add date conditions if provided
+//                 if (Object.keys(dateConditions).length > 0) {
+//                     soldHistoryQuery.sold_at = dateConditions;
+//                 }
+
+//                 // Aggregate sales statistics
+//                 const salesStats = await productSoldHistory.aggregate([
+//                     { $match: soldHistoryQuery },
+//                     {
+//                         $group: {
+//                             _id: "$product_id",
+//                             productTitle: { $first: "$product_title" },
+//                             totalQuantitySold: { $sum: "$product_qty_sold" },
+//                             totalRevenue: { $sum: "$amount_at_which_prod_sold" },
+//                             totalDiscountApplied: { $sum: "$discount_applied" },
+//                             totalCoinUsed: { $sum: "$coin_used" },
+//                             totalOrders: { $sum: 1 },
+//                             averageSellingPrice: { $avg: "$amount_at_which_prod_sold" }
+//                         }
+//                     }
+//                 ]);
+
+//                 // Return product details with sales stats
+//                 return {
+//                     productDetails: {
+//                         _id: product._id,
+//                         title: product.productTitle,
+//                         category: product.productCategory,
+//                         subcategory: product.productSubCategory,
+//                         thumbnail: product.productVariance[0]?.thumbnail || ''
+//                     },
+//                     salesStatistics: salesStats[0] || {
+//                         totalQuantitySold: 0,
+//                         totalRevenue: 0,
+//                         totalDiscountApplied: 0,
+//                         totalCoinUsed: 0,
+//                         totalOrders: 0,
+//                         averageSellingPrice: 0
+//                     }
+//                 };
+//             });
+
+//             // Resolve all product statistics
+//             const productStatistics = await Promise.all(productStatsPromises);
+
+//             // Return response
+//             res.status(200).json({
+//                 success: true,
+//                 totalProducts: productStatistics.length,
+//                 products: productStatistics,
+//                 overallTotals: overallTotals[0] || {
+//                     totalSell: 0,
+//                     totalRevenue: 0
+//                 }
+//             });
+
+//         } catch (error) {
+//             console.error("Error searching product stats:", error);
+//             res.status(500).json({ 
+//                 success: false, 
+//                 error: "Failed to search product statistics" 
+//             });
+//         }
+//     }
+// );
+
 
 
 // export const getProductStats = asyncErrorHandler(

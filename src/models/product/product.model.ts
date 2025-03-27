@@ -148,6 +148,9 @@ const productSchema = new Schema(
         productSkinPattern: {
             type: String,
         },
+        productKeyword: {
+            type: String,
+        },
         productHeadsetType: {
             type: String,
         },

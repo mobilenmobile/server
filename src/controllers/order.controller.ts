@@ -198,9 +198,10 @@ export const newOrder = asyncErrorHandler(
 
         const productHistoryDocs = newOrder.orderItems.map((orderItem: any) => {
           // Ensure all fields have proper MongoDB ObjectId types
+          console.log("creating historhy ", orderItem.productId)
           return {
             order_id: newOrder._id,
-            product_id: orderItem._id,
+            product_id: orderItem.productId,
             product_title: orderItem.productTitle,
             product_thumbnail: orderItem.thumbnail,
             variant_id: orderItem.selectedVarianceId ? orderItem.selectedVarianceId : null,
@@ -923,66 +924,215 @@ export const getAllOrders = asyncErrorHandler(async (req, res, next) => {
 })
 
 //-------------------api to get all orders----------------------------------------------------------------
+
+
 export const getAllAdminOrders = asyncErrorHandler(async (req, res, next) => {
+  console.log("Order controller called");
 
-  // const userId = req.user._id; // Assuming req.user.id contains the user's ID
-  console.log("order controller called")
-  // Find all orders for the user
-  const orders = await Order.find().sort('-createdAt').populate('user', 'profile');
+  const { startDate, endDate, page = 1, orderStatus, searchText } = req.query;
+  const limit = 2;
 
-  if (!orders || orders.length === 0) {
-    return res.status(404).json({ error: 'No orders found for the user' });
+  // Parse and validate page
+  const parsedPage = (page && typeof page === "string") ? parseInt(page, 10) : 1;
+  if (isNaN(parsedPage) || parsedPage < 1) {
+    return res.status(400).json({ error: "Invalid page value" });
+  }
+  const skip = (parsedPage - 1) * limit;
+
+  // Helper function for date validation
+  const validateDate = (dateStr: string): Date | null => {
+    const date = new Date(dateStr);
+    return !isNaN(date.getTime()) ? date : null;
+  };
+
+  // Define types for filters
+  interface DateFilter {
+    createdAt?: { $gte?: Date; $lte?: Date };
   }
 
-  const [orderReceived, orderCompleted, orderProcessed, orderCancelled, orderReturned] = await Promise.all([
-    Order.countDocuments({ orderStatusState: 'placed' }),
-    Order.countDocuments({ orderStatusState: 'delivered' }),
-    Order.countDocuments({ orderStatusState: 'processed' }),
-    Order.countDocuments({ orderStatusState: 'cancelled' }),
-    Order.countDocuments({ orderStatusState: 'returned' })
-  ])
+  interface StatusFilter {
+    orderStatusState?: string;
+  }
 
-  // placed packed shipped outfordelivery delivered cancelled
-  // Define the desired order of statuses
+  interface SearchFilter {
+    "orderItems.productTitle"?: { $regex: string; $options: string };
+  }
 
-  // const statusOrder = ['placed', 'packed', 'shipped', 'outfordelivery', 'delivered', 'cancelled'];
+  let dateFilter: DateFilter = {};
+  const start = validateDate(startDate as string);
+  const end = validateDate(endDate as string);
 
-  // Function to determine the last status of an order
+  if (startDate || endDate) {
+    if (start && end) {
+      dateFilter.createdAt = { $gte: start, $lte: end };
+    } else {
+      return res.status(400).json({ error: "Invalid date format" });
+    }
+  }
 
-  // function getLastStatus(order: any) {
-  //   if (order.orderStatuses.length > 0) {
-  //     return order.orderStatuses[order.orderStatuses.length - 1].status;
-  //   }
-  //   return null; // Return null if no statuses are present
-  // }
+  // Validate required query parameters
+  if (!startDate && !endDate && !orderStatus && !searchText) {
+    return res.status(400).json({ error: "At least one query parameter must be provided." });
+  }
 
-  // // Sorting orders based on the last status
-  // orders.sort((a, b) => {
-  //   let lastStatusA = getLastStatus(a);
-  //   let lastStatusB = getLastStatus(b);
-  //   console.log(lastStatusA, lastStatusB)
-  //   // Sort orders based on the index of their last status in statusOrder
-  //   return statusOrder.indexOf(lastStatusA) - statusOrder.indexOf(lastStatusB);
-  // });
+  let statusFilter: StatusFilter = {};
+  if (orderStatus) {
+    statusFilter.orderStatusState = orderStatus as string;
+  }
 
-  // console.log(orders)
-  // console.log(sortedOrders)
-  // res.json(jsonResponse);
+  let searchFilter: SearchFilter = {};
+  if (typeof searchText === "string" && searchText.trim()) {
+    searchFilter = {
+      "orderItems.productTitle": { $regex: searchText.trim(), $options: "i" }
+    };
+  }
 
-  return res.status(200).json({
-    success: true,
-    message: "order fetched Successfully",
-    orders,
-    orderStatistics: {
+  // Combine filters
+  const filter = { ...dateFilter, ...statusFilter, ...searchFilter };
+
+  try {
+    // Fetch orders and total products
+    const [orders, totalProducts] = await Promise.all([
+      Order.find(filter)
+        .sort("-createdAt")
+        .populate("user", "profile")
+        .skip(skip)
+        .limit(limit),
+      Order.countDocuments(filter) // Total number of products matching the filter
+    ]);
+
+    // Total products in the current page
+    const currentPageTotalProducts = orders.length;
+
+    // Count orders for statistics within the timeframe
+    const [
       orderReceived,
       orderCompleted,
       orderProcessed,
       orderCancelled,
-      orderReturned
-    }
-  });
+      orderReturned,
+      previousOrderReceived
+    ] = await Promise.all([
+      Order.countDocuments({ orderStatusState: "placed", ...dateFilter }),
+      Order.countDocuments({ orderStatusState: "delivered", ...dateFilter }),
+      Order.countDocuments({ orderStatusState: "processed", ...dateFilter }),
+      Order.countDocuments({ orderStatusState: "cancelled", ...dateFilter }),
+      Order.countDocuments({ orderStatusState: "returned", ...dateFilter }),
+      startDate ? Order.countDocuments({ orderStatusState: "placed", createdAt: { $lt: start } }) : 0
+    ]);
 
-})
+    // Calculate growth/loss percentage
+    const calculateGrowth = (current: number, previous: number): number => {
+      if (previous === 0) return current > 0 ? 100 : 0;
+      return Math.round(((current - previous) / previous) * 100);
+    };
+
+    const orderStatistics = {
+      orderReceived: {
+        count: orderReceived,
+        growth: calculateGrowth(orderReceived, previousOrderReceived)
+      },
+      orderCompleted: {
+        count: orderCompleted,
+        growth: calculateGrowth(orderCompleted, previousOrderReceived)
+      },
+      orderProcessed: {
+        count: orderProcessed,
+        growth: calculateGrowth(orderProcessed, previousOrderReceived)
+      },
+      orderCancelled: {
+        count: orderCancelled,
+        growth: calculateGrowth(orderCancelled, previousOrderReceived)
+      },
+      orderReturned: {
+        count: orderReturned,
+        growth: calculateGrowth(orderReturned, previousOrderReceived)
+      }
+    };
+
+    // Success response
+    return res.status(200).json({
+      success: true,
+      message: "Orders fetched successfully",
+      totalProducts,
+      currentPageTotalProducts,
+      page: parsedPage,
+      orders,
+      orderStatistics
+    });
+  } catch (err) {
+    console.error("Error fetching orders:", err);
+    return res.status(500).json({
+      success: false,
+      error: "Internal server error"
+    });
+  }
+});
+
+
+
+
+
+// export const getAllAdminOrders = asyncErrorHandler(async (req, res, next) => {
+
+//   // const userId = req.user._id; // Assuming req.user.id contains the user's ID
+//   console.log("order controller called")
+//   // Find all orders for the user
+//   const orders = await Order.find().sort('-createdAt').populate('user', 'profile');
+
+//   if (!orders || orders.length === 0) {
+//     return res.status(404).json({ error: 'No orders found for the user' });
+//   }
+
+//   const [orderReceived, orderCompleted, orderProcessed, orderCancelled, orderReturned] = await Promise.all([
+//     Order.countDocuments({ orderStatusState: 'placed' }),
+//     Order.countDocuments({ orderStatusState: 'delivered' }),
+//     Order.countDocuments({ orderStatusState: 'processed' }),
+//     Order.countDocuments({ orderStatusState: 'cancelled' }),
+//     Order.countDocuments({ orderStatusState: 'returned' })
+//   ])
+
+//   // placed packed shipped outfordelivery delivered cancelled
+//   // Define the desired order of statuses
+
+//   // const statusOrder = ['placed', 'packed', 'shipped', 'outfordelivery', 'delivered', 'cancelled'];
+
+//   // Function to determine the last status of an order
+
+//   // function getLastStatus(order: any) {
+//   //   if (order.orderStatuses.length > 0) {
+//   //     return order.orderStatuses[order.orderStatuses.length - 1].status;
+//   //   }
+//   //   return null; // Return null if no statuses are present
+//   // }
+
+//   // // Sorting orders based on the last status
+//   // orders.sort((a, b) => {
+//   //   let lastStatusA = getLastStatus(a);
+//   //   let lastStatusB = getLastStatus(b);
+//   //   console.log(lastStatusA, lastStatusB)
+//   //   // Sort orders based on the index of their last status in statusOrder
+//   //   return statusOrder.indexOf(lastStatusA) - statusOrder.indexOf(lastStatusB);
+//   // });
+
+//   // console.log(orders)
+//   // console.log(sortedOrders)
+//   // res.json(jsonResponse);
+
+//   return res.status(200).json({
+//     success: true,
+//     message: "order fetched Successfully",
+//     orders,
+//     orderStatistics: {
+//       orderReceived,
+//       orderCompleted,
+//       orderProcessed,
+//       orderCancelled,
+//       orderReturned
+//     }
+//   });
+
+// })
 
 
 // //api to get order details not needed !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
