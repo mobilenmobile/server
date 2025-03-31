@@ -46,7 +46,7 @@ app.use(
 // Rate limiter to avoid misuse of the service and avoid cost spikes
 const limiter = rateLimit({
   windowMs: 2 * 60 * 1000, // 15 minutes
-  max: 1000, // Limit each IP to 500 requests per `window` (here, per 15 minutes)
+  max: 50, // Limit each IP to 500 requests per `window` (here, per 15 minutes)
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
   keyGenerator: (req) => {
@@ -62,6 +62,7 @@ const limiter = rateLimit({
 });
 
 app.use(limiter)
+
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(express.static("public"));
@@ -97,8 +98,6 @@ app.use("/api/v1/suggestion", suggestionRoute);
 //Error middleware to be used below route
 //to cache err from routes
 app.use(errorMiddleware);
-
-
 
 
 export const myCache = new NodeCache();

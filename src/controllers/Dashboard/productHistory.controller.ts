@@ -438,7 +438,7 @@ export const getSearchedProductStats = asyncErrorHandler(
                             totalDiscountApplied: { $sum: "$discount_applied" },
                             totalCoinUsed: { $sum: "$coin_used" },
                             totalOrders: { $sum: 1 },
-                            averageSellingPrice: { $avg: "$amount_at_which_prod_sold" }
+                            soldPrice: { $avg: "$amount_at_which_prod_sold" }
                         }
                     }
                 ]);
@@ -448,22 +448,16 @@ export const getSearchedProductStats = asyncErrorHandler(
 
                 // Return product details with sales stats
                 return {
-                    salesStatistics: salesStats[0] || {
-                        totalQuantitySold: 0,
-                        totalRevenue: 0,
-                        totalDiscountApplied: 0,
-                        totalCoinUsed: 0,
-                        totalOrders: 0,
-                        averageSellingPrice: 0
-                    },
-                    productDetails: {
-                        _id: product._id,
-                        title: product.productTitle,
-                        category: product.categoryName || '',
-                        subcategory: product.subcategoryName || '',
-                        thumbnail: product.productVariance?.[0]?.thumbnail || ''
-                    },
-                   
+                    productId: product._id,
+                    title: product.productTitle,
+                    thumbnail: product.productVariance?.[0]?.thumbnail || '',
+                    
+                    quantity: salesStats[0]?.totalQuantitySold || 0,
+                    totalRevenue: salesStats[0]?.totalRevenue || 0,
+                    totalDiscountApplied: salesStats[0]?.totalDiscountApplied || 0,
+                    totalCoinUsed: salesStats[0]?.totalCoinUsed || 0,
+                    totalOrders: salesStats[0]?.totalOrders || 0,
+                    soldPrice: salesStats[0]?.soldPrice || 0
                 };
             });
 

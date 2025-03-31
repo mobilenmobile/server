@@ -49,6 +49,15 @@ const orderSchema = new Schema({
     type: String,
     default: 'placed',
   },
+  cancellationDetails: {
+    type: Object, default: {
+      isCancelled: false,
+      cancellationReason: '',
+      cancellationInitiatedBy: '', // or determine dynamically
+      cancellationDate: '',
+      cancellationSource: '',
+    }
+  },
   total: {
     type: Number,
     required: true

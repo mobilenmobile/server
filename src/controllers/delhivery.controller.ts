@@ -3,6 +3,7 @@ import { asyncErrorHandler } from "../middleware/error.middleware";
 import ErrorHandler from "../utils/errorHandler";
 import { Order } from "../models/order/order.model";
 import { ShipmentDataModel } from "../models/order/shipment.models";
+import mongoose from "mongoose";
 
 
 
@@ -172,7 +173,7 @@ export const createShipment = asyncErrorHandler(async (req, res, next) => {
         'orderId', 'fullName', 'address', 'pinCode', 'city', 'state',
         'mobileNo', 'paymentMode', 'productDescriptions', 'codAmount', 'orderDate',
         'totalAmount', 'totalQuantity', 'shipmentWidth', 'shipmentHeight', 'weight',
-        'addressType', 'totalDiscount', 'mrpTotal', 'netTotal', 'deliveryCharge'
+        'addressType', 'mrpTotal', 'netTotal', 'deliveryCharge'
     ];
 
     for (const field of requiredFields) {
@@ -310,7 +311,7 @@ export const createShipment = asyncErrorHandler(async (req, res, next) => {
         //     console.log("Shipment data saved to DB:", savedShipment);
         // }
 
-        
+
 
 
         return res.status(200).json({
@@ -396,3 +397,187 @@ export const generatePickup = asyncErrorHandler(async (req, res, next) => {
         });
     }
 });
+
+
+
+export const cancelShipment = asyncErrorHandler(async (req, res, next) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+        const {
+            orderId,
+            cancellationReason = 'User requested cancellation',
+            cancellationSource = 'user_request'
+        } = req.body;
+
+        // Validate orderId is provided
+        if (!orderId) {
+            return res.status(400).json({
+                success:false,
+                message: 'Order ID is required for cancellation'
+            });
+        }
+
+        // Find the order
+        const order = await Order.findById(orderId);
+
+        // Check if order exists
+        if (!order) {
+            return res.status(404).json({
+                success:false,
+                message: 'Order not found'
+            });
+        }
+
+        // Check if order is already cancelled
+        if (order.orderStatusState === 'cancelled' || order.cancellationDetails.isCancelled) {
+            return res.status(400).json({
+                success:true,
+                message: 'Order is already cancelled'
+            });
+        }
+
+        // Check if order is in a state that can be cancelled
+        const cancelableStates = ['placed', 'processing', 'pending'];
+        if (!cancelableStates.includes(order.orderStatusState)) {
+            return res.status(400).json({
+                success:false,
+                message: 'Order cannot be cancelled at this stage'
+            });
+        }
+
+        // Attempt to cancel shipment with Delhivery
+        const response = await axios.post(
+            'https://track.delhivery.com/api/p/edit',
+            {
+                waybill: order.shippingId,
+                cancellation: 'True'
+            },
+            {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'Authorization': `Token ${process.env.DELHIVERY_API_KEY}`,
+                },
+            }
+        );
+
+        // Update order details
+        order.orderStatuses.push({
+            status: 'cancelled',
+            date: new Date()
+        });
+        order.orderStatusState = 'cancelled';
+
+        // Update cancellation-specific fields
+        order.cancellationDetails = {
+            isCancelled: true,
+            cancellationReason: cancellationReason,
+            cancellationInitiatedBy: 'user', // or determine dynamically
+            cancellationDate: new Date(),
+            cancellationSource:cancellationSource,
+        };
+        
+
+        // Save the updated order
+        await order.save({ session });
+
+        // Commit the transaction
+        await session.commitTransaction();
+        session.endSession();
+
+        res.status(200).json({
+            success:true,
+            message: 'Order cancelled successfully',
+            order: order
+        });
+
+    } catch (error) {
+        console.error('Error cancelling shipment:', error);
+        res.status(400).json({
+            success:false,
+            message: 'Failed to cancel shipment',
+            error: 'some err occured '
+        });
+    }
+});
+
+
+
+// export const cancelShipment = asyncErrorHandler(async (req, res, next) => {
+//     try {
+//         const { orderId, shipmentId } = req.body;
+
+//         const waybill = shipmentId
+
+//         // Validate waybill is provided
+//         if (!waybill || !orderId) {
+//             return res.status(400).json({
+//                 message: 'orderid and shipmentid is required'
+//             });
+//         }
+
+
+//         // Find the order
+//         const order = await Order.findById(orderId);
+
+//         // Check if order exists
+//         if (!order) {
+//             return res.status(404).json({
+//                 message: 'Order not found'
+//             });
+//         }
+
+//         // Check if order is already cancelled
+//         if (order.orderStatusState === 'cancelled') {
+//             return res.status(400).json({
+//                 message: 'Order is already cancelled'
+//             });
+//         }
+
+//         // Check if order is in a state that can be cancelled
+//         const cancelableStates = ['placed', 'processed'];
+//         if (!cancelableStates.includes(order.orderStatusState)) {
+//             return res.status(400).json({
+//                 message: 'Order cannot be cancelled at this stage'
+//             });
+//         }
+//         // Make API call to Delhivery to cancel shipment
+//         const response = await axios.post(
+//             'https://track.delhivery.com/api/p/edit',
+//             {
+//                 waybill: waybill,
+//                 cancellation: 'True'
+//             },
+//             {
+//                 headers: {
+//                     'Content-Type': 'application/json',
+//                     'Accept': 'application/json',
+//                     'Authorization': `Token ${process.env.DELHIVERY_API_KEY}`,
+//                 },
+//             }
+//         );
+
+//         // Check the response and send appropriate status
+//         if (response.data.status) {
+//             res.status(200).json({
+//                 message: 'Shipment cancelled successfully',
+//                 data: response.data
+//             });
+//         } else {
+//             res.status(400).json({
+//                 message: 'Failed to cancel shipment',
+//                 error: response.data
+//             });
+//         }
+//     } catch (error) {
+//         console.error('Error cancelling shipment:', error);
+//         res.status(400).json({
+//             message: 'Failed to cancel shipment',
+//             error: 'some err occured '
+//         });
+//     }
+// });
+
+
