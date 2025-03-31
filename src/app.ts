@@ -45,8 +45,8 @@ app.use(
 // Required Middlewares
 // Rate limiter to avoid misuse of the service and avoid cost spikes
 const limiter = rateLimit({
-  windowMs: 2 * 60 * 1000, // 15 minutes
-  max: 50, // Limit each IP to 500 requests per `window` (here, per 15 minutes)
+  windowMs: 10 * 60 * 1000, // 15 minutes
+  max: 5000, // Limit each IP to 5000 requests per `window` (here, per 10 minutes)
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
   keyGenerator: (req) => {
