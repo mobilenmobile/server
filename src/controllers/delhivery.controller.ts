@@ -5,13 +5,8 @@ import { Order } from "../models/order/order.model";
 import ShipmentModel from "../models/order/shipment.models";
 import mongoose from "mongoose";
 
-
-
 const DELHIVERY_API_KEY = process.env.DELHIVERY_API_KEY;
 const BASE_URL = process.env.DELHIVERY_BASE_URL;
-
-
-
 
 
 // step 2 
@@ -192,9 +187,6 @@ export const createShipment = asyncErrorHandler(async (req, res, next) => {
     if (!orderData) {
         return res.status(404).json({ success: false, message: "Order not found" });
     }
-
-
-
 
     // Find the order
     const order = await Order.findById(orderId);

@@ -2104,9 +2104,9 @@ export const getAllOrders = asyncErrorHandler(async (req, res, next) => {
 
 
 export const getAllAdminOrders = asyncErrorHandler(async (req, res, next) => {
-  console.log("Order controller called");
-  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-  console.log(`Incoming request from IP: ${ip} to ${req.originalUrl}`);
+  // console.log("Order controller called");
+  // const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+  // console.log(`Incoming request from IP: ${ip} to ${req.originalUrl}`);
   const { startDate, endDate, page = 1, orderStatus, searchText } = req.query;
   const limit = 20;
 
@@ -2192,7 +2192,7 @@ export const getAllAdminOrders = asyncErrorHandler(async (req, res, next) => {
 
     // --------------------------------------------- order stats ----------------------------------------
 
-    // Comprehensive status tracking function - this is working correctly
+    // // Comprehensive status tracking function - this is working correctly
     const thoroughStatusDebug = async (start: Date, end: Date) => {
       try {
         // Find all orders with statuses in the date range (no status filter)
@@ -2236,7 +2236,7 @@ export const getAllAdminOrders = asyncErrorHandler(async (req, res, next) => {
 
     // Get the total count of all orders in the date range for statistics
     const totalOrdersInDateRange = await Order.countDocuments(dateFilter);
-
+    const totalReadyToShipOrder = await Order.countDocuments({ orderStatusState: 'placed' })
     // Get current and previous period status counts using thoroughStatusDebug
     const currentStatusCounts = await thoroughStatusDebug(start, end);
     const previousStatusCounts = await thoroughStatusDebug(previousStart, previousEnd);
@@ -2279,6 +2279,7 @@ export const getAllAdminOrders = asyncErrorHandler(async (req, res, next) => {
       totalPages,
       hasNextPage,
       hasPreviousPage,
+      totalReadyToShipOrder,
       orders,
       orderStatistics
     });
