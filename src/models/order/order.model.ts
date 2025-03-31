@@ -1,6 +1,8 @@
 import mongoose, { Schema } from "mongoose";
 
 
+const statuses = ["placed", "processed", "delivered", "cancelled"];
+
 // Define the Address schema
 const addressSchema = new Schema({
   fullName: { type: String, required: true },
@@ -47,6 +49,7 @@ const orderSchema = new Schema({
   },
   orderStatusState: {
     type: String,
+    enum: statuses,
     default: 'placed',
   },
   cancellationDetails: {

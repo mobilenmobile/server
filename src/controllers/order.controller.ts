@@ -12,6 +12,7 @@ import { createOrderBody } from "./shiprocket.controller.js";
 import axios from "axios";
 import productSoldHistory from "../models/product/productSoldHistory.js";
 import { User } from "../models/auth/user.model.js";
+import ShipmentModel from "../models/order/shipment.models.js";
 
 
 
@@ -508,6 +509,8 @@ export const getSingleOrderDetails = asyncErrorHandler(async (req, res, next) =>
     shipmentDetails: order?.courierOrderDetails,
     orderItems: orderItemsWithReviews
   }
+
+
   console.log("orderItemwithreviews", orderItemsWithReviews)
   return res.status(200).json({
     success: true,
@@ -524,12 +527,207 @@ export const getAdminSingleOrderDetails = asyncErrorHandler(async (req, res, nex
   if (!order) {
     return next(new ErrorHandler("Order Not Found", 404));
   }
+  // Look for existing shipment in MongoDB using the order ID
+  const shipment = await ShipmentModel.findOne({ orderId: id });
+  // Check if the order has a shipment
+  let shipmentDetails = order?.courierOrderDetails || {};
+  let shipmentStatus = order?.orderStatuses || [];
+  const lastStatus = shipmentStatus[shipmentStatus.length - 1]?.status || '';
+
+  if (shipment) {
+    // Use the shipment details from MongoDB
+    shipmentDetails = shipment.shipmentDetails || {};
+
+    // Only check for status updates if the order is not delivered or cancelled
+    if (lastStatus !== 'delivered' && lastStatus !== 'cancelled') {
+      try {
+        const waybill = shipment.waybillNumber;
+
+        if (waybill) {
+          // Construct the URL with query parameters
+          const trackingUrl = `${process.env.DELHIVERY_BASE_URL}/api/v1/packages/json/?waybill=${waybill}`;
+
+          // Make request to Delhivery API
+          const response = await axios.get(
+            trackingUrl,
+            {
+              headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'Authorization': `Token ${process.env.DELHIVERY_API_KEY}`,
+              },
+            }
+          );
+
+          // Update shipment details with the latest information
+          if (response.data && response.data.trackingData.ShipmentData && response.data.trackingData.ShipmentData.length > 0) {
+            const latestShipmentDataStatus = response.data.trackingData.ShipmentData.Shipment.Status;
+
+
+
+            // Update shipment in MongoDB
+            await ShipmentModel.findByIdAndUpdate(shipment._id, {
+              status: latestShipmentDataStatus,
+              lastUpdated: new Date()
+            });
+
+            // Map Delhivery status to your order status
+            if (latestShipmentDataStatus.toLowerCase() == 'delivered') {
+              await Order.findByIdAndUpdate(id, {
+                $push: { orderStatuses: { status: 'delivered', timestamp: new Date() } }
+              });
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching shipment tracking:", error);
+        // Continue with the existing shipment details if API call fails
+      }
+    }
+  }
+
   return res.status(200).json({
     success: true,
     message: "Order details fetched Successfully",
     orderDetails: order,
+    shipmentDetails: shipment
   });
 });
+
+
+// export const getSinglesOrderDetails = asyncErrorHandler(async (req, res, next) => {
+//   const { id } = req.params;
+//   const order = await Order.findById(id).populate("user", "name");
+
+//   if (!order) {
+//     return next(new ErrorHandler("Order Not Found", 404));
+//   }
+
+//   // Fetch reviews for all items in the current order
+//   const orderItemsWithReviews = await Promise.all(order.orderItems.map(async (item) => {
+//     console.log("item", item);
+//     // Find reviews based on userId and productId
+//     const reviews = await Review.find({
+//       reviewUser: req.user._id,
+//       reviewProduct: item.productId
+//     });
+//     console.log("reviews", reviews);
+//     // Return an object with item details and associated reviews
+//     return {
+//       ...item,
+//       review: reviews?.length > 0 ? reviews[0] : {}
+//     };
+//   }));
+
+//   // Check if the order has a shipment
+//   let shipmentDetails = order?.courierOrderDetails || {};
+//   let shipmentStatus = order?.orderStatuses || [];
+//   const lastStatus = shipmentStatus[shipmentStatus.length - 1]?.status || '';
+
+//   // Look for existing shipment in MongoDB using the order ID
+//   const shipment = await ShipmentModel.findOne({ orderId: id });
+
+//   if (shipment) {
+//     // Use the shipment details from MongoDB
+//     shipmentDetails = shipment.shipmentDetails || {};
+
+//     // Only check for status updates if the order is not delivered or cancelled
+//     if (lastStatus !== 'delivered' && lastStatus !== 'cancelled') {
+//       try {
+//         const waybill = shipmentDetails.waybill || shipmentDetails.shipment_id;
+
+//         if (waybill) {
+//           // Construct the URL with query parameters
+//           const trackingUrl = `${process.env.DELHIVERY_BASE_URL}/api/v1/packages/json/?waybill=${waybill}`;
+
+//           // Make request to Delhivery API
+//           const response = await axios.get(
+//             trackingUrl,
+//             {
+//               headers: {
+//                 'Content-Type': 'application/json',
+//                 'Accept': 'application/json',
+//                 'Authorization': `Token ${process.env.DELHIVERY_API_KEY}`,
+//               },
+//             }
+//           );
+
+//           // Update shipment details with the latest information
+//           if (response.data && response.data.ShipmentData && response.data.ShipmentData.length > 0) {
+//             const latestShipmentData = response.data.ShipmentData[0];
+
+//             // Update shipment details
+//             shipmentDetails = {
+//               ...shipmentDetails,
+//               tracking_data: latestShipmentData
+//             };
+
+//             // Update shipment in MongoDB
+//             await Shipment.findByIdAndUpdate(shipment._id, {
+//               shipmentDetails: shipmentDetails,
+//               lastUpdated: new Date()
+//             });
+
+//             // Update order status if needed
+//             const delhiveryStatus = latestShipmentData.Status || '';
+//             let orderStatus = '';
+
+//             // Map Delhivery status to your order status
+//             if (delhiveryStatus.toLowerCase().includes('delivered')) {
+//               orderStatus = 'delivered';
+//             } else if (delhiveryStatus.toLowerCase().includes('cancelled')) {
+//               orderStatus = 'cancelled';
+//             } else if (delhiveryStatus.toLowerCase().includes('in transit')) {
+//               orderStatus = 'shipped';
+//             }
+
+//             // Update order status in DB if there's a new status
+//             if (orderStatus && lastStatus !== orderStatus) {
+//               await Order.findByIdAndUpdate(id, {
+//                 $push: { orderStatuses: { status: orderStatus, timestamp: new Date() } }
+//               });
+
+//               // Update local shipmentStatus for the response
+//               shipmentStatus.push({ status: orderStatus, timestamp: new Date() });
+//             }
+//           }
+//         }
+//       } catch (error) {
+//         console.error("Error fetching shipment tracking:", error.message);
+//         // Continue with the existing shipment details if API call fails
+//       }
+//     }
+//   }
+
+//   const orderDetails = {
+//     orderId: order._id,
+//     deliveryAddress: order.deliveryAddress,
+//     orderStatuses: shipmentStatus,
+//     total: order.total,
+//     couponcode: order.couponcode,
+//     discount: order.discount,
+//     paymentMode: order.paymentMethod?.paymentMode,
+//     paymentStatus: order.paymentStatus,
+//     discountedTotal: order.discountedTotal,
+//     finalAmount: order.finalAmount,
+//     deliveryCharges: order.deliveryCharges,
+//     coinsCredited: order.coinsCredited,
+//     coinsDebited: order.coinsDebited,
+//     shipmentId: shipmentDetails?.shipment_id,
+//     shipmentDetails: shipmentDetails,
+//     orderItems: orderItemsWithReviews
+//   };
+
+//   console.log("orderItemwithreviews", orderItemsWithReviews);
+
+//   return res.status(200).json({
+//     success: true,
+//     message: "Order details fetched Successfully",
+//     orderDetails,
+//   });
+// });
+
+
 
 //--------------------api to process order------------------------------------------------
 
@@ -925,6 +1123,986 @@ export const getAllOrders = asyncErrorHandler(async (req, res, next) => {
 
 //-------------------api to get all orders----------------------------------------------------------------
 
+// export const getAllAdminOrders = asyncErrorHandler(async (req, res, next) => {
+//   console.log("Order controller called");
+//   const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+//   console.log(`Incoming request from IP: ${ip} to ${req.originalUrl}`);
+//   const { startDate, endDate, page = 1, orderStatus, searchText } = req.query;
+//   const limit = 20;
+
+//   // Parse and validate page
+//   const parsedPage = (page && typeof page === "string") ? parseInt(page, 10) : 1;
+
+//   if (isNaN(parsedPage) || parsedPage < 1) {
+//     return res.status(400).json({ error: "Invalid page value" });
+//   }
+//   const skip = (parsedPage - 1) * limit;
+
+//   // Helper function for date validation
+//   const validateDate = (dateStr: string): Date | null => {
+//     const date = new Date(dateStr);
+//     return !isNaN(date.getTime()) ? date : null;
+//   };
+
+
+//   let start: Date | null = validateDate(startDate as string);
+//   let end: Date | null = validateDate(endDate as string);
+
+//   // Default to one-month range if dates are missing
+//   if (!start && !end) {
+//     end = new Date();
+//     start = new Date();
+//     start.setMonth(start.getMonth() - 1);
+//   } else if (!start || !end) {
+//     return res.status(400).json({ error: "Invalid start or end date provided" });
+//   }
+
+//   // Previous time frame calculation
+//   const previousEnd = new Date(start);
+//   const previousStart = new Date(previousEnd);
+//   previousStart.setMonth(previousStart.getMonth() - 1);
+
+//   // Define the structure of `orderStatuses`
+//   interface OrderStatus {
+//     status: string;
+//     date: string;
+//   }
+
+//   type OrderDocument = {
+//     orderStatuses: OrderStatus[];
+//     createdAt: Date;
+//     [key: string]: any;
+//   };
+
+//   try {
+//     // Combine filters
+//     const dateFilter = { "orderStatuses.date": { $gte: start.toISOString(), $lte: end.toISOString() } };
+
+//     let statusFilter: Record<string, any> = {};
+//     if (orderStatus) {
+//       statusFilter["orderStatusState"] = orderStatus as string;
+//     }
+
+//     let searchFilter: Record<string, any> = {};
+//     if (typeof searchText === "string" && searchText.trim()) {
+//       searchFilter = {
+//         "orderItems.productTitle": { $regex: searchText.trim(), $options: "i" }
+//       };
+//     }
+
+//     const filter = { ...dateFilter, ...statusFilter, ...searchFilter };
+
+//     // Fetch orders and total products
+//     const [orders, totalProducts] = await Promise.all([
+//       Order.find(filter)
+//         .sort("-createdAt")
+//         .populate("user", "profile")
+//         .skip(skip)
+//         .limit(limit),
+//       Order.countDocuments(filter)
+//     ]);
+
+//     // Total products in the current page
+//     const currentPageTotalProducts = orders.length;
+
+
+//     // --------------------------------------------- order stats ----------------------------------------
+
+//     // Helper function for status counts
+//     const getStatusCounts = async (start: Date, end: Date) => {
+//       try {
+//         const pipeline: PipelineStage[] = [
+//           // Unwind the entire orderStatuses array
+//           { $unwind: "$orderStatuses" },
+
+//           // Match statuses within the date range
+//           {
+//             $match: {
+//               "orderStatuses.date": {
+//                 $gte: start.toISOString(),
+//                 $lte: end.toISOString()
+//               }
+//             }
+//           },
+
+//           // Group by status
+//           {
+//             $group: {
+//               _id: "$orderStatuses.status",
+//               count: { $sum: 1 },
+//               orderIds: { $addToSet: "$_id" }
+//             }
+//           },
+
+//           // Sort by count
+//           {
+//             $sort: { count: -1 }
+//           }
+//         ];
+
+//         // Execute the aggregation
+//         const statusCounts = await Order.aggregate(pipeline);
+
+//         // Convert to a more usable format
+//         const counts: Record<string, number> = {};
+//         statusCounts.forEach(status => {
+//           counts[status._id] = status.count;
+//         });
+
+//         console.log(' Detailed Status Counts:', JSON.stringify(counts, null, 2));
+//         console.log('Status Aggregation Full Details:', JSON.stringify(statusCounts, null, 2));
+
+//         return counts;
+//       } catch (error) {
+//         console.error('Error calculating status counts:', error);
+//         return {};
+//       }
+//     };
+
+
+
+
+//     const getPlacedOrderCount = async (startDate: Date, endDate: Date) => {
+//       try {
+//         const pipeline = [
+//           {
+//             $match: {
+//               "orderStatuses": {
+//                 $elemMatch: {
+//                   status: "placed",
+//                   date: {
+//                     $gte: new Date(startDate),
+//                     $lte: new Date(endDate)
+//                   }
+//                 }
+//               }
+//             }
+//           },
+//           {
+//             $count: "placedOrdersCount"
+//           }
+//         ];
+
+//         const result = await Order.aggregate(pipeline);
+//         console.log('########### result is', result)
+//         return result.length > 0 ? result[0].placedOrdersCount : 0;
+//       } catch (error) {
+//         console.error("Error fetching placed orders count:", error);
+//         return 0;
+//       }
+//     };
+
+
+
+//     // Comprehensive debugging function
+//     const thoroughStatusDebug = async (start: Date, end: Date) => {
+//       try {
+//         // Find all orders with statuses in the date range
+//         const orders = await Order.find({
+//           "orderStatuses": {
+//             $elemMatch: {
+//               date: {
+//                 $gte: start.toISOString(),
+//                 $lte: end.toISOString()
+//               }
+//             }
+//           }
+//         });
+
+//         console.log('Total Orders in Range:', orders.length);
+
+//         // Detailed status tracking
+//         const statusTracker: Record<string, number> = {};
+
+//         orders.forEach(order => {
+//           console.log('Order ID:', order._id);
+//           console.log('Full Order Statuses:', order.orderStatuses);
+
+//           // Track all statuses in the date range
+//           order.orderStatuses.forEach((status: any) => {
+//             const statusDate = new Date(status.date);
+//             if (statusDate >= start && statusDate <= end) {
+//               console.log(`Status Found: ${status.status}, Date: ${status.date}`);
+//               statusTracker[status.status] = (statusTracker[status.status] || 0) + 1;
+//             }
+//           });
+//         });
+
+//         console.log('Comprehensive Status Tracking:', statusTracker);
+//         return statusTracker;
+//       } catch (error) {
+//         console.error('Thorough Debug Error:', error);
+//         return {};
+//       }
+//     };
+
+//     // Modified status changes calculation
+//     const calculateStatusChanges = (currentCounts: Record<string, number>, previousCounts: Record<string, number>, statuses: string[]) => {
+//       return statuses.map((status) => {
+//         const currentInterval = currentCounts[status] || 0;
+//         const previousInterval = previousCounts[status] || 0;
+//         const difference = currentInterval - previousInterval;
+//         const growth = previousInterval === 0
+//           ? (currentInterval > 0 ? 100 : 0)
+//           : Math.round(((currentInterval - previousInterval) / previousInterval) * 100);
+
+//         return {
+//           status,
+//           currentInterval,
+//           previousInterval,
+//           difference,
+//           growth
+//         };
+//       });
+//     };
+
+//     // Usage in your controller
+//     const thoroughDebug = await thoroughStatusDebug(start, end);
+//     const currentCounts = await getStatusCounts(start, end);
+//     const previousCounts = await getStatusCounts(previousStart, previousEnd);
+
+//     // Use all possible statuses from both current and previous counts
+//     const allStatuses = Array.from(new Set([
+//       ...Object.keys(currentCounts),
+//       ...Object.keys(previousCounts)
+//     ]));
+
+//     const statusChangess = calculateStatusChanges(currentCounts, previousCounts, allStatuses);
+
+//     // Debugging function to verify status entries
+//     const debugOrderStatuses = async (start: Date, end: Date) => {
+//       try {
+//         const orders = await Order.find({
+//           "orderStatuses": {
+//             $elemMatch: {
+//               date: {
+//                 $gte: start.toISOString(),
+//                 $lte: end.toISOString()
+//               }
+//             }
+//           }
+//         });
+
+//         console.log('Total Orders in Range:', orders.length);
+//         orders.forEach(order => {
+//           console.log('Order ID:', order._id);
+//           console.log('Full Order Statuses:', order.orderStatuses);
+
+//           // Filter statuses within the date range
+//           const filteredStatuses = order.orderStatuses.filter((status: any) => {
+//             const statusDate = new Date(status.date);
+//             return statusDate >= start && statusDate <= end;
+//           });
+
+//           console.log('Filtered Statuses:', filteredStatuses);
+//         });
+//       } catch (error) {
+//         console.error('Debug Error:', error);
+//       }
+//     };
+
+//     await debugOrderStatuses(start, end);
+//     console.log("###########placed########", await getPlacedOrderCount(start, end))
+//     // Usage
+//     // const currentCounts = await getStatusCounts(start, end);
+//     // // Fetch status counts for the current and previous time frames
+//     // const previousCounts = await getStatusCounts(previousStart, previousEnd);
+
+//     // Calculate changes for each status
+//     const statuses = ["placed", "processed", "delivered", "cancelled"];
+
+//     const statusChanges = statuses.map((status) => {
+//       const currentInterval = currentCounts[status] || 0;
+//       const previousInterval = previousCounts[status] || 0;
+//       const difference = currentInterval - previousInterval;
+//       const growth = previousInterval === 0 ? (currentInterval > 0 ? 100 : 0) : Math.round(((currentInterval - previousInterval) / previousInterval) * 100);
+//       return { status, currentInterval, previousInterval, difference, growth };
+//     });
+
+//     // Order Statistics
+//     const orderStatistics = {
+//       statusChanges,
+//       totalProducts,
+//       currentPageTotalProducts
+//     };
+//     // Success response
+//     return res.status(200).json({
+//       success: true,
+//       message: "Orders fetched successfully",
+//       totalProducts,
+//       currentPageTotalProducts,
+//       page: parsedPage,
+//       orders,
+//       orderStatistics
+//     });
+//   } catch (err) {
+//     console.error("Error fetching orders:", err);
+//     return res.status(500).json({
+//       success: false,
+//       error: "Internal server error"
+//     });
+//   }
+// });
+
+
+
+// export const getAllAdminOrders = asyncErrorHandler(async (req, res, next) => {
+//   console.log("Order controller called");
+//   const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+//   console.log(`Incoming request from IP: ${ip} to ${req.originalUrl}`);
+//   const { startDate, endDate, page = 1, orderStatus, searchText } = req.query;
+//   const limit = 20;
+
+//   // Parse and validate page
+//   const parsedPage = (page && typeof page === "string") ? parseInt(page, 10) : 1;
+
+//   if (isNaN(parsedPage) || parsedPage < 1) {
+//     return res.status(400).json({ error: "Invalid page value" });
+//   }
+//   const skip = (parsedPage - 1) * limit;
+
+//   // Helper function for date validation
+//   const validateDate = (dateStr: string): Date | null => {
+//     const date = new Date(dateStr);
+//     return !isNaN(date.getTime()) ? date : null;
+//   };
+
+
+//   let start: Date | null = validateDate(startDate as string);
+//   let end: Date | null = validateDate(endDate as string);
+
+//   // Default to one-month range if dates are missing
+//   if (!start && !end) {
+//     end = new Date();
+//     start = new Date();
+//     start.setMonth(start.getMonth() - 1);
+//   } else if (!start || !end) {
+//     return res.status(400).json({ error: "Invalid start or end date provided" });
+//   }
+
+//   // Previous time frame calculation
+//   const previousEnd = new Date(start);
+//   const previousStart = new Date(previousEnd);
+//   previousStart.setMonth(previousStart.getMonth() - 1);
+
+//   // Define the structure of `orderStatuses`
+//   interface OrderStatus {
+//     status: string;
+//     date: string;
+//   }
+
+//   type OrderDocument = {
+//     orderStatuses: OrderStatus[];
+//     createdAt: Date;
+//     [key: string]: any;
+//   };
+
+//   try {
+//     // Combine filters
+//     const dateFilter = { "orderStatuses.date": { $gte: start.toISOString(), $lte: end.toISOString() } };
+
+//     let statusFilter: Record<string, any> = {};
+//     if (orderStatus) {
+//       statusFilter["orderStatusState"] = orderStatus as string;
+//     }
+
+//     let searchFilter: Record<string, any> = {};
+//     if (typeof searchText === "string" && searchText.trim()) {
+//       searchFilter = {
+//         "orderItems.productTitle": { $regex: searchText.trim(), $options: "i" }
+//       };
+//     }
+
+//     const filter = { ...dateFilter, ...statusFilter, ...searchFilter };
+
+//     // Fetch orders and total products
+//     const [orders, totalProducts] = await Promise.all([
+//       Order.find(filter)
+//         .sort("-createdAt")
+//         .populate("user", "profile")
+//         .skip(skip)
+//         .limit(limit),
+//       Order.countDocuments(filter)
+//     ]);
+
+//     // Total products in the current page
+//     const currentPageTotalProducts = orders.length;
+
+//     // Calculate pagination metadata
+//     const totalPages = Math.ceil(totalProducts / limit);
+//     const hasNextPage = parsedPage < totalPages;
+//     const hasPreviousPage = parsedPage > 1;
+
+//     // --------------------------------------------- order stats ----------------------------------------
+
+//     // Helper function for status counts
+//     const getStatusCounts = async (start: Date, end: Date) => {
+//       try {
+//         const pipeline: PipelineStage[] = [
+//           // Unwind the entire orderStatuses array
+//           { $unwind: "$orderStatuses" },
+
+//           // Match statuses within the date range
+//           {
+//             $match: {
+//               "orderStatuses.date": {
+//                 $gte: start.toISOString(),
+//                 $lte: end.toISOString()
+//               }
+//             }
+//           },
+
+//           // Group by status
+//           {
+//             $group: {
+//               _id: "$orderStatuses.status",
+//               count: { $sum: 1 },
+//               orderIds: { $addToSet: "$_id" }
+//             }
+//           },
+
+//           // Sort by count
+//           {
+//             $sort: { count: -1 }
+//           }
+//         ];
+
+//         // Execute the aggregation
+//         const statusCounts = await Order.aggregate(pipeline);
+
+//         // Convert to a more usable format
+//         const counts: Record<string, number> = {};
+//         statusCounts.forEach(status => {
+//           counts[status._id] = status.count;
+//         });
+
+//         console.log(' Detailed Status Counts:', JSON.stringify(counts, null, 2));
+//         console.log('Status Aggregation Full Details:', JSON.stringify(statusCounts, null, 2));
+
+//         return counts;
+//       } catch (error) {
+//         console.error('Error calculating status counts:', error);
+//         return {};
+//       }
+//     };
+
+
+
+
+//     const getPlacedOrderCount = async (startDate: Date, endDate: Date) => {
+//       try {
+//         const pipeline = [
+//           {
+//             $match: {
+//               "orderStatuses": {
+//                 $elemMatch: {
+//                   status: "placed",
+//                   date: {
+//                     $gte: new Date(startDate),
+//                     $lte: new Date(endDate)
+//                   }
+//                 }
+//               }
+//             }
+//           },
+//           {
+//             $count: "placedOrdersCount"
+//           }
+//         ];
+
+//         const result = await Order.aggregate(pipeline);
+//         console.log('########### result is', result)
+//         return result.length > 0 ? result[0].placedOrdersCount : 0;
+//       } catch (error) {
+//         console.error("Error fetching placed orders count:", error);
+//         return 0;
+//       }
+//     };
+
+
+
+//     // Comprehensive debugging function
+//     const thoroughStatusDebug = async (start: Date, end: Date) => {
+//       try {
+//         // Find all orders with statuses in the date range
+//         const orders = await Order.find({
+//           "orderStatuses": {
+//             $elemMatch: {
+//               date: {
+//                 $gte: start.toISOString(),
+//                 $lte: end.toISOString()
+//               }
+//             }
+//           }
+//         });
+
+//         console.log('Total Orders in Range:', orders.length);
+
+//         // Detailed status tracking
+//         const statusTracker: Record<string, number> = {};
+
+//         orders.forEach(order => {
+//           console.log('Order ID:', order._id);
+//           console.log('Full Order Statuses:', order.orderStatuses);
+
+//           // Track all statuses in the date range
+//           order.orderStatuses.forEach((status: any) => {
+//             const statusDate = new Date(status.date);
+//             if (statusDate >= start && statusDate <= end) {
+//               console.log(`Status Found: ${status.status}, Date: ${status.date}`);
+//               statusTracker[status.status] = (statusTracker[status.status] || 0) + 1;
+//             }
+//           });
+//         });
+
+//         console.log('Comprehensive Status Tracking:', statusTracker);
+//         return statusTracker;
+//       } catch (error) {
+//         console.error('Thorough Debug Error:', error);
+//         return {};
+//       }
+//     };
+
+//     // Modified status changes calculation
+//     const calculateStatusChanges = (currentCounts: Record<string, number>, previousCounts: Record<string, number>, statuses: string[]) => {
+//       return statuses.map((status) => {
+//         const currentInterval = currentCounts[status] || 0;
+//         const previousInterval = previousCounts[status] || 0;
+//         const difference = currentInterval - previousInterval;
+//         const growth = previousInterval === 0
+//           ? (currentInterval > 0 ? 100 : 0)
+//           : Math.round(((currentInterval - previousInterval) / previousInterval) * 100);
+
+//         return {
+//           status,
+//           currentInterval,
+//           previousInterval,
+//           difference,
+//           growth
+//         };
+//       });
+//     };
+
+//     // Usage in your controller
+//     const thoroughDebug = await thoroughStatusDebug(start, end);
+//     const currentCounts = await getStatusCounts(start, end);
+//     const previousCounts = await getStatusCounts(previousStart, previousEnd);
+
+//     // Use all possible statuses from both current and previous counts
+//     const allStatuses = Array.from(new Set([
+//       ...Object.keys(currentCounts),
+//       ...Object.keys(previousCounts)
+//     ]));
+
+//     const statusChangess = calculateStatusChanges(currentCounts, previousCounts, allStatuses);
+
+//     // Debugging function to verify status entries
+//     const debugOrderStatuses = async (start: Date, end: Date) => {
+//       try {
+//         const orders = await Order.find({
+//           "orderStatuses": {
+//             $elemMatch: {
+//               date: {
+//                 $gte: start.toISOString(),
+//                 $lte: end.toISOString()
+//               }
+//             }
+//           }
+//         });
+
+//         console.log('Total Orders in Range:', orders.length);
+//         orders.forEach(order => {
+//           console.log('Order ID:', order._id);
+//           console.log('Full Order Statuses:', order.orderStatuses);
+
+//           // Filter statuses within the date range
+//           const filteredStatuses = order.orderStatuses.filter((status: any) => {
+//             const statusDate = new Date(status.date);
+//             return statusDate >= start && statusDate <= end;
+//           });
+
+//           console.log('Filtered Statuses:', filteredStatuses);
+//         });
+//       } catch (error) {
+//         console.error('Debug Error:', error);
+//       }
+//     };
+
+//     await debugOrderStatuses(start, end);
+//     console.log("###########placed########", await getPlacedOrderCount(start, end))
+
+//     // Usage
+//     // const currentCounts = await getStatusCounts(start, end);
+//     // // Fetch status counts for the current and previous time frames
+//     // const previousCounts = await getStatusCounts(previousStart, previousEnd);
+
+//     // Calculate changes for each status
+//     const statuses = ["placed", "processed", "delivered", "cancelled"];
+
+//     const statusChanges = statuses.map((status) => {
+//       const currentInterval = currentCounts[status] || 0;
+//       const previousInterval = previousCounts[status] || 0;
+//       const difference = currentInterval - previousInterval;
+//       const growth = previousInterval === 0 ? (currentInterval > 0 ? 100 : 0) : Math.round(((currentInterval - previousInterval) / previousInterval) * 100);
+//       return { status, currentInterval, previousInterval, difference, growth };
+//     });
+
+//     // Order Statistics
+
+//     // Success response with pagination metadata
+//     return res.status(200).json({
+//       success: true,
+//       message: "Orders fetched successfully",
+//       totalProducts,
+//       currentPageTotalProducts,
+//       page: parsedPage,
+//       totalPages,
+//       hasNextPage,
+//       hasPreviousPage,
+//       orderStatistics: statusChanges,
+//       orders,
+//     });
+//   } catch (err) {
+//     console.error("Error fetching orders:", err);
+//     return res.status(500).json({
+//       success: false,
+//       error: "Internal server error"
+//     });
+//   }
+// });
+
+
+
+// export const getAllAdminOrders = asyncErrorHandler(async (req, res, next) => {
+//   console.log("Order controller called");
+//   const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+//   console.log(`Incoming request from IP: ${ip} to ${req.originalUrl}`);
+//   const { startDate, endDate, page = 1, orderStatus, searchText } = req.query;
+//   const limit = 20;
+
+//   // Parse and validate page
+//   const parsedPage = (page && typeof page === "string") ? parseInt(page, 10) : 1;
+
+//   if (isNaN(parsedPage) || parsedPage < 1) {
+//     return res.status(400).json({ error: "Invalid page value" });
+//   }
+//   const skip = (parsedPage - 1) * limit;
+
+//   // Helper function for date validation
+//   const validateDate = (dateStr: string): Date | null => {
+//     const date = new Date(dateStr);
+//     return !isNaN(date.getTime()) ? date : null;
+//   };
+
+//   let start: Date | null = validateDate(startDate as string);
+//   let end: Date | null = validateDate(endDate as string);
+
+//   // Default to one-month range if dates are missing
+//   if (!start && !end) {
+//     end = new Date();
+//     start = new Date();
+//     start.setMonth(start.getMonth() - 1);
+//   } else if (!start || !end) {
+//     return res.status(400).json({ error: "Invalid start or end date provided" });
+//   }
+
+//   // Previous time frame calculation
+//   const previousEnd = new Date(start);
+//   const previousStart = new Date(previousEnd);
+//   previousStart.setMonth(previousStart.getMonth() - 1);
+
+//   // Define the structure of `orderStatuses`
+//   interface OrderStatus {
+//     status: string;
+//     date: string;
+//   }
+
+//   type OrderDocument = {
+//     orderStatuses: OrderStatus[];
+//     createdAt: Date;
+//     [key: string]: any;
+//   };
+
+//   try {
+//     // Create two separate filters - one for orders and one for statistics
+//     // For orders, we'll apply all filters (date, status, search)
+//     // For statistics, we'll only use the date filter
+
+//     // Date filter applied to both orders and statistics
+//     const dateFilter = { "orderStatuses.date": { $gte: start.toISOString(), $lte: end.toISOString() } };
+
+//     // Status and search filters only applied to orders query
+//     let statusFilter: Record<string, any> = {};
+//     if (orderStatus) {
+//       statusFilter["orderStatusState"] = orderStatus as string;
+//     }
+
+//     let searchFilter: Record<string, any> = {};
+//     if (typeof searchText === "string" && searchText.trim()) {
+//       searchFilter = {
+//         "orderItems.productTitle": { $regex: searchText.trim(), $options: "i" }
+//       };
+//     }
+
+//     // Combine filters for the orders query
+//     const ordersFilter = { ...dateFilter, ...statusFilter, ...searchFilter };
+
+//     // Fetch orders with all filters applied
+//     const [orders, totalFilteredProducts] = await Promise.all([
+//       Order.find(ordersFilter)
+//         .sort("-createdAt")
+//         .populate("user", "profile")
+//         .skip(skip)
+//         .limit(limit),
+//       Order.countDocuments(ordersFilter)
+//     ]);
+
+//     // Total products in the current page
+//     const currentPageTotalProducts = orders.length;
+
+//     // Calculate pagination metadata based on filtered results
+//     const totalPages = Math.ceil(totalFilteredProducts / limit);
+//     const hasNextPage = parsedPage < totalPages;
+//     const hasPreviousPage = parsedPage > 1;
+
+//     // --------------------------------------------- order stats ----------------------------------------
+
+//     // Helper function for status counts - using only the date filter
+//     const getStatusCounts = async (start: Date, end: Date) => {
+//       try {
+//         const pipeline: PipelineStage[] = [
+//           // Unwind the entire orderStatuses array
+//           { $unwind: "$orderStatuses" },
+
+//           // Match statuses within the date range (no status filter)
+//           {
+//             $match: {
+//               "orderStatuses.date": {
+//                 $gte: start.toISOString(),
+//                 $lte: end.toISOString()
+//               }
+//             }
+//           },
+
+//           // Group by status
+//           {
+//             $group: {
+//               _id: "$orderStatuses.status",
+//               count: { $sum: 1 },
+//               orderIds: { $addToSet: "$_id" }
+//             }
+//           },
+
+//           // Sort by count
+//           {
+//             $sort: { count: -1 }
+//           }
+//         ];
+
+//         // Execute the aggregation
+//         const statusCounts = await Order.aggregate(pipeline);
+
+//         // Convert to a more usable format
+//         const counts: Record<string, number> = {};
+//         statusCounts.forEach(status => {
+//           counts[status._id] = status.count;
+//         });
+
+//         console.log(' Detailed Status Counts:', JSON.stringify(counts, null, 2));
+//         console.log('Status Aggregation Full Details:', JSON.stringify(statusCounts, null, 2));
+
+//         return counts;
+//       } catch (error) {
+//         console.error('Error calculating status counts:', error);
+//         return {};
+//       }
+//     };
+
+//     const getPlacedOrderCount = async (startDate: Date, endDate: Date) => {
+//       try {
+//         const pipeline = [
+//           {
+//             $match: {
+//               "orderStatuses": {
+//                 $elemMatch: {
+//                   status: "placed",
+//                   date: {
+//                     $gte: new Date(startDate),
+//                     $lte: new Date(endDate)
+//                   }
+//                 }
+//               }
+//             }
+//           },
+//           {
+//             $count: "placedOrdersCount"
+//           }
+//         ];
+
+//         const result = await Order.aggregate(pipeline);
+//         console.log('########### result is', result)
+//         return result.length > 0 ? result[0].placedOrdersCount : 0;
+//       } catch (error) {
+//         console.error("Error fetching placed orders count:", error);
+//         return 0;
+//       }
+//     };
+
+//     // Comprehensive debugging function - using only date filter
+//     const thoroughStatusDebug = async (start: Date, end: Date) => {
+//       try {
+//         // Find all orders with statuses in the date range (no status filter)
+//         const orders = await Order.find({
+//           "orderStatuses": {
+//             $elemMatch: {
+//               date: {
+//                 $gte: start.toISOString(),
+//                 $lte: end.toISOString()
+//               }
+//             }
+//           }
+//         });
+
+//         console.log('Total Orders in Range:', orders.length);
+
+//         // Detailed status tracking
+//         const statusTracker: Record<string, number> = {};
+
+//         orders.forEach(order => {
+//           console.log('Order ID:', order._id);
+//           console.log('Full Order Statuses:', order.orderStatuses);
+
+//           // Track all statuses in the date range
+//           order.orderStatuses.forEach((status: any) => {
+//             const statusDate = new Date(status.date);
+//             if (statusDate >= start && statusDate <= end) {
+//               console.log(`Status Found: ${status.status}, Date: ${status.date}`);
+//               statusTracker[status.status] = (statusTracker[status.status] || 0) + 1;
+//             }
+//           });
+//         });
+
+//         console.log('Comprehensive Status Tracking:', statusTracker);
+//         return statusTracker;
+//       } catch (error) {
+//         console.error('Thorough Debug Error:', error);
+//         return {};
+//       }
+//     };
+
+//     // Modified status changes calculation
+//     const calculateStatusChanges = (currentCounts: Record<string, number>, previousCounts: Record<string, number>, statuses: string[]) => {
+//       return statuses.map((status) => {
+//         const currentInterval = currentCounts[status] || 0;
+//         const previousInterval = previousCounts[status] || 0;
+//         const difference = currentInterval - previousInterval;
+//         const growth = previousInterval === 0
+//           ? (currentInterval > 0 ? 100 : 0)
+//           : Math.round(((currentInterval - previousInterval) / previousInterval) * 100);
+
+//         return {
+//           status,
+//           currentInterval,
+//           previousInterval,
+//           difference,
+//           growth
+//         };
+//       });
+//     };
+
+//     // Get the total count of all orders in the date range for statistics
+//     const totalOrdersInDateRange = await Order.countDocuments(dateFilter);
+
+//     // Usage in your controller - using only date filter for statistics
+//     const thoroughDebug = await thoroughStatusDebug(start, end);
+//     const currentCounts = await getStatusCounts(start, end);
+//     const previousCounts = await getStatusCounts(previousStart, previousEnd);
+
+//     // Use all possible statuses from both current and previous counts
+//     const allStatuses = Array.from(new Set([
+//       ...Object.keys(currentCounts),
+//       ...Object.keys(previousCounts)
+//     ]));
+
+//     const statusChangess = calculateStatusChanges(currentCounts, previousCounts, allStatuses);
+
+//     // Debugging function to verify status entries - using only date filter
+//     const debugOrderStatuses = async (start: Date, end: Date) => {
+//       try {
+//         const orders = await Order.find({
+//           "orderStatuses": {
+//             $elemMatch: {
+//               date: {
+//                 $gte: start.toISOString(),
+//                 $lte: end.toISOString()
+//               }
+//             }
+//           }
+//         });
+
+//         console.log('Total Orders in Range:', orders.length);
+//         orders.forEach(order => {
+//           console.log('Order ID:', order._id);
+//           console.log('Full Order Statuses:', order.orderStatuses);
+
+//           // Filter statuses within the date range
+//           const filteredStatuses = order.orderStatuses.filter((status: any) => {
+//             const statusDate = new Date(status.date);
+//             return statusDate >= start && statusDate <= end;
+//           });
+
+//           console.log('Filtered Statuses:', filteredStatuses);
+//         });
+//       } catch (error) {
+//         console.error('Debug Error:', error);
+//       }
+//     };
+
+//     await debugOrderStatuses(start, end);
+//     console.log("###########placed########", await getPlacedOrderCount(start, end))
+
+//     // Calculate changes for each status - using independent counts (not filtered by orderStatus)
+//     const statuses = ["placed", "processed", "delivered", "cancelled"];
+
+//     const statusChanges = statuses.map((status) => {
+//       const currentInterval = currentCounts[status] || 0;
+//       const previousInterval = previousCounts[status] || 0;
+//       const difference = currentInterval - previousInterval;
+//       const growth = previousInterval === 0 ? (currentInterval > 0 ? 100 : 0) : Math.round(((currentInterval - previousInterval) / previousInterval) * 100);
+//       return { status, currentInterval, previousInterval, difference, growth };
+//     });
+
+//     // Order Statistics - including total across all statuses
+//     const orderStatistics = {
+//       statusChanges,
+//       totalProducts: totalOrdersInDateRange,  // Total orders across all statuses in date range
+//       filteredProducts: totalFilteredProducts, // Total orders matching all filters
+//       currentPageTotalProducts
+//     };
+
+//     // Success response with pagination metadata
+//     return res.status(200).json({
+//       success: true,
+//       message: "Orders fetched successfully",
+//       totalProducts: totalFilteredProducts, // This is for the filtered count
+//       currentPageTotalProducts,
+//       page: parsedPage,
+//       totalPages,
+//       hasNextPage,
+//       hasPreviousPage,
+//       orders,
+//       orderStatistics
+//     });
+//   } catch (err) {
+//     console.error("Error fetching orders:", err);
+//     return res.status(500).json({
+//       success: false,
+//       error: "Internal server error"
+//     });
+//   }
+// });
+
+
 export const getAllAdminOrders = asyncErrorHandler(async (req, res, next) => {
   console.log("Order controller called");
   const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
@@ -945,7 +2123,6 @@ export const getAllAdminOrders = asyncErrorHandler(async (req, res, next) => {
     const date = new Date(dateStr);
     return !isNaN(date.getTime()) ? date : null;
   };
-
 
   let start: Date | null = validateDate(startDate as string);
   let end: Date | null = validateDate(endDate as string);
@@ -977,7 +2154,7 @@ export const getAllAdminOrders = asyncErrorHandler(async (req, res, next) => {
   };
 
   try {
-    // Combine filters
+    // Create two separate filters - one for orders and one for statistics
     const dateFilter = { "orderStatuses.date": { $gte: start.toISOString(), $lte: end.toISOString() } };
 
     let statusFilter: Record<string, any> = {};
@@ -992,114 +2169,33 @@ export const getAllAdminOrders = asyncErrorHandler(async (req, res, next) => {
       };
     }
 
-    const filter = { ...dateFilter, ...statusFilter, ...searchFilter };
+    // Combine filters for the orders query
+    const ordersFilter = { ...dateFilter, ...statusFilter, ...searchFilter };
 
-    // Fetch orders and total products
-    const [orders, totalProducts] = await Promise.all([
-      Order.find(filter)
+    // Fetch orders with all filters applied
+    const [orders, totalFilteredProducts] = await Promise.all([
+      Order.find(ordersFilter)
         .sort("-createdAt")
         .populate("user", "profile")
         .skip(skip)
         .limit(limit),
-      Order.countDocuments(filter)
+      Order.countDocuments(ordersFilter)
     ]);
 
     // Total products in the current page
     const currentPageTotalProducts = orders.length;
 
+    // Calculate pagination metadata based on filtered results
+    const totalPages = Math.ceil(totalFilteredProducts / limit);
+    const hasNextPage = parsedPage < totalPages;
+    const hasPreviousPage = parsedPage > 1;
 
     // --------------------------------------------- order stats ----------------------------------------
 
-    // Helper function for status counts
-    const getStatusCounts = async (start: Date, end: Date) => {
-      try {
-        const pipeline: PipelineStage[] = [
-          // Unwind the entire orderStatuses array
-          { $unwind: "$orderStatuses" },
-
-          // Match statuses within the date range
-          {
-            $match: {
-              "orderStatuses.date": {
-                $gte: start.toISOString(),
-                $lte: end.toISOString()
-              }
-            }
-          },
-
-          // Group by status
-          {
-            $group: {
-              _id: "$orderStatuses.status",
-              count: { $sum: 1 },
-              orderIds: { $addToSet: "$_id" }
-            }
-          },
-
-          // Sort by count
-          {
-            $sort: { count: -1 }
-          }
-        ];
-
-        // Execute the aggregation
-        const statusCounts = await Order.aggregate(pipeline);
-
-        // Convert to a more usable format
-        const counts: Record<string, number> = {};
-        statusCounts.forEach(status => {
-          counts[status._id] = status.count;
-        });
-
-        console.log(' Detailed Status Counts:', JSON.stringify(counts, null, 2));
-        console.log('Status Aggregation Full Details:', JSON.stringify(statusCounts, null, 2));
-
-        return counts;
-      } catch (error) {
-        console.error('Error calculating status counts:', error);
-        return {};
-      }
-    };
-
-
-
-
-    const getPlacedOrderCount = async (startDate: Date, endDate: Date) => {
-      try {
-        const pipeline = [
-          {
-            $match: {
-              "orderStatuses": {
-                $elemMatch: {
-                  status: "placed",
-                  date: {
-                    $gte: new Date(startDate),
-                    $lte: new Date(endDate)
-                  }
-                }
-              }
-            }
-          },
-          {
-            $count: "placedOrdersCount"
-          }
-        ];
-
-        const result = await Order.aggregate(pipeline);
-        console.log('########### result is', result)
-        return result.length > 0 ? result[0].placedOrdersCount : 0;
-      } catch (error) {
-        console.error("Error fetching placed orders count:", error);
-        return 0;
-      }
-    };
-
-
-
-    // Comprehensive debugging function
+    // Comprehensive status tracking function - this is working correctly
     const thoroughStatusDebug = async (start: Date, end: Date) => {
       try {
-        // Find all orders with statuses in the date range
+        // Find all orders with statuses in the date range (no status filter)
         const orders = await Order.find({
           "orderStatuses": {
             $elemMatch: {
@@ -1138,102 +2234,51 @@ export const getAllAdminOrders = asyncErrorHandler(async (req, res, next) => {
       }
     };
 
-    // Modified status changes calculation
-    const calculateStatusChanges = (currentCounts: Record<string, number>, previousCounts: Record<string, number>, statuses: string[]) => {
-      return statuses.map((status) => {
-        const currentInterval = currentCounts[status] || 0;
-        const previousInterval = previousCounts[status] || 0;
-        const difference = currentInterval - previousInterval;
-        const growth = previousInterval === 0
-          ? (currentInterval > 0 ? 100 : 0)
-          : Math.round(((currentInterval - previousInterval) / previousInterval) * 100);
+    // Get the total count of all orders in the date range for statistics
+    const totalOrdersInDateRange = await Order.countDocuments(dateFilter);
 
-        return {
-          status,
-          currentInterval,
-          previousInterval,
-          difference,
-          growth
-        };
-      });
-    };
+    // Get current and previous period status counts using thoroughStatusDebug
+    const currentStatusCounts = await thoroughStatusDebug(start, end);
+    const previousStatusCounts = await thoroughStatusDebug(previousStart, previousEnd);
 
-    // Usage in your controller
-    const thoroughDebug = await thoroughStatusDebug(start, end);
-    const currentCounts = await getStatusCounts(start, end);
-    const previousCounts = await getStatusCounts(previousStart, previousEnd);
-
-    // Use all possible statuses from both current and previous counts
-    const allStatuses = Array.from(new Set([
-      ...Object.keys(currentCounts),
-      ...Object.keys(previousCounts)
-    ]));
-
-    const statusChangess = calculateStatusChanges(currentCounts, previousCounts, allStatuses);
-
-    // Debugging function to verify status entries
-    const debugOrderStatuses = async (start: Date, end: Date) => {
-      try {
-        const orders = await Order.find({
-          "orderStatuses": {
-            $elemMatch: {
-              date: {
-                $gte: start.toISOString(),
-                $lte: end.toISOString()
-              }
-            }
-          }
-        });
-
-        console.log('Total Orders in Range:', orders.length);
-        orders.forEach(order => {
-          console.log('Order ID:', order._id);
-          console.log('Full Order Statuses:', order.orderStatuses);
-
-          // Filter statuses within the date range
-          const filteredStatuses = order.orderStatuses.filter((status: any) => {
-            const statusDate = new Date(status.date);
-            return statusDate >= start && statusDate <= end;
-          });
-
-          console.log('Filtered Statuses:', filteredStatuses);
-        });
-      } catch (error) {
-        console.error('Debug Error:', error);
-      }
-    };
-
-    await debugOrderStatuses(start, end);
-    console.log("###########placed########", await getPlacedOrderCount(start, end))
-    // Usage
-    // const currentCounts = await getStatusCounts(start, end);
-    // // Fetch status counts for the current and previous time frames
-    // const previousCounts = await getStatusCounts(previousStart, previousEnd);
-
-    // Calculate changes for each status
+    // Calculate changes for each status - using thoroughStatusDebug results
     const statuses = ["placed", "processed", "delivered", "cancelled"];
 
     const statusChanges = statuses.map((status) => {
-      const currentInterval = currentCounts[status] || 0;
-      const previousInterval = previousCounts[status] || 0;
+      const currentInterval = currentStatusCounts[status] || 0;
+      const previousInterval = previousStatusCounts[status] || 0;
       const difference = currentInterval - previousInterval;
-      const growth = previousInterval === 0 ? (currentInterval > 0 ? 100 : 0) : Math.round(((currentInterval - previousInterval) / previousInterval) * 100);
-      return { status, currentInterval, previousInterval, difference, growth };
+      const growth = previousInterval === 0
+        ? (currentInterval > 0 ? 100 : 0)
+        : Math.round(((currentInterval - previousInterval) / previousInterval) * 100);
+
+      return {
+        status,
+        currentInterval,
+        previousInterval,
+        difference,
+        growth
+      };
     });
 
-    // Order Statistics
+    // Order Statistics object
     const orderStatistics = {
       statusChanges,
-      totalProducts,
+      totalProducts: totalOrdersInDateRange,
+      filteredProducts: totalFilteredProducts,
       currentPageTotalProducts
     };
-    // Success response
+
+    // Success response with pagination metadata
     return res.status(200).json({
       success: true,
       message: "Orders fetched successfully",
-      totalProducts,
+      totalProducts: totalFilteredProducts,
       currentPageTotalProducts,
       page: parsedPage,
+      totalPages,
+      hasNextPage,
+      hasPreviousPage,
       orders,
       orderStatistics
     });
@@ -1245,8 +2290,3 @@ export const getAllAdminOrders = asyncErrorHandler(async (req, res, next) => {
     });
   }
 });
-
-
-
-
-

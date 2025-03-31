@@ -1,73 +1,162 @@
-import mongoose from 'mongoose';
+import mongoose, { Schema, Document } from 'mongoose';
 
-const ShipmentSchema = new mongoose.Schema({
-  name: String,
-  add: String,
-  pin: String,
-  city: String,
-  state: String,
-  country: String,
-  phone: String,
-  order: { type: mongoose.Schema.Types.ObjectId, ref: 'Order' },
-  payment_mode: String,
-  products_desc: String,
-  cod_amount: String,
-  order_date: Date,
-  total_amount: String,
-  seller_add: String,
-  seller_name: String,
-  seller_inv: String,
-  quantity: String,
-  waybill: String,
-  shipment_width: String,
-  shipment_height: String,
-  weight: String,
-  seller_gst_tin: String,
-  shipping_mode: String,
-  address_type: String,
-  client: String,
-  total_discount: String,
-  mrp_total: String,
-  net_total: String,
-  delivery_charge: String,
-  coupon_discount: String,
-  tax_class: String,
-  tax_breakup: String,
-  invoice_number: String,
-  invoice_date: Date,
-}, { timestamps: true });
+// Define interface for Shipment document
+export interface IShipment extends Document {
+  orderId: mongoose.Types.ObjectId;
+  waybillNumber: string;
+  courierCompany: string;
+  status: string;
+  trackingUrl?: string;
+  shipmentDate: Date;
+  estimatedDeliveryDate?: Date;
+  actualDeliveryDate?: Date;
+  shipmentDetails: {
+    packageDimensions: {
+      width: number;
+      height: number;
+      weight: number;
+    };
+    deliveryAddress: {
+      fullName: string;
+      address: string;
+      pinCode: string;
+      city: string;
+      state: string;
+      country: string;
+      mobileNo: string;
+      addressType: string;
+    };
+    codAmount: number;
+    totalAmount: number;
+    totalQuantity: number;
+    productDescriptions: string;
+  };
+  apiResponse: object;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
-const PickupLocationSchema = new mongoose.Schema({
-  name: String,
-  add: String,
-  city: String,
-  pin_code: String,
-  country: String,
-  phone: String,
-}, { _id: false });
-
-const ShipmentDataSchema = new mongoose.Schema({
-  shipments: [ShipmentSchema],
-  pickup_location: PickupLocationSchema,
-  waybill: String,
-}, { timestamps: true });
-
-
-ShipmentDataSchema.statics.saveShipment = async function (shipmentData) {
-  try {
-    const shipment = new this(shipmentData);
-    await shipment.save();
-    console.log("Shipment data saved successfully:", shipment);
-    return shipment;
-  } catch (error) {
-    console.error("Error saving shipment data:", error);
-    throw error;
+// Create shipment schema
+const ShipmentSchema: Schema = new Schema({
+  orderId: {
+    type: Schema.Types.ObjectId,
+    ref: 'Order',
+    required: true,
+    index: true // Add index for better query performance
+  },
+  waybillNumber: {
+    type: String,
+    required: true,
+    unique: true
+  },
+  courierCompany: {
+    type: String,
+    required: true,
+    default: 'Delhivery'
+  },
+  status: {
+    type: String,
+    required: true,
+    enum: ['NEW', 'PICKUP_SCHEDULED', 'PICKUP_GENERATED', 'PICKUP_DONE', 'IN_TRANSIT', 'DELIVERED', 'CANCELLED', 'RTO', 'FAILED'],
+    default: 'NEW'
+  },
+  trackingUrl: {
+    type: String
+  },
+  shipmentDate: {
+    type: Date,
+    default: Date.now
+  },
+  estimatedDeliveryDate: {
+    type: Date
+  },
+  actualDeliveryDate: {
+    type: Date
+  },
+  shipmentDetails: {
+    packageDimensions: {
+      width: {
+        type: Number,
+        required: true
+      },
+      height: {
+        type: Number,
+        required: true
+      },
+      weight: {
+        type: Number,
+        required: true
+      }
+    },
+    deliveryAddress: {
+      fullName: {
+        type: String,
+        required: true
+      },
+      address: {
+        type: String,
+        required: true
+      },
+      pinCode: {
+        type: String,
+        required: true
+      },
+      city: {
+        type: String,
+        required: true
+      },
+      state: {
+        type: String,
+        required: true
+      },
+      country: {
+        type: String,
+        default: 'India'
+      },
+      mobileNo: {
+        type: String,
+        required: true
+      },
+      addressType: {
+        type: String,
+        default: 'home'
+      }
+    },
+    codAmount: {
+      type: Number,
+      required: true
+    },
+    totalAmount: {
+      type: Number,
+      required: true
+    },
+    totalQuantity: {
+      type: Number,
+      required: true
+    },
+    productDescriptions: {
+      type: String,
+      required: true
+    }
+  },
+  apiResponse: {
+    type: Schema.Types.Mixed
   }
+}, {
+  timestamps: true
+});
+
+// Add method to count shipments by order ID
+ShipmentSchema.statics.countShipmentsByOrderId = async function(orderId: string): Promise<number> {
+  return this.countDocuments({ orderId });
 };
 
-export default mongoose.model('ShipmentDataModel', ShipmentDataSchema);
+// Add method to find all shipments for an order
+ShipmentSchema.statics.findShipmentsByOrderId = async function(orderId: string) {
+  return this.find({ orderId }).sort({ createdAt: -1 });
+};
 
+// Create the model
+const ShipmentModel = mongoose.model<IShipment>('Shipment', ShipmentSchema);
 
-
-const ShipmentDataModel = mongoose.models.ShipmentDataModel || mongoose.model("ShipmentDataModel", ShipmentDataSchema);
-export { ShipmentDataModel };
+export default ShipmentModel;

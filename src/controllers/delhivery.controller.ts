@@ -2,7 +2,7 @@ import axios from "axios";
 import { asyncErrorHandler } from "../middleware/error.middleware";
 import ErrorHandler from "../utils/errorHandler";
 import { Order } from "../models/order/order.model";
-import { ShipmentDataModel } from "../models/order/shipment.models";
+import ShipmentModel from "../models/order/shipment.models";
 import mongoose from "mongoose";
 
 
@@ -193,6 +193,21 @@ export const createShipment = asyncErrorHandler(async (req, res, next) => {
         return res.status(404).json({ success: false, message: "Order not found" });
     }
 
+
+
+
+    // Find the order
+    const order = await Order.findById(orderId);
+
+
+    // Check if order is already cancelled
+    if (order.orderStatusState === 'cancelled' || order.orderStatusState === 'delivered' || order.orderStatusState === 'processed') {
+        return res.status(400).json({
+            success: false,
+            message: 'Order is already processed/delivered/cancelled'
+        });
+    }
+
     // Single Waybill Handling (For Multi-Item Single Shipment)
     const waybillResponse = await axios.get(
         "https://track.delhivery.com/waybill/api/bulk/json/?count=1",
@@ -291,6 +306,39 @@ export const createShipment = asyncErrorHandler(async (req, res, next) => {
 
         console.log("Delhivery Response:", response.data);
 
+        // Save the shipment details to our database
+        const newShipment = new ShipmentModel({
+            orderId,
+            waybillNumber,
+            courierCompany: 'Delhivery',
+            status: 'NEW',
+            shipmentDetails: {
+                packageDimensions: {
+                    width: shipmentWidth,
+                    height: shipmentHeight,
+                    weight: weight
+                },
+                deliveryAddress: {
+                    fullName,
+                    address,
+                    pinCode,
+                    city,
+                    state,
+                    country: country || 'India',
+                    mobileNo,
+                    addressType
+                },
+                codAmount,
+                totalAmount,
+                totalQuantity,
+                productDescriptions
+            },
+            apiResponse: response.data
+        });
+
+        await newShipment.save();
+        console.log(`Shipment ${waybillNumber} created and saved to database`);
+
         // Update order with shipping info
         await Order.findByIdAndUpdate(orderId, {
             shippingId: waybillNumber,
@@ -309,13 +357,22 @@ export const createShipment = asyncErrorHandler(async (req, res, next) => {
         //     // Save shipment data to database
         //     const savedShipment = await ShipmentDataModel.saveShipment(shipmentData);
         //     console.log("Shipment data saved to DB:", savedShipment);
+
         // }
 
+        if (response.data.success) {
+            order.orderStatusState = 'processed';
 
-
+            // Push the new status to the order's status list
+            order.orderStatuses.push({
+                date: new Date(),
+                status: 'processed'
+            });
+            await order.save()
+        }
 
         return res.status(200).json({
-            success: true,
+            success: response.data.success,
             // data: response.data.data || response.data,
             data: response.data,
             waybill: waybillNumber
@@ -358,11 +415,7 @@ export const generatePackingLabel = asyncErrorHandler(async (req, res, next) => 
     }
 });
 
-
-
-
 //generate pickup
-
 export const generatePickup = asyncErrorHandler(async (req, res, next) => {
     try {
         const { pickup_location, expected_package_count, pickup_date, pickup_time } = req.body;
@@ -414,7 +467,7 @@ export const cancelShipment = asyncErrorHandler(async (req, res, next) => {
         // Validate orderId is provided
         if (!orderId) {
             return res.status(400).json({
-                success:false,
+                success: false,
                 message: 'Order ID is required for cancellation'
             });
         }
@@ -425,7 +478,7 @@ export const cancelShipment = asyncErrorHandler(async (req, res, next) => {
         // Check if order exists
         if (!order) {
             return res.status(404).json({
-                success:false,
+                success: false,
                 message: 'Order not found'
             });
         }
@@ -433,7 +486,7 @@ export const cancelShipment = asyncErrorHandler(async (req, res, next) => {
         // Check if order is already cancelled
         if (order.orderStatusState === 'cancelled' || order.cancellationDetails.isCancelled) {
             return res.status(400).json({
-                success:true,
+                success: true,
                 message: 'Order is already cancelled'
             });
         }
@@ -442,7 +495,7 @@ export const cancelShipment = asyncErrorHandler(async (req, res, next) => {
         const cancelableStates = ['placed', 'processing', 'pending'];
         if (!cancelableStates.includes(order.orderStatusState)) {
             return res.status(400).json({
-                success:false,
+                success: false,
                 message: 'Order cannot be cancelled at this stage'
             });
         }
@@ -476,9 +529,9 @@ export const cancelShipment = asyncErrorHandler(async (req, res, next) => {
             cancellationReason: cancellationReason,
             cancellationInitiatedBy: 'user', // or determine dynamically
             cancellationDate: new Date(),
-            cancellationSource:cancellationSource,
+            cancellationSource: cancellationSource,
         };
-        
+
 
         // Save the updated order
         await order.save({ session });
@@ -488,7 +541,7 @@ export const cancelShipment = asyncErrorHandler(async (req, res, next) => {
         session.endSession();
 
         res.status(200).json({
-            success:true,
+            success: true,
             message: 'Order cancelled successfully',
             order: order
         });
@@ -496,7 +549,7 @@ export const cancelShipment = asyncErrorHandler(async (req, res, next) => {
     } catch (error) {
         console.error('Error cancelling shipment:', error);
         res.status(400).json({
-            success:false,
+            success: false,
             message: 'Failed to cancel shipment',
             error: 'some err occured '
         });
@@ -504,7 +557,61 @@ export const cancelShipment = asyncErrorHandler(async (req, res, next) => {
 });
 
 
+export const trackPackage = asyncErrorHandler(async (req, res, next) => {
+    try {
+        // Get waybill from query parameters
+        const { shippingId } = req.params;
+        const waybill = shippingId
 
+        // Validate waybill is provided
+        if (!waybill) {
+            return res.status(400).json({
+                success: false,
+                message: 'Waybill number is required for tracking'
+            });
+        }
+
+        // Construct the URL with query parameters
+        let trackingUrl = `${process.env.DELHIVERY_BASE_URL}/api/v1/packages/json/?waybill=${waybill}`;
+
+
+        // Make request to Delhivery API
+        const response = await axios.get(
+            trackingUrl,
+            {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'Authorization': `Token ${process.env.DELHIVERY_API_KEY}`,
+                },
+            }
+        );
+
+        // Check if the response contains package data
+        if (!response.data || response.data.Error) {
+            return res.status(404).json({
+                success: false,
+                message: 'Package information not found',
+                error: response.data?.Error || 'No data returned from tracking service'
+            });
+        }
+
+        // Return tracking information
+        res.status(200).json({
+            success: true,
+            message: 'Package information retrieved successfully',
+            trackingData: response.data
+        });
+
+    } catch (error) {
+        console.error('Error tracking package:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to process tracking request',
+            error: 'Internal server error'
+        });
+    }
+});
 // export const cancelShipment = asyncErrorHandler(async (req, res, next) => {
 //     try {
 //         const { orderId, shipmentId } = req.body;
