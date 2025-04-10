@@ -6,11 +6,7 @@
   "scripts": {
     "build": "npm i && tsc",
     "tsc": "tsc -w",
-<<<<<<< HEAD
-    "start": "nodemon -r dotenv/config --experimental-json-modules  dist/index.js",
-=======
     "start": "node -r dotenv/config ./dist/index.js",
->>>>>>> 3cae6325cd44ef5005588b3b135da48caa583f1e
     "dev": "tsc-watch --onSuccess \"nodemon -r dotenv/config --experimental-json-modules  dist/index.js\""
   },
   "author": "sy,trii,neema",

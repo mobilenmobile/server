@@ -142,8 +142,6 @@ export const newOrder = asyncErrorHandler(
       await coinAccount.save({ session });
       await newOrder.save({ session });
 
-
-
       console.log("Order created successfully:", newOrder);
 
       // ----------------------------------- !!!! shiprocket order creation !!!!!-----------------------------------
@@ -165,6 +163,7 @@ export const newOrder = asyncErrorHandler(
 
       // console.log("createorderbodydata------------>", creatorderbodydata)
       try {
+
         // const response = await axios.post(createOrderUrl, creatorderbodydata, config)
         // console.log({ success: true, message: 'shipRocket Order Created', data: response.data })
         // Store courier order details in the order
@@ -188,18 +187,15 @@ export const newOrder = asyncErrorHandler(
         }
 
         user.coupon = null
-
         await user.save({ session });
 
         //Dashboard Analytic
         //store order history to maintain
         // Create all product sold history documents in a single batch operation
 
-
-
         const productHistoryDocs = newOrder.orderItems.map((orderItem: any) => {
           // Ensure all fields have proper MongoDB ObjectId types
-          console.log("creating historhy ", orderItem.productId)
+          console.log("creating history of order for analytic purpose ", orderItem.productId)
           return {
             order_id: newOrder._id,
             product_id: orderItem.productId,
@@ -219,7 +215,7 @@ export const newOrder = asyncErrorHandler(
           };
         });
 
-        // Use insertMany for better performance but handle validation errors
+        // Use insertMany for bulk updates
         try {
           if (productHistoryDocs.length > 0) {
             await productSoldHistory.insertMany(productHistoryDocs, { session });
@@ -227,7 +223,7 @@ export const newOrder = asyncErrorHandler(
           }
         } catch (error) {
           console.error("Error creating product sold history:", error);
-          // You might want to log the documents that failed validation
+          //failed insertion of the data
           console.error("Failed documents:", JSON.stringify(productHistoryDocs));
           throw error; // This will trigger the transaction rollback
         }
@@ -316,7 +312,7 @@ export const trackOrder = asyncErrorHandler(async (req, res, next) => {
 });
 
 
-//------------- api to create new order-----------------------------------------------------
+//------------- Archived for reference:api to create new order-----------------------------------------------------
 // export const newOrder = asyncErrorHandler(
 //   async (req: Request, res, next) => {
 
@@ -509,7 +505,6 @@ export const getSingleOrderDetails = asyncErrorHandler(async (req, res, next) =>
     shipmentDetails: order?.courierOrderDetails,
     orderItems: orderItemsWithReviews
   }
-
 
   console.log("orderItemwithreviews", orderItemsWithReviews)
   return res.status(200).json({

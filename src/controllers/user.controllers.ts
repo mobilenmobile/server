@@ -18,7 +18,6 @@ import { Role } from "../models/userRoleModel";
 
 
 
-
 //------------------------xxxxxx List-Of-Apis xxxxxxxxx-------------------
 
 
@@ -881,28 +880,24 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
 
   //mapping through cartItems to structure the data
   const cartItemsData = cartItems.map((item) => {
+    console.log("############## check if free product available ############")
+    console.log(item)
     if (item.productId.productVariance) {
-
       const variantData = item.productId.productVariance.find((variant: any) => {
         if ((variant.id.replace(/\s+/g, "")) == (item.selectedVarianceId.replace(/\s+/g, ""))) {
           return variant
         }
-
       })
       const productDiscount = calculateDiscount(variantData?.boxPrice, variantData?.sellingPrice)
 
       let productComboProducts = [];
       let productFreeProducts = []
 
-
       if (item.isCombo) {
-
-
         productComboProducts = item?.productId?.productComboProducts.map((item: any) => {
           if (item.productId.productVariance) {
             const variantData = item.productId.productVariance[0]
             const productDiscount = calculateDiscount(variantData?.boxPrice, variantData?.sellingPrice)
-
             // console.log("type of ------------->", variantData.quantity, variantData.boxPrice, variantData.sellingPrice)
             return {
               _id: item._id,
@@ -915,7 +910,7 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
               thumbnail: variantData?.thumbnail,
               boxPrice: variantData?.boxPrice || 0,  // Ensure a valid number
               sellingPrice: variantData?.sellingPrice || 0,  // Ensure a valid number
-              comboPrice: variantData.comboPrice || variantData.sellingPrice || 0,  // Ensure a valid number
+              comboPrice: item.comboPrice || variantData.sellingPrice || 0,  // Ensure a valid number
               // color: variantData?.color,
               // ramAndStorage: variantData?.ramAndStorage[0],
               productRating: item.productId.productRating,
@@ -948,17 +943,12 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
           Total: 0,
           DiscountedTotal: 0,
         });
-
-
         console.log("accucombodata-------------------------------->", "data", ComboAccumulator)
-
         // console.log("combo item -=====>", item.productId)
         ComboAccumulator.productTotal = Number(ComboAccumulator?.Total) + Number(variantData?.sellingPrice)
         ComboAccumulator.finalTotal = Number(ComboAccumulator?.DiscountedTotal) + Number(variantData?.sellingPrice)
 
       }
-
-
 
       if (item.productId.productFreeProducts.length > 0) {
         productFreeProducts = item?.productId?.productFreeProducts?.map((item: any) => {
@@ -1018,7 +1008,7 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
         isCombo: item?.isCombo || false,
         // productComboProducts: item?.productId?.productComboProducts ? item?.productId?.productComboProducts : [],
         productComboProducts: productComboProducts ? productComboProducts : [],
-        productFreeProducts: item.selectedFreeProducts ? item.selectedFreeProducts : [],
+        productFreeProducts: item.selectedFreeProducts ?? productFreeProducts,
         // selectedFreeProducts: item.selectedFreeProducts ? item.selectedFreeProducts : [],
         skinProductDetails: item?.skinProductDetails || [],
         deviceDetails: item?.deviceDetails
