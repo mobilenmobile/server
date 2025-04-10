@@ -1,8 +1,8 @@
 import dotenv from "dotenv";
 import connectDB from "./db/index.js";
 import app from "./app.js";
-import { deleteTodayModels } from "./controllers/model.controller.js";
-import { storeSuggestions } from "./suggestion.js";
+import { logger } from "./logger.js";
+
 
 dotenv.config({
   path: "./env",
@@ -10,14 +10,9 @@ dotenv.config({
 
 // console.log(process.env.PORT);
 function startServer(port: number) {
-
   const server = app.listen(port, () => {
-    console.log("Server is started successfully on port: ", port);
+    logger.info(`Server is running on Port ${port}`)
   });
-
-  // deleteTodayModels()
-
-  //handle error if server failed to start 
   server.on('error', (err: Error) => {
     if ((err as any).syscall !== 'listen') {
       throw err;
@@ -40,12 +35,9 @@ function startServer(port: number) {
   });
 }
 
-
-
-// storeSuggestions()
-
 connectDB()
   .then(() => {
+   
     startServer(Number(process.env.PORT) || 3000)
     // app.listen(process.env.PORT || 4000, () => {
     //   console.log("Server is started successfully on port: ", process.env.PORT);
@@ -53,8 +45,8 @@ connectDB()
     // app.on("error", (err) => {
     //   console.log("server failed to start ", err);
     // });
-    
   })
   .catch((err) => {
-    console.log("Mongodb connection failed !!!", err);
+    // console.log("Mongodb connection failed !!!", err);
+    logger.error(`Error starting server`, err)
   });

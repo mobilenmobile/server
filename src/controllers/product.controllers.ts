@@ -415,7 +415,8 @@ export const getSingleProductDetails = asyncErrorHandler(async (req, res, next) 
             thumbnail: variant.thumbnail,
             boxPrice: variant.boxPrice,
             sellingPrice: variant.sellingPrice,
-            comboPrice: variant.comboPrice,
+            //if combo price is not available fall back to selling price
+            comboPrice: comboProduct.comboPrice ?? variant.sellingPrice,
             discount: productDiscount,
             rating: product.productRating,
             color: variant.color, // Replace with actual rating if available
@@ -430,42 +431,63 @@ export const getSingleProductDetails = asyncErrorHandler(async (req, res, next) 
     // console.log("product Freeroducts ==> ", product.productFreeProducts)
     product.productFreeProducts?.forEach((FreeProduct: any) => {
       const product = FreeProduct.productId
-      product.productVariance.forEach((variant: ProductVariance) => {
+      const variants = product.productVariance.filter((variant: ProductVariance) => Number(variant.quantity) > 0)
+      if (variants.length > 0) {
+        const variant = variants[0]
         const productDiscount = calculateDiscount(variant.boxPrice, variant.sellingPrice)
-        // console.log(variant)
-        if (Number(variant.quantity) > 0) {
-          // console.log("--------------------------------ram---------------------", variant.ramAndStorage[0])
+        const newProduct = {
+          productid: `${product._id}`,
+          keyid: `${product._id}${variant.id.replace(/\s+/g, "")}`,
+          variantid: `${variant.id.replace(/\s+/g, "")}`,
+          title: product.productTitle.toLowerCase(),
+          category: product?.productCategory?.categoryName,
+          thumbnail: variant.thumbnail,
+          boxPrice: variant.boxPrice,
+          sellingPrice: variant.sellingPrice,
+          comboPrice: variant.comboPrice,
+          discount: productDiscount,
+          rating: product.productRating,
+          color: variant.color, // Replace with actual rating if available
+          brand: product.productBrand?.brandName || 'nobrand'
+        };
+        transformedFreeProducts.push(newProduct)
+      }
+      // product.productVariance.forEach((variant: ProductVariance) => {
+      //   const productDiscount = calculateDiscount(variant.boxPrice, variant.sellingPrice)
+      //   // console.log(variant)
+      //   if (Number(variant.quantity) > 0) {
+      //     // console.log("--------------------------------ram---------------------", variant.ramAndStorage[0])
 
-          //dynamically creating title of product
-          let title = product.productTitle
+      //     //dynamically creating title of product
+      //     let title = product.productTitle
 
-          if (variant['ramAndStorage'].length > 0 && variant.ramAndStorage[0]?.ram) {
+      //     if (variant['ramAndStorage'].length > 0 && variant.ramAndStorage[0]?.ram) {
 
-            title = `${product.productTitle} ${variant.ramAndStorage
-              && `(${variant.color} ${variant.ramAndStorage[0].storage != '0' ? `${variant.ramAndStorage[0].storage}GB` : ''})`
-              }`
-          } else {
-            title = `${product.productTitle} (${variant.color})`
-          }
-          //creating different product based on variance
-          const newProduct = {
-            productid: `${product._id}`,
-            keyid: `${product._id}${variant.id.replace(/\s+/g, "")}`,
-            variantid: `${variant.id.replace(/\s+/g, "")}`,
-            title: title.toLowerCase(),
-            category: product?.productCategory?.categoryName,
-            thumbnail: variant.thumbnail,
-            boxPrice: variant.boxPrice,
-            sellingPrice: variant.sellingPrice,
-            comboPrice: variant.comboPrice,
-            discount: productDiscount,
-            rating: product.productRating,
-            color: variant.color, // Replace with actual rating if available
-            brand: product.productBrand?.brandName || 'nobrand'
-          };
-          transformedFreeProducts.push(newProduct)
-        }
-      });
+      //       title = `${product.productTitle} ${variant.ramAndStorage
+      //         && `(${variant.color} ${variant.ramAndStorage[0].storage != '0' ? `${variant.ramAndStorage[0].storage}GB` : ''})`
+      //         }`
+      //     } else {
+      //       title = `${product.productTitle} (${variant.color})`
+      //     }
+      //     //creating different product based on variance
+      //     const newProduct = {
+      //       productid: `${product._id}`,
+      //       keyid: `${product._id}${variant.id.replace(/\s+/g, "")}`,
+      //       variantid: `${variant.id.replace(/\s+/g, "")}`,
+      //       title: title.toLowerCase(),
+      //       category: product?.productCategory?.categoryName,
+      //       thumbnail: variant.thumbnail,
+      //       boxPrice: variant.boxPrice,
+      //       sellingPrice: variant.sellingPrice,
+      //       comboPrice: variant.comboPrice,
+      //       discount: productDiscount,
+      //       rating: product.productRating,
+      //       color: variant.color, // Replace with actual rating if available
+      //       brand: product.productBrand?.brandName || 'nobrand'
+      //     };
+      //     transformedFreeProducts.push(newProduct)
+      //   }
+      // });
     });
   }
   // Modify `productRamAndStorage` if necessary

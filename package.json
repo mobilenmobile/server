@@ -6,7 +6,7 @@
   "scripts": {
     "build": "npm i && tsc",
     "tsc": "tsc -w",
-    "start": "node ./dist/index.js",
+    "start": "nodemon -r dotenv/config --experimental-json-modules  dist/index.js",
     "dev": "tsc-watch --onSuccess \"nodemon -r dotenv/config --experimental-json-modules  dist/index.js\""
   },
   "author": "sy,trii,neema",
@@ -52,6 +52,7 @@
     "razorpay": "^2.9.4",
     "request-ip": "^3.3.0",
     "uuid": "^9.0.1",
-    "validator": "^13.11.0"
+    "validator": "^13.11.0",
+    "winston": "^3.17.0"
   }
 }
