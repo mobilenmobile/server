@@ -16,7 +16,7 @@ import {
 import { FilterQuery } from "mongoose";
 import { subCategory } from "../models/subCategory/subCategory.model.js";
 import { Box } from "../models/boxModel.js";
-import { AdminSearchRequestQuery,  fProductWiseQty,  InputData,  ProductVariance } from "../types/productTypes.js";
+import { AdminSearchRequestQuery, fProductWiseQty, InputData, ProductVariance } from "../types/productTypes.js";
 import formatProductWiseQty from "../utils/formatProductWiseQty.js";
 
 
@@ -725,16 +725,15 @@ export const getAllAdminProducts = asyncErrorHandler(
   }
 );
 
+
+
 export const getAllProducts = asyncErrorHandler(
   async (req, res, next) => {
-    // const fullUrl = req.protocol + '://' + req.get('host') + req.originalUrl;
-    // console.log("API PATH FULL URL:-", fullUrl)
-    const { search, sort, category, price, device, isfeatured } = req.query;
-    console.log("Search query:-", search, sort, category, price, device, isfeatured)
+    const { search, sort="hl", category, price, device, isfeatured } = req.query;
+    console.log("Search query:-", search, sort, category, price, device, isfeatured);
     const page = Number(req.query.page) || 1;
-    const limit = Number(req.query.limit) || 12;
+    const limit = Number(req.query.limit) || 20;
     const skip = (page - 1) * limit;
-    // let baseQuery: FilterQuery<BaseQuery> = {};
 
     let baseQuery: FilterQuery<BaseQuery> = {
       isArchived: { $ne: true }  // Exclude archived products
@@ -747,9 +746,8 @@ export const getAllProducts = asyncErrorHandler(
     }
 
     // Apply category filter if provided
-    console.log("category for search product", category)
+    console.log("category for search product", category);
     if (category) {
-      // console.log("category for search product inside", category)
       const findCategory = await Category.findOne({ categoryName: category });
       if (findCategory) {
         baseQuery.productCategory = findCategory._id;
@@ -760,11 +758,10 @@ export const getAllProducts = asyncErrorHandler(
     if (isfeatured) {
       baseQuery.isFeatured = isfeatured === 'true';
     }
+    
     let searchQuery: FilterQuery<BaseQuery> = {};
 
     if (search && typeof search === 'string') {
-      // Make search more flexible by not requiring word boundaries
-      // and checking both partial matches and exact matches
       const searchTerm = search.toLowerCase().trim();
 
       if (searchTerm) {
@@ -772,7 +769,6 @@ export const getAllProducts = asyncErrorHandler(
           $or: [
             { productTitle: { $regex: searchTerm, $options: 'i' } },
             { productKeyword: { $regex: searchTerm, $options: 'i' } },
-            // { productCategory: { $regex: searchTerm, $options: 'i' } },
           ]
         };
       }
@@ -800,9 +796,7 @@ export const getAllProducts = asyncErrorHandler(
     const productPromise = Product.find(combinedQuery)
       .populate("productCategory")
       .populate("productBrand")
-      .sort(sort ? sortBy : { createdAt: -1 })
-      .skip(skip)
-      .limit(limit);
+      .sort(sort ? sortBy : { createdAt: -1 });
 
     let [products, filteredProductwithoutlimit] = await Promise.all([
       productPromise,
@@ -854,23 +848,248 @@ export const getAllProducts = asyncErrorHandler(
       });
     });
 
-    const totalPage = Math.ceil(totalProducts / limit);
+    interface FlatProduct {
+      productid: string;
+      keyid: string;
+      variantid: string;
+      title: string;
+      category: string;
+      thumbnail: string;
+      boxPrice: number;
+      sellingPrice: number;
+      discount: number;
+      rating: number;
+      color: string;
+      brand: string;
+      outofstock: boolean;
+    }
 
-    // for (let i = flatProducts.length - 1; i > 0; i--) {
-    //   const j = Math.floor(Math.random() * (i + 1));
-    //   [flatProducts[i], flatProducts[j]] = [flatProducts[j], flatProducts[i]];
-    // }
+    // Separate in-stock and out-of-stock products
+    const inStockProducts: FlatProduct[] = flatProducts.filter((product: any) => !product.outofstock);
+    const outOfStockProducts: FlatProduct[] = flatProducts.filter((product: any) => product.outofstock);
+
+    // Apply sorting to each array separately based on the sort parameter
+    if (sort === "lh") {
+      // Sort by selling price from low to high
+      inStockProducts.sort((a: FlatProduct, b: FlatProduct) => a.sellingPrice - b.sellingPrice);
+      outOfStockProducts.sort((a: FlatProduct, b: FlatProduct) => a.sellingPrice - b.sellingPrice);
+    } else if (sort === "hl") {
+      // Sort by selling price from high to low
+      inStockProducts.sort((a: FlatProduct, b: FlatProduct) => b.sellingPrice - a.sellingPrice);
+      outOfStockProducts.sort((a: FlatProduct, b: FlatProduct) => b.sellingPrice - a.sellingPrice);
+    }
+
+    // Combine in-stock and out-of-stock products
+    const allSortedProducts = [...inStockProducts, ...outOfStockProducts];
+
+    // Calculate pagination for the combined array
+    const totalAllProducts = allSortedProducts.length;
+    const totalPage = Math.ceil(totalAllProducts / limit);
+    
+    // Get the products for the current page
+    const paginatedProducts = allSortedProducts.slice(skip, skip + limit);
 
     return res.status(200).json({
       success: true,
       message: "All products fetched successfully",
-      products: flatProducts,
+      products: paginatedProducts,
       totalPage,
       currentPage: Number(page),
-      totalProducts,
+      totalProducts: totalAllProducts,
     });
   }
 );
+
+// export const getAllProducts = asyncErrorHandler(
+//   async (req, res, next) => {
+//     // const fullUrl = req.protocol + '://' + req.get('host') + req.originalUrl;
+//     // console.log("API PATH FULL URL:-", fullUrl)
+//     const { search, sort = "hl", category, price, device, isfeatured } = req.query;
+//     console.log("Search query:-", search, sort, category, price, device, isfeatured)
+//     const page = Number(req.query.page) || 1;
+//     const limit = Number(req.query.limit) || 12;
+//     const skip = (page - 1) * limit;
+//     // let baseQuery: FilterQuery<BaseQuery> = {};
+
+//     let baseQuery: FilterQuery<BaseQuery> = {
+//       isArchived: { $ne: true }  // Exclude archived products
+//     };
+
+//     if (price) {
+//       baseQuery.price = {
+//         $lte: Number(price),
+//       };
+//     }
+
+//     // Apply category filter if provided
+//     console.log("category for search product", category)
+//     if (category) {
+//       // console.log("category for search product inside", category)
+//       const findCategory = await Category.findOne({ categoryName: category });
+//       if (findCategory) {
+//         baseQuery.productCategory = findCategory._id;
+//       }
+//     }
+
+//     // Apply isfeatured filter if provided
+//     if (isfeatured) {
+//       baseQuery.isFeatured = isfeatured === 'true';
+//     }
+//     let searchQuery: FilterQuery<BaseQuery> = {};
+
+//     if (search && typeof search === 'string') {
+//       // Make search more flexible by not requiring word boundaries
+//       // and checking both partial matches and exact matches
+//       const searchTerm = search.toLowerCase().trim();
+
+//       if (searchTerm) {
+//         searchQuery = {
+//           $or: [
+//             { productTitle: { $regex: searchTerm, $options: 'i' } },
+//             { productKeyword: { $regex: searchTerm, $options: 'i' } },
+//             // { productCategory: { $regex: searchTerm, $options: 'i' } },
+//           ]
+//         };
+//       }
+//     }
+
+//     const combinedQuery = {
+//       ...baseQuery,
+//       ...(Object.keys(searchQuery).length > 0 ? searchQuery : {})
+//     };
+
+//     const sortBy: any = {};
+
+//     if (sort) {
+//       if (sort === "A-Z") {
+//         sortBy.productTitle = 1;
+//       } else if (sort === "Z-A") {
+//         sortBy.productTitle = -1;
+//       } else if (sort === "oldest") {
+//         sortBy.createdAt = 1;
+//       } else {
+//         sortBy.createdAt = -1;
+//       }
+//     }
+
+//     const productPromise = Product.find(combinedQuery)
+//       .populate("productCategory")
+//       .populate("productBrand")
+//       .sort(sort ? sortBy : { createdAt: -1 })
+//       .skip(skip)
+//       .limit(limit);
+
+//     let [products, filteredProductwithoutlimit] = await Promise.all([
+//       productPromise,
+//       Product.find(combinedQuery),
+//     ]);
+
+//     const totalProducts = await Product.countDocuments(combinedQuery);
+//     if (!totalProducts) {
+//       return res.status(200).json({ success: false, products: [] })
+//     }
+
+//     if (category === "skin" && typeof device === 'string' && device.length > 1) {
+//       console.log("skin filter according to device :---", device);
+//       products = products.filter((item) => {
+//         return item.ProductSkinSelectedItems.includes(device.toLowerCase().trim());
+//       });
+//     }
+
+//     let flatProducts: any = [];
+
+//     products.forEach(product => {
+//       product.productVariance.forEach((variant: ProductVariance) => {
+//         const productDiscount = calculateDiscount(variant.boxPrice, variant.sellingPrice);
+
+//         let title = product.productTitle;
+
+//         if (variant['ramAndStorage'].length > 0 && variant.ramAndStorage[0]?.ram) {
+//           title = `${product.productTitle} ${variant.ramAndStorage[0].storage !== '0' ? `(${variant.color} ${variant.ramAndStorage[0].storage}GB)` : `(${variant.color})`}`;
+//         } else {
+//           title = `${product.productTitle} (${variant.color})`;
+//         }
+
+//         const newProduct = {
+//           productid: `${product._id}`,
+//           keyid: `${product._id}${variant.id.replace(/\s+/g, "")}`,
+//           variantid: `${variant.id.replace(/\s+/g, "")}`,
+//           title: title.toLowerCase(),
+//           category: product?.productCategory?.categoryName,
+//           thumbnail: variant.thumbnail,
+//           boxPrice: variant.boxPrice,
+//           sellingPrice: variant.sellingPrice,
+//           discount: productDiscount,
+//           rating: product.productRating,
+//           color: variant.color?.split("-")[0],
+//           brand: product.productBrand?.brandName || 'nobrand',
+//           outofstock: Number(variant?.quantity) === 0,
+//         };
+//         flatProducts.push(newProduct);
+//       });
+//     });
+
+//     interface FlatProduct {
+//       productid: string;
+//       keyid: string;
+//       variantid: string;
+//       title: string;
+//       category: string;
+//       thumbnail: string;
+//       boxPrice: number;
+//       sellingPrice: number;
+//       discount: number;
+//       rating: number;
+//       color: string;
+//       brand: string;
+//       outofstock: boolean;
+//     }
+
+//     // Apply sorting with in-stock items prioritized over out-of-stock items
+//     const inStockProducts: FlatProduct[] = flatProducts.filter((product: any) => !product.outofstock);
+//     const outOfStockProducts: FlatProduct[] = flatProducts.filter((product: any) => product.outofstock);
+
+//     // Apply sorting to each array separately based on the sort parameter
+//     if (sort === "lh") {
+//       // Sort by selling price from low to high
+//       inStockProducts.sort((a: FlatProduct, b: FlatProduct) => a.sellingPrice - b.sellingPrice);
+//       outOfStockProducts.sort((a: FlatProduct, b: FlatProduct) => a.sellingPrice - b.sellingPrice);
+//     } else if (sort === "hl") {
+//       // Sort by selling price from high to low
+//       inStockProducts.sort((a: FlatProduct, b: FlatProduct) => b.sellingPrice - a.sellingPrice);
+//       outOfStockProducts.sort((a: FlatProduct, b: FlatProduct) => b.sellingPrice - a.sellingPrice);
+//     }
+
+//     const allSortedProducts = [...inStockProducts, ...outOfStockProducts];
+
+//     // Calculate pagination for the combined array
+//     const totalAllProducts = allSortedProducts.length;
+//     const totalPage = Math.ceil(totalAllProducts / limit);
+
+//     // Get the products for the current page
+//     const paginatedProducts = allSortedProducts.slice(skip, skip + limit);
+
+
+//     // for (let i = flatProducts.length - 1; i > 0; i--) {
+//     //   const j = Math.floor(Math.random() * (i + 1));
+//     //   [flatProducts[i], flatProducts[j]] = [flatProducts[j], flatProducts[i]];
+//     // }
+
+//     return res.status(200).json({
+//       success: true,
+//       message: "All products fetched successfully",
+//       products: paginatedProducts,
+//       totalPage,
+//       currentPage: Number(page),
+//       totalProducts,
+//     });
+//   }
+// );
+
+
+
+
+
 
 //---------------------api to get similar products and change its structure------------------------------------
 export const getSimilarProducts = asyncErrorHandler(
@@ -1053,6 +1272,7 @@ export const getLimitedProductsByBrands = asyncErrorHandler(async (req, res, nex
 
 // -------------------Api to filter and sort products-------------------------------------
 export const getFilterAndSortProducts = asyncErrorHandler(async (req, res, next) => {
+
   const {
     category,
     searchText,
