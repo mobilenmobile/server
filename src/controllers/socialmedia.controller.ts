@@ -30,7 +30,7 @@ export const newSocialMedia = asyncErrorHandler(
         //         socialMedia.socialMediaLinks.push({ name, link });
         //     }
         // });
-        
+
         socialMedia.socialMediaLinks = socialMediaLinksParsed
         await socialMedia.save();
         return res.status(200).json({
@@ -51,6 +51,14 @@ export const getAllSocialMedias = asyncErrorHandler(
         });
     }
 );
+
+
+
+
+
+
+
+// -------------------------- Archived controllers --------------------------------
 
 // Optionally, you can add a method to delete a social media link
 // export const deleteSocialMedia = asyncErrorHandler(

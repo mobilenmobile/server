@@ -211,6 +211,25 @@ export const searchAllOffer = asyncErrorHandler(
     });
   }
 );
+
+//-------------------api to delete offer-----------------------------------------------
+
+export const deleteOffer = asyncErrorHandler(async (req, res, next) => {
+  const { offerId } = req.params;
+  const offer = await Offer.findById(offerId);
+  if (!offer) {
+    return next(new ErrorHandler("offer not found", 404));
+  }
+  await offer.deleteOne();
+  return res.status(200).json({
+    success: true,
+    message: "offer Deleted Successfully",
+  });
+});
+
+
+
+// ------------------------- Archived controllers -----------------------------------
 // export const searchAllOffer = asyncErrorHandler(
 //   async (req: Request<{}, {}, SearchOfferQuery>, res, next) => {
 //     const { couponId, state } = req.query;
@@ -249,18 +268,3 @@ export const searchAllOffer = asyncErrorHandler(
 //     });
 //   }
 // );
-
-//-------------------api to delete offer-----------------------------------------------
-
-export const deleteOffer = asyncErrorHandler(async (req, res, next) => {
-  const { offerId } = req.params;
-  const offer = await Offer.findById(offerId);
-  if (!offer) {
-    return next(new ErrorHandler("offer not found", 404));
-  }
-  await offer.deleteOne();
-  return res.status(200).json({
-    success: true,
-    message: "offer Deleted Successfully",
-  });
-});

@@ -10,34 +10,54 @@ import { Offer } from "../models/offer/offer.model";
 import { calculateDiscount } from "./product.controllers";
 import { deleteUser, updateFirebaseProfile } from "../db/firebase";
 import { IncreaseCoins } from "./coin.controller";
-import mongoose, { ObjectId, PipelineStage } from "mongoose";
+import { PipelineStage } from "mongoose";
 import { CoinAccount } from "../models/coins/coinAccount";
-import { profile } from "console";
-import { populate } from "dotenv";
 import { Role } from "../models/userRoleModel";
 
 
 
 //------------------------xxxxxx List-Of-Apis xxxxxxxxx-------------------
 
+// ########## User controllers ##########
 
 // 1.newUser
-// .finduser
-// 2.getUser
-// 3.updateProfile
-// 4.updateProfileImage
-// 5.updateCouponCode
-// 6.getAppliedCoupon
-// 7.removeCouponCode
-// 8.updateWishlist
-// 9.getWishlistItems
-// 10.removeWishlistItem
-// 11.updateCart
-// 12.decreaseCartProductQuantity
-// 13.getCartItems
-// 14.removeCartItem
-// 15.getCartDetails
-// 16.clearCart
+// 2.checkIfUserExist
+// 3.finduser
+// 4.getUser
+// 5.updateRole
+// 6.updateProfile
+// 7.updateProfileImage
+
+// ########### user admin controllers ############
+
+// 1.list all users
+// 2. change user roles
+
+// ######### coupon related controllers #######
+
+// 1.updateCouponCode
+// 2.getAppliedCoupon
+// 3.removeCouponCode
+
+
+// ############ wishlist related controllers ###########
+
+// 1.updateWishlist
+// 2.getWishlistItems
+// 3.removeWishlistItem
+
+// ########## cart related controllers ######################
+
+// 1.updateCart
+// 2.decreaseCartProductQuantity
+// 3.getCartItems
+// 4.removeCartItem
+// 5.remove combo item
+// 6.remove free item
+// 7.getCartDetails
+// 8.get unauthenticated cart details
+// 9.store cart items in db
+// 10.clearCart
 
 //----------------------xxxxxx List-Of-Apis-End xxxxxxxxx-------------------------
 
@@ -118,7 +138,6 @@ export const newUser = asyncErrorHandler(
   }
 );
 
-
 export const checkIfUserExist = asyncErrorHandler(
   async (req: Request<{}, {}, { phoneNumber: string }>, res: Response, next: NextFunction) => {
     const { phoneNumber } = req.body;
@@ -143,9 +162,6 @@ export const checkIfUserExist = asyncErrorHandler(
     });
   }
 );
-
-
-
 
 // -------------------------- find user--------------------------------------------------------------------
 export const findUser = asyncErrorHandler(
@@ -196,48 +212,6 @@ export const getUser = asyncErrorHandler(async (req: Request, res, next) => {
   });
 });
 
-// //-----------------------api to update profile ----------------------------------------
-// export const updateProfile = asyncErrorHandler(async (req, res, next) => {
-//   const { profile } = req.body
-//   const user = await User.findById(req.user._id);
-//   if (!user) {
-//     return next(new ErrorHandler("No user found by this id", 404));
-//   }
-
-//   const profileData = JSON.parse(profile)
-//   console.log(profileData)
-//   const {
-//     profileImageUrl,
-//     profileName,
-//     profilePhoneNo,
-//     profileGender,
-//     profileLocation,
-//     profileAlternateMobileNo,
-//   } = profileData
-
-//   user.name = profileData.profileName
-//   user.profile = {
-//     profileImageUrl,
-//     profileName,
-//     profilePhoneNo,
-//     profileGender,
-//     profileLocation,
-//     profileAlternateMobileNo,
-//     profileEmailId: user.profile.profileEmailId,
-//   }
-
-//   await updateFirebaseProfile(req.user.uid, profileData.profileName, profileData.profileImageUrl, profileData.profilePhoneNo)
-//   // user.email = profileData.profileEmailId
-//   await user.save();
-
-//   return res.status(200).json({
-//     success: true,
-//     message: "Successfully updated profile",
-
-//   });
-// });
-
-
 export const updateRole = asyncErrorHandler(async (req, res, next) => {
   const { userId, roleId } = req.body;
 
@@ -262,7 +236,6 @@ export const updateRole = asyncErrorHandler(async (req, res, next) => {
     userData: user
   });
 });
-
 
 export const updateProfile = asyncErrorHandler(async (req, res, next) => {
   const { profile } = req.body;
@@ -324,7 +297,6 @@ export const updateProfile = asyncErrorHandler(async (req, res, next) => {
   });
 });
 
-
 //---------------------api to update profile image-------------------------------------------
 export const updateProfileImage = asyncErrorHandler(async (req, res, next) => {
   const { profileImageUrl } = req.body
@@ -346,33 +318,149 @@ export const updateProfileImage = asyncErrorHandler(async (req, res, next) => {
   });
 });
 
-//------------------api to add coupon code for cart------------------------------------------
-// export const updateCouponCode = asyncErrorHandler(async (req, res, next) => {
-//   const { couponId } = req.body
-//   if (!couponId) {
-//     return next(new ErrorHandler("enter coupon code", 404));
-//   }
-//   const couponCode = await Offer.findOne({ _id: couponId })
 
-//   if (!couponCode) {
-//     return next(new ErrorHandler("No coupon found by this id", 404));
-//   }
+// =============================== admin panel======================================
 
-//   const user = await User.findById(req.user._id);
 
-//   if (!user) {
-//     return next(new ErrorHandler("No user found by this id", 404));
-//   }
+export const listAllUsers = asyncErrorHandler(async (req, res, next) => {
+  const { name, platform, page = '1', export: exportFlag } = req.query;
+  const isExport = exportFlag === 'true';
 
-//   user.coupon = couponId
+  let limit = 10;
+  const pageNumber = Number(page);
+  const skip = (pageNumber - 1) * limit;
 
-//   await user.save();
+  // Construct query filters with an explicit type for dynamic properties
+  const query: Record<string, any> = {};
 
-//   return res.status(200).json({
-//     success: true,
-//     message: "Successfully added coupon",
-//   });
-// });
+  if (platform) {
+    query.platform = platform;
+  }
+  if (name) {
+    query.name = { $regex: name, $options: 'i' };
+  }
+
+  // Exclude users with role "admin"
+  const adminRole = await Role.findOne({ roleName: 'admin' });
+  if (adminRole) {
+    query.role = { $ne: adminRole._id };
+  }
+
+  // Build the aggregation pipeline
+  const aggregationPipeline: PipelineStage[] = [
+    { $match: query } as PipelineStage,
+    {
+      $lookup: {
+        from: 'roles',
+        localField: 'role',
+        foreignField: '_id',
+        as: 'roleInfo',
+      },
+    } as PipelineStage,
+    { $unwind: '$roleInfo' } as PipelineStage,
+    {
+      $addFields: {
+        sortOrder: {
+          $switch: {
+            branches: [
+              { case: { $eq: ['$roleInfo.roleName', 'editor'] }, then: 1 },
+              { case: { $eq: ['$roleInfo.roleName', 'customer'] }, then: 2 },
+            ],
+            default: 3,
+          },
+        },
+      },
+    } as PipelineStage,
+    { $sort: { sortOrder: 1 } } as PipelineStage,
+    {
+      $project: {
+        uid: 1,
+        _id: 1,
+        name: 1,
+        platform: 1,
+        profile: 1,
+        email: 1,
+        phoneNumber: 1,
+        role: '$roleInfo.roleName',
+      },
+    } as PipelineStage,
+  ];
+
+  // Apply pagination if export is false
+  if (!isExport) {
+    aggregationPipeline.push({ $skip: skip } as PipelineStage, { $limit: limit } as PipelineStage);
+  }
+
+  // Fetch users using the aggregation pipeline
+  const users = await User.aggregate(aggregationPipeline);
+
+  if (!users || users.length === 0) {
+    return res.status(200).json({
+      success: false,
+      message: 'No user found',
+      users: [],
+    });
+  }
+
+  // If export is true, skip pagination info and return all users
+  if (isExport) {
+    return res.status(200).json({
+      success: true,
+      message: 'Successfully exported all users',
+      users,
+    });
+  }
+
+  // Get the total count of users for pagination
+  // const totalUsers = await User.countDocuments(query);
+  // Count only users with platform "mnm" for pagination
+  const totalUsers = await User.countDocuments({ ...query, platform: 'mnm' });
+  const totalPages = Math.ceil(totalUsers / limit);
+
+  // Respond with users and pagination info
+  return res.status(200).json({
+    success: true,
+    message: 'Successfully fetched users',
+    users,
+    pagination: {
+      totalUsers,
+      totalPages,
+      currentPage: pageNumber,
+      limitPerPage: limit,
+    },
+  });
+});
+
+
+export const changeUserRole = asyncErrorHandler(async (req, res, next) => {
+  const { userId, newRoleId } = req.body;
+
+  const user = await User.findOne({ uid: userId })
+  console.log("user", user)
+  if (!user) {
+    return next(new ErrorHandler("No User found", 400))
+  }
+
+  const newRole = await Role.findById(newRoleId)
+
+  if (!newRole) {
+    return next(new ErrorHandler("Invalid role provided", 400))
+  }
+
+  user.role = newRole._id;
+
+  await user.save();
+
+  return res.status(200).json({
+    success: true,
+    message: "User role updated successfully",
+    updatedUser: user,
+  });
+});
+
+
+// ________________________ coupon related controllers _________________________________
+
 
 export const updateCouponCode = asyncErrorHandler(async (req, res, next) => {
   const { couponId } = req.body;
@@ -442,6 +530,9 @@ export const removeCouponCode = asyncErrorHandler(async (req, res, next) => {
     message: "Successfully removed coupon",
   });
 });
+
+
+// ############### Wishlist controllers ############################
 
 //---------------------api to update wislist----------------------------------------------------
 export const updateWishlist = asyncErrorHandler(async (req, res, next) => {
@@ -547,61 +638,7 @@ export const removeWishlistItem = asyncErrorHandler(async (req: Request, res, ne
 });
 
 
-//---------------------api to update cart----------------------------------------------------------
-// export const updateCart = asyncErrorHandler(async (req, res, next) => {
-
-//   const { productId, selectedVarianceId, quantity, customSkin, isCombo, skinProductDetails, selectedFreeProducts } = req.body
-//   console.log("-------------------- update cart------------------------", req.body)
-//   if (!customSkin) {
-//     if (!productId || !selectedVarianceId) {
-//       return next(new ErrorHandler("please enter all fields", 404));
-//     }
-
-//     const product = await Product.findById(productId);
-//     if (!product) {
-//       return next(new ErrorHandler("No product found with this id", 404));
-//     }
-//     const selectedVariantData = product.productVariance.find((variant: { id: string; }) => {
-//       return variant.id.replace(/\s+/g, "") == selectedVarianceId.replace(/\s+/g, "")
-//     })
-
-//     if (selectedVariantData?.quantity == '0' || selectedVariantData?.quantity == 0) {
-//       return next(new ErrorHandler("product is out of stock", 404));
-//     }
-
-//   }
-
-//   const cartItem = await cart.findOne({ productId, selectedVarianceId, user: req.user._id });
-
-
-//   if (cartItem && cartItem.quantity < 10) {
-//     cartItem.quantity = cartItem.quantity + 1
-//     await cartItem.save()
-//   }
-
-//   // console.log(skinProductDetails)
-//   // console.log(JSON.parse(selectedFreeProducts))
-
-//   if (!cartItem) {
-//     await cart.create({
-//       user: req.user._id,
-//       productId,
-//       selectedVarianceId,
-//       customSkin,
-//       isCombo,
-//       skinProductDetails: skinProductDetails ? JSON.parse(skinProductDetails) : null,
-//       selectedFreeProducts: selectedFreeProducts ? JSON.parse(selectedFreeProducts) : null,
-//       quantity
-//     })
-//   }
-
-//   return res.status(200).json({
-//     success: true,
-//     message: "Successfully updated cart",
-//     cartItem
-//   });
-
-// });
+// ############### cart related controllers ##########################
 
 export const updateCart = asyncErrorHandler(async (req, res, next) => {
   const {
@@ -666,7 +703,6 @@ export const updateCart = asyncErrorHandler(async (req, res, next) => {
     cartItem
   });
 });
-
 
 //----------------api to decrease product quantity in cart------------------------------------------------
 export const decreaseCartProductQuantity = asyncErrorHandler(async (req, res, next) => {
@@ -796,10 +832,6 @@ export const removeComboItem = asyncErrorHandler(async (req: Request, res, next)
 });
 
 
-
-
-
-
 // ------------------------- remove free item--------------------------------------------------
 
 export const removeFreeItem = asyncErrorHandler(async (req: Request, res, next) => {
@@ -830,9 +862,6 @@ export const removeFreeItem = asyncErrorHandler(async (req: Request, res, next) 
 });
 
 // ------------------ api to get cart details -------------------------------------------------------
-// ------------------ api to get cart details -------------------------------------------------------
-
-
 export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) => {
 
   if (!req.user._id) {
@@ -1126,8 +1155,6 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
   });
 });
 
-
-
 // ------------------ api to get cart details -------------------------------------------------------
 export const getUnAuthenticatedCartDetails = asyncErrorHandler(async (req: Request, res, next) => {
 
@@ -1383,61 +1410,6 @@ export const clearCart = asyncErrorHandler(async (req: Request, res, next) => {
   });
 });
 
-
-///--------------------- buyNow Cart -----------------------------
-
-
-
-// export const getbuyNowCartItems = asyncErrorHandler(async (req: Request, res, next) => {
-//   if (!req.user._id) {
-//     return next(new ErrorHandler("unauthenticated", 400));
-//   }
-
-//   // console.log(item)
-
-//   const { productId, selectedVarianceId, quantity, customSkin, skinProductDetails } = req.body
-
-
-//   if (!productId || !selectedVarianceId) {
-//     return next(new ErrorHandler("please enter all fields", 404));
-
-//   }
-//   const product = await Product.findById(productId);
-//   if (!product) {
-//     return next(new ErrorHandler("No product found with this id", 404));
-//   }
-//   const selectedVariantData = product.productVariance.find((variant: { id: string; }) => {
-//     return variant.id.replace(/\s+/g, "") == selectedVarianceId.replace(/\s+/g, "")
-//   })
-
-//   if (selectedVariantData?.quantity == '0' || selectedVariantData?.quantity == 0) {
-//     return next(new ErrorHandler("product is out of stock", 404));
-//   }
-//   // console.log("variantData", variantData)
-//   const productDiscount = calculateDiscount(selectedVariantData?.boxPrice, selectedVariantData?.sellingPrice)
-//   const cartItemsData = {
-//     productTitle: product.productTitle,
-//     thumbnail: selectedVariantData.thumbnail,
-//     boxPrice: selectedVariantData?.boxPrice,
-//     sellingPrice: selectedVariantData?.sellingPrice,
-//     color: selectedVariantData?.color,
-//     ramAndStorage: selectedVariantData?.ramAndStorage[0],
-//     productRating: product.productRating,
-//     quantity: quantity,
-//     productId: product._id,
-//     selectedVarianceId: product.selectedVarianceId,
-//     discount: productDiscount,
-//   }
-
-
-//   return res.status(200).json({
-//     success: true,
-//     message: "successfully fetched buyNow data",
-//     cartItemsData: [cartItemsData]
-//   });
-// })
-
-
 export const getBuyNowCartDetails = asyncErrorHandler(async (req: Request, res, next) => {
 
   if (!req.user._id) {
@@ -1555,147 +1527,188 @@ export const getBuyNowCartDetails = asyncErrorHandler(async (req: Request, res, 
 
 
 
-// =============================== admin panel======================================
 
 
 
-// Define the expected shape of the query parameters
-interface UserQuery {
-  name?: string;
-}
+// ------------------------ Archived controllers-----------------------------------------
+// //-----------------------api to update profile ----------------------------------------
+// export const updateProfile = asyncErrorHandler(async (req, res, next) => {
+//   const { profile } = req.body
+//   const user = await User.findById(req.user._id);
+//   if (!user) {
+//     return next(new ErrorHandler("No user found by this id", 404));
+//   }
 
-export const listAllUsers = asyncErrorHandler(async (req, res, next) => {
-  const { name, platform, page = '1', export: exportFlag } = req.query;
-  const isExport = exportFlag === 'true';
+//   const profileData = JSON.parse(profile)
+//   console.log(profileData)
+//   const {
+//     profileImageUrl,
+//     profileName,
+//     profilePhoneNo,
+//     profileGender,
+//     profileLocation,
+//     profileAlternateMobileNo,
+//   } = profileData
 
-  let limit = 10;
-  const pageNumber = Number(page);
-  const skip = (pageNumber - 1) * limit;
+//   user.name = profileData.profileName
+//   user.profile = {
+//     profileImageUrl,
+//     profileName,
+//     profilePhoneNo,
+//     profileGender,
+//     profileLocation,
+//     profileAlternateMobileNo,
+//     profileEmailId: user.profile.profileEmailId,
+//   }
 
-  // Construct query filters with an explicit type for dynamic properties
-  const query: Record<string, any> = {};
+//   await updateFirebaseProfile(req.user.uid, profileData.profileName, profileData.profileImageUrl, profileData.profilePhoneNo)
+//   // user.email = profileData.profileEmailId
+//   await user.save();
 
-  if (platform) {
-    query.platform = platform;
-  }
-  if (name) {
-    query.name = { $regex: name, $options: 'i' };
-  }
+//   return res.status(200).json({
+//     success: true,
+//     message: "Successfully updated profile",
 
-  // Exclude users with role "admin"
-  const adminRole = await Role.findOne({ roleName: 'admin' });
-  if (adminRole) {
-    query.role = { $ne: adminRole._id };
-  }
-
-  // Build the aggregation pipeline
-  const aggregationPipeline: PipelineStage[] = [
-    { $match: query } as PipelineStage,
-    {
-      $lookup: {
-        from: 'roles',
-        localField: 'role',
-        foreignField: '_id',
-        as: 'roleInfo',
-      },
-    } as PipelineStage,
-    { $unwind: '$roleInfo' } as PipelineStage,
-    {
-      $addFields: {
-        sortOrder: {
-          $switch: {
-            branches: [
-              { case: { $eq: ['$roleInfo.roleName', 'editor'] }, then: 1 },
-              { case: { $eq: ['$roleInfo.roleName', 'customer'] }, then: 2 },
-            ],
-            default: 3,
-          },
-        },
-      },
-    } as PipelineStage,
-    { $sort: { sortOrder: 1 } } as PipelineStage,
-    {
-      $project: {
-        uid: 1,
-        _id: 1,
-        name: 1,
-        platform: 1,
-        profile: 1,
-        email: 1,
-        phoneNumber: 1,
-        role: '$roleInfo.roleName',
-      },
-    } as PipelineStage,
-  ];
-
-  // Apply pagination if export is false
-  if (!isExport) {
-    aggregationPipeline.push({ $skip: skip } as PipelineStage, { $limit: limit } as PipelineStage);
-  }
-
-  // Fetch users using the aggregation pipeline
-  const users = await User.aggregate(aggregationPipeline);
-
-  if (!users || users.length === 0) {
-    return res.status(200).json({
-      success: false,
-      message: 'No user found',
-      users: [],
-    });
-  }
-
-  // If export is true, skip pagination info and return all users
-  if (isExport) {
-    return res.status(200).json({
-      success: true,
-      message: 'Successfully exported all users',
-      users,
-    });
-  }
-
-  // Get the total count of users for pagination
-  // const totalUsers = await User.countDocuments(query);
-  // Count only users with platform "mnm" for pagination
-  const totalUsers = await User.countDocuments({ ...query, platform: 'mnm' });
-  const totalPages = Math.ceil(totalUsers / limit);
-
-  // Respond with users and pagination info
-  return res.status(200).json({
-    success: true,
-    message: 'Successfully fetched users',
-    users,
-    pagination: {
-      totalUsers,
-      totalPages,
-      currentPage: pageNumber,
-      limitPerPage: limit,
-    },
-  });
-});
+//   });
+// });
 
 
-export const changeUserRole = asyncErrorHandler(async (req, res, next) => {
-  const { userId, newRoleId } = req.body;
+//---------------------api to update cart----------------------------------------------------------
+// export const updateCart = asyncErrorHandler(async (req, res, next) => {
 
-  const user = await User.findOne({ uid: userId })
-  console.log("user", user)
-  if (!user) {
-    return next(new ErrorHandler("No User found", 400))
-  }
+//   const { productId, selectedVarianceId, quantity, customSkin, isCombo, skinProductDetails, selectedFreeProducts } = req.body
+//   console.log("-------------------- update cart------------------------", req.body)
+//   if (!customSkin) {
+//     if (!productId || !selectedVarianceId) {
+//       return next(new ErrorHandler("please enter all fields", 404));
+//     }
 
-  const newRole = await Role.findById(newRoleId)
+//     const product = await Product.findById(productId);
+//     if (!product) {
+//       return next(new ErrorHandler("No product found with this id", 404));
+//     }
+//     const selectedVariantData = product.productVariance.find((variant: { id: string; }) => {
+//       return variant.id.replace(/\s+/g, "") == selectedVarianceId.replace(/\s+/g, "")
+//     })
 
-  if (!newRole) {
-    return next(new ErrorHandler("Invalid role provided", 400))
-  }
+//     if (selectedVariantData?.quantity == '0' || selectedVariantData?.quantity == 0) {
+//       return next(new ErrorHandler("product is out of stock", 404));
+//     }
 
-  user.role = newRole._id;
+//   }
 
-  await user.save();
+//   const cartItem = await cart.findOne({ productId, selectedVarianceId, user: req.user._id });
 
-  return res.status(200).json({
-    success: true,
-    message: "User role updated successfully",
-    updatedUser: user,
-  });
-});
+
+//   if (cartItem && cartItem.quantity < 10) {
+//     cartItem.quantity = cartItem.quantity + 1
+//     await cartItem.save()
+//   }
+
+//   // console.log(skinProductDetails)
+//   // console.log(JSON.parse(selectedFreeProducts))
+
+//   if (!cartItem) {
+//     await cart.create({
+//       user: req.user._id,
+//       productId,
+//       selectedVarianceId,
+//       customSkin,
+//       isCombo,
+//       skinProductDetails: skinProductDetails ? JSON.parse(skinProductDetails) : null,
+//       selectedFreeProducts: selectedFreeProducts ? JSON.parse(selectedFreeProducts) : null,
+//       quantity
+//     })
+//   }
+
+//   return res.status(200).json({
+//     success: true,
+//     message: "Successfully updated cart",
+//     cartItem
+//   });
+
+// });
+
+
+
+///--------------------- buyNow Cart -----------------------------
+
+
+
+// export const getbuyNowCartItems = asyncErrorHandler(async (req: Request, res, next) => {
+//   if (!req.user._id) {
+//     return next(new ErrorHandler("unauthenticated", 400));
+//   }
+
+//   // console.log(item)
+
+//   const { productId, selectedVarianceId, quantity, customSkin, skinProductDetails } = req.body
+
+
+//   if (!productId || !selectedVarianceId) {
+//     return next(new ErrorHandler("please enter all fields", 404));
+
+//   }
+//   const product = await Product.findById(productId);
+//   if (!product) {
+//     return next(new ErrorHandler("No product found with this id", 404));
+//   }
+//   const selectedVariantData = product.productVariance.find((variant: { id: string; }) => {
+//     return variant.id.replace(/\s+/g, "") == selectedVarianceId.replace(/\s+/g, "")
+//   })
+
+//   if (selectedVariantData?.quantity == '0' || selectedVariantData?.quantity == 0) {
+//     return next(new ErrorHandler("product is out of stock", 404));
+//   }
+//   // console.log("variantData", variantData)
+//   const productDiscount = calculateDiscount(selectedVariantData?.boxPrice, selectedVariantData?.sellingPrice)
+//   const cartItemsData = {
+//     productTitle: product.productTitle,
+//     thumbnail: selectedVariantData.thumbnail,
+//     boxPrice: selectedVariantData?.boxPrice,
+//     sellingPrice: selectedVariantData?.sellingPrice,
+//     color: selectedVariantData?.color,
+//     ramAndStorage: selectedVariantData?.ramAndStorage[0],
+//     productRating: product.productRating,
+//     quantity: quantity,
+//     productId: product._id,
+//     selectedVarianceId: product.selectedVarianceId,
+//     discount: productDiscount,
+//   }
+
+
+//   return res.status(200).json({
+//     success: true,
+//     message: "successfully fetched buyNow data",
+//     cartItemsData: [cartItemsData]
+//   });
+// })
+
+
+//------------------api to add coupon code for cart------------------------------------------
+// export const updateCouponCode = asyncErrorHandler(async (req, res, next) => {
+//   const { couponId } = req.body
+//   if (!couponId) {
+//     return next(new ErrorHandler("enter coupon code", 404));
+//   }
+//   const couponCode = await Offer.findOne({ _id: couponId })
+
+//   if (!couponCode) {
+//     return next(new ErrorHandler("No coupon found by this id", 404));
+//   }
+
+//   const user = await User.findById(req.user._id);
+
+//   if (!user) {
+//     return next(new ErrorHandler("No user found by this id", 404));
+//   }
+
+//   user.coupon = couponId
+
+//   await user.save();
+
+//   return res.status(200).json({
+//     success: true,
+//     message: "Successfully added coupon",
+//   });
+// });

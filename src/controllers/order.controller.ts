@@ -3,12 +3,10 @@ import { Order } from "../models/order/order.model.js";
 import ErrorHandler from "../utils/errorHandler.js";
 import { Request } from "express";
 import { Review } from "../models/review/review.model.js";
-import { IncreaseCoins } from "./coin.controller.js";
 import { CoinAccount } from "../models/coins/coinAccount.js";
 import { CoinTransaction } from "../models/coins/coinTransaction.js";
-import mongoose, { PipelineStage, startSession } from "mongoose";
+import mongoose, {startSession } from "mongoose";
 import { ShipRocket } from "../models/shiprocket/shiprocket.model.js";
-import { createOrderBody } from "./shiprocket.controller.js";
 import axios from "axios";
 import productSoldHistory from "../models/product/productSoldHistory.js";
 import { User } from "../models/auth/user.model.js";
@@ -25,6 +23,7 @@ import ShipmentModel from "../models/order/shipment.models.js";
 // 5.deleteOrder
 // 6.getAllOrders
 // 7.getAllAdminOrders
+// 8. trackOrders
 
 //----------------------xxxxxx List-Of-Apis-End xxxxxxxxx-------------------------
 
@@ -259,212 +258,6 @@ export const newOrder = asyncErrorHandler(
   }
 );
 
-
-// -----------------------!!!!!!!!!!!!! Track shipment !!!!!!!!!!!--------------------------
-export const trackOrder = asyncErrorHandler(async (req, res, next) => {
-
-  const { orderId } = req.body
-  if (!orderId) {
-    return res.status(400).send({ success: false, message: 'order id is required' })
-  }
-
-  const order = await Order.findById(orderId)
-
-  if (!order) {
-    return res.status(400).send({ success: false, message: 'order not found' })
-  }
-
-
-  const trackshipmentUrl = `https://apiv2.shiprocket.in/v1/external/courier/track?order_id=${order.courierOrderDetails.order_id}&channel_id=${order.courierOrderDetails.channel_id}`
-
-  // const UserOrder = await Order.findOne({ _id: orderId }).populate("user")
-  const ShipRocketCredentials = await ShipRocket.findOne({ email: "mobilenmobilebjnr1@gmail.com" })
-  if (!ShipRocketCredentials) {
-    return res.status(404).json({ success: false, message: "ShipRocket credentials not found" })
-  }
-
-  const config = {
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${ShipRocketCredentials.token}`
-    }
-  };
-  // console.log("awbdata------------>", cancellShipmetBodyData)
-  try {
-    const response = await axios.get(trackshipmentUrl, config)
-    console.log('Response data for track shipment:', response.data);
-    return res.status(200).json({ success: true, message: "successfully tracked shipment", data: response.data })
-  } catch (error: any) {
-    if (error.response) {
-      // The request was made and the server responded with a status code
-      // that falls out of the range of 2xx
-      console.error('Error response data:', error.response.data.errors || error.response.data.message || error.response.data || 'No error message');
-    } else if (error.request) {
-      // The request was made but no response was received
-      console.error('Error request:', error.request);
-    } else {
-      // Something happened in setting up the request that triggered an Error
-      console.error('Error message:', error.message);
-    }
-    return res.status(400).json({ success: false, message: "Error in tracking order" })
-  }
-
-});
-
-
-//------------- Archived for reference:api to create new order-----------------------------------------------------
-// export const newOrder = asyncErrorHandler(
-//   async (req: Request, res, next) => {
-
-//     console.log("new order--------------->----------------------------------------------------------")
-//     console.log(req.body)
-//     console.log("new order--------------->----------------------------------------------------------")
-
-//     const {
-//       orderItems,
-//       orderStatuses,
-//       total,
-//       couponcode,
-//       paymentMethod,
-//       paymentStatus,
-//       deliveryAddress,
-//       discount,
-//       discountedTotal,
-//       finalAmount,
-//       usableCoins,
-//       deliveryCharges
-//     } = req.body;
-
-//     if (!deliveryAddress || !orderItems || !total || !finalAmount) {
-//       return next(new ErrorHandler("Please Enter all Fields", 400));
-//     }
-
-//     console.log(JSON.parse(deliveryAddress))
-
-//     if (!req.user._id) {
-//       return next(new ErrorHandler("unauthenticated user", 400));
-//     }
-//     // Start a session for transaction management
-//     const session = await mongoose.startSession();
-//     session.startTransaction();
-//     try {
-
-//       const newOrder = new Order({
-//         user: req.user._id,
-//         orderItems: JSON.parse(orderItems),
-//         orderStatuses: JSON.parse(orderStatuses),
-//         total,
-//         couponcode,
-//         paymentMethod: JSON.parse(paymentMethod),
-//         paymentStatus,
-//         deliveryAddress: JSON.parse(deliveryAddress),
-//         discount,
-//         discountedTotal,
-//         finalAmount,
-//         usableCoins,
-//         deliveryCharges,
-//       });
-
-
-
-//       const ItemCategory = newOrder.orderItems.some((item: { category: string }) => item.category === "smartphone") ? "smartphone" : "accessories";
-
-//       const coinAccountData = await CoinAccount.findOne({ userId: req.user._id })
-//       const deductCoins = usableCoins | 0
-//       coinAccountData.coinAccountBalance -= coinAccountData.useCoinForPayment ? deductCoins : 0
-
-//       // Find the existing coin account or create a new one if not found
-//       let coinAccount = await CoinAccount.findOne({ userId: req.user._id }).session(session);
-
-//       if (!coinAccount) {
-//         // Create a new coin account if it doesn't exist
-//         coinAccount = new CoinAccount({ userId: req.user._id, coinAccountBalance: 0 });
-//         await coinAccount.save({ session });
-//       }
-
-//       // Update the coin account balance
-//       coinAccount.coinAccountBalance -= deductCoins;
-//       await coinAccount.save({ session });
-
-//       // console.log("rewardType:----->", rewardType)
-
-//       // Create a new transaction record
-//       const reducetransaction = new CoinTransaction({
-//         userId: req.user._id,
-//         orderId: newOrder._id,
-//         rewardType: `purchase of ${ItemCategory}`,
-//         amountSpent: deductCoins,
-//         amountReceived: 0,
-//         notes: 'Coins reduced for purchase'
-//       });
-
-//       await reducetransaction.save({ session }); // Update the coin account balance
-
-
-//       // give coins for new purchase
-//       let coinPercentage = 0;
-//       if (ItemCategory == "smartphone") {
-//         coinPercentage = (1 / 100) * newOrder.finalAmount;
-//         // await IncreaseCoins(req.user._id, "Purchase of Smartphone", newOrder._id, Math.floor(coinPercentage))
-//       }
-
-//       if (ItemCategory == "accessories") {
-//         coinPercentage = (10 / 100) * newOrder.finalAmount;
-//         // await IncreaseCoins(req.user._id, "Purchase of Accessories", newOrder._id, Math.floor(coinPercentage))
-//       }
-
-
-//       const coinsTobeAdded = Math.floor(coinPercentage)
-//       coinAccount.coinAccountBalance += coinsTobeAdded;
-//       await coinAccount.save({ session });
-
-//       // console.log("rewardType:----->", rewardType)
-
-//       // Create a new transaction record
-//       const addtransaction = new CoinTransaction({
-//         userId: req.user._id,
-//         orderId: newOrder._id,
-//         rewardType: `purchase of ${ItemCategory}`,
-//         amountSpent: 0,
-//         amountReceived: coinsTobeAdded,
-//         notes: 'Coins added for purchase'
-//       });
-
-//       await addtransaction.save({ session });
-
-//       newOrder.coinsCredited = coinsTobeAdded
-//       newOrder.coinsDebited = coinAccountData.useCoinForPayment ? deductCoins : 0
-//       coinAccountData.useCoinForPayment = false
-
-//       await coinAccountData.save({ session })
-//       await newOrder.save({ session })
-//       console.log("new order--------------->", newOrder)
-//       //also give coin for purchase
-//       // Commit the transaction
-//       await session.commitTransaction();
-//       session.endSession();
-//       console.log(newOrder, "....................newOrder//////////")
-
-//       return res.status(201).json({
-//         success: true,
-//         message: "Order cr successfully",
-//         newMsg: "just checking",
-//         order: newOrder,
-//       });
-//       // console.log("Transaction successfully completed:", transaction);
-//     } catch (error) {
-//       // Abort the transaction in case of an error
-//       await session.abortTransaction();
-//       session.endSession();
-
-//       console.error("Error processing transaction:", error);
-//       throw error
-//     }
-
-
-//   }
-// );
-
 //--------------------api to get single order details---------------------------------------
 export const getSingleOrderDetails = asyncErrorHandler(async (req, res, next) => {
   const { id } = req.params;
@@ -513,8 +306,6 @@ export const getSingleOrderDetails = asyncErrorHandler(async (req, res, next) =>
     orderDetails,
   });
 });
-
-
 
 export const getAdminSingleOrderDetails = asyncErrorHandler(async (req, res, next) => {
   const { id } = req.params;
@@ -588,6 +379,641 @@ export const getAdminSingleOrderDetails = asyncErrorHandler(async (req, res, nex
     shipmentDetails: shipment
   });
 });
+
+export const processOrder = asyncErrorHandler(async (req, res, next) => {
+  const { id } = req.params;
+  const { stage } = req.query;
+
+  if (!stage || typeof stage != "string") {
+    return next(new ErrorHandler("Stage is Not Valid", 404));
+  }
+
+  const order = await Order.findById(id);
+  if (!order) {
+    return next(new ErrorHandler("Order not found", 404));
+  }
+
+  console.log(order, "------and---------", order.orderStatuses.length);
+  let orderStatus = order.orderStatuses[order.orderStatuses.length - 1];
+  console.log(orderStatus);
+
+  if (!orderStatus) {
+    return next(new ErrorHandler("Status not found", 404));
+  }
+
+  // Define valid stages as a literal type
+  const validStages = ["placed", "processed", "delivered", "cancelled"] as const;
+
+  type OrderStage = typeof validStages[number];
+
+  // Type assertion: Ensure that 'stage' is one of the valid stages
+  const typedStage = stage as OrderStage;
+
+  if (!validStages.includes(typedStage)) {
+    return next(new ErrorHandler("Invalid stage", 400));
+  }
+
+  // Add type assertion for currentStage
+  const currentStage = order.orderStatusState as OrderStage;
+  // Prevent changes if the order is already delivered or cancelled
+  if (currentStage === "delivered" || currentStage === "cancelled") {
+    return next(new ErrorHandler("Cannot change status of a delivered or cancelled order", 400));
+  }
+
+  //change order status
+  order.orderStatusState = typedStage
+  // Push the new status to the order's status list
+  order.orderStatuses.push({
+    date: new Date(),
+    status: typedStage
+  });
+
+  await order.save();
+  return res.status(200).json({
+    success: true,
+    message: "Order processed successfully",
+  });
+});
+
+export const cancellOrder = asyncErrorHandler(async (req, res, next) => {
+  console.log("order cancellation called")
+  const { shipRocketId, orderId } = req.body;
+  console.log(req.body)
+
+  if (!orderId || !shipRocketId) {
+    return res.status(400).send({ success: false, message: 'orderId is required' });
+  }
+
+  const ShipRocketCredentials = await ShipRocket.findOne({ email: "mobilenmobilebjnr1@gmail.com" });
+  if (!ShipRocketCredentials) {
+    return res.status(404).json({ success: false, message: "ShipRocket credentials not found" });
+  }
+
+  const cancellOrderUrl = "https://apiv2.shiprocket.in/v1/external/orders/cancel";
+  const config = {
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${ShipRocketCredentials.token}`
+    }
+  };
+
+  const cancellOrderBodyData = {
+    "ids": [shipRocketId]
+  };
+
+  const session = await startSession();
+  session.startTransaction();
+
+  try {
+    const order = await Order.findById(orderId).session(session);
+    if (!order) {
+      await session.abortTransaction();
+      session.endSession();
+      return next(new ErrorHandler("Order not found", 404));
+    }
+
+    // Attempt to cancel the order on Shiprocket first
+    const response = await axios.post(cancellOrderUrl, cancellOrderBodyData, config);
+    console.log('Response data for cancel order:', response.data);
+
+    // If Shiprocket cancellation is successful, cancel the order in MongoDB
+    order.orderStatuses.push({
+      date: new Date(),
+      status: 'cancelled'
+    });
+    order.orderStatusState = "cancelled"
+    await order.save({ session });
+
+    await session.commitTransaction();
+    session.endSession();
+
+    return res.status(200).json({
+      success: true,
+      message: "Order cancelled and deleted successfully",
+      data: response.data
+    });
+
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+
+    if (axios.isAxiosError(error)) {
+      if (error.response) {
+        console.error('Error response data:', error.response.data.errors || error.response.data.message || error.response.data || 'No error message');
+      } else if (error.request) {
+        console.error('Error request:', error.request);
+      } else {
+        console.error('Error message:', error.message);
+      }
+    } else {
+      console.error('Unknown error:', error);
+    }
+
+    return res.status(500).json({ success: false, message: "Error in cancelling Shiprocket order", error });
+  }
+});
+
+export const deleteOrder = asyncErrorHandler(async (req, res, next) => {
+
+  const { shipRocketId, orderId } = req.body;
+  console.log(req.body)
+
+  if (!orderId || !shipRocketId) {
+    return res.status(400).send({ success: false, message: 'Both orderId is required' });
+  }
+
+  const orderInDb = await Order.findById(orderId)
+
+  if (!orderInDb) {
+    return res.status(400).send({ success: false, message: 'order does not exist in db' });
+  }
+
+
+  const ShipRocketCredentials = await ShipRocket.findOne({ email: "mobilenmobilebjnr1@gmail.com" });
+
+  if (!ShipRocketCredentials) {
+    return res.status(404).json({ success: false, message: "ShipRocket credentials not found" });
+  }
+
+  const cancellOrderUrl = "https://apiv2.shiprocket.in/v1/external/orders/cancel";
+  const config = {
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${ShipRocketCredentials.token}`
+    }
+  };
+
+  const cancellOrderBodyData = {
+    "ids": [shipRocketId]
+  };
+
+  const session = await startSession();
+  session.startTransaction();
+
+  try {
+    const order = await Order.findById(orderId).session(session);
+    if (!order) {
+      await session.abortTransaction();
+      session.endSession();
+      return next(new ErrorHandler("Order not found", 404));
+    }
+
+    // Attempt to cancel the order on Shiprocket first
+    const response = await axios.post(cancellOrderUrl, cancellOrderBodyData, config);
+    console.log('Response data for cancel order:', response.data);
+
+    // If Shiprocket cancellation is successful, delete the order from MongoDB
+    await order.deleteOne({ session });
+
+    await session.commitTransaction();
+    session.endSession();
+
+    return res.status(200).json({
+      success: true,
+      message: "Order cancelled and deleted successfully",
+      data: response.data
+    });
+
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+
+    if (axios.isAxiosError(error)) {
+      if (error.response) {
+        console.error('Error response data:', error.response.data.errors || error.response.data.message || error.response.data || 'No error message');
+      } else if (error.request) {
+        console.error('Error request:', error.request);
+      } else {
+        console.error('Error message:', error.message);
+      }
+    } else {
+      console.error('Unknown error:', error);
+    }
+
+    return res.status(500).json({ success: false, message: "Error in cancelling Shiprocket order", error });
+  }
+});
+
+export const getAllOrders = asyncErrorHandler(async (req, res, next) => {
+  const userId = req.user._id; // Assuming req.user.id contains the user's ID
+  // Find all orders for the user
+  const orders = await Order.find({ user: userId });
+  if (!orders || orders.length === 0) {
+    return next(new ErrorHandler("order not found", 404));
+  }
+
+  // Create an array to store promises for fetching reviews for all items in all orders
+  const reviewPromises = orders.map(async (order) => {
+    const orderId = order._id;
+
+    // Fetch reviews for all items in the current order
+    const orderItemsWithReviews = await Promise.all(order.orderItems.map(async (item: any) => {
+
+      console.log("item", item)
+
+      // Find reviews based on userId and productId
+      const reviews = await Review.find({
+        reviewUser: userId,
+        reviewProduct: item.productId
+      });
+      console.log("reviews", reviews)
+      // Return an object with item details and associated reviews
+      return {
+        item,
+        reviews: reviews
+      };
+    }));
+    console.log("orderItemwithreviews", orderItemsWithReviews)
+    // Return an object with order details and items with reviews
+    return {
+      _id: orderId,
+      deliveryAddress: order.deliveryAddress,
+      discount: order.discount,
+      orderStatuses: order.orderStatuses,
+      orderItems: orderItemsWithReviews
+    };
+  });
+
+  // Execute all review promises concurrently
+  const ordersWithReviews = await Promise.all(reviewPromises);
+  // Define the desired order of statuses
+  const statusOrder = ['placed', 'packed', 'shipped', 'outfordelivery', 'delivered', 'cancelled'];
+
+  // Function to determine the last status of an order
+
+  function getLastStatus(order: any) {
+    if (order.orderStatuses.length > 0) {
+      return order.orderStatuses[order.orderStatuses.length - 1].status;
+    }
+    return null; // Return null if no statuses are present
+  }
+
+
+  // Sorting orders based on the last status
+  ordersWithReviews.sort((a, b) => {
+    let lastStatusA = getLastStatus(a);
+    let lastStatusB = getLastStatus(b);
+    console.log(lastStatusA, lastStatusB)
+    // Sort orders based on the index of their last status in statusOrder
+    return statusOrder.indexOf(lastStatusA) - statusOrder.indexOf(lastStatusB);
+  });
+  // res.json(jsonResponse);
+  return res.status(200).json({
+    success: true,
+    message: "orders fetched Successfully",
+    orders: ordersWithReviews
+  });
+
+})
+
+export const getAllAdminOrders = asyncErrorHandler(async (req, res, next) => {
+  // console.log("Order controller called");
+  // const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+  // console.log(`Incoming request from IP: ${ip} to ${req.originalUrl}`);
+  const { startDate, endDate, page = 1, orderStatus, searchText } = req.query;
+  const limit = 20;
+
+  // Parse and validate page
+  const parsedPage = (page && typeof page === "string") ? parseInt(page, 10) : 1;
+
+  if (isNaN(parsedPage) || parsedPage < 1) {
+    return res.status(400).json({ error: "Invalid page value" });
+  }
+  const skip = (parsedPage - 1) * limit;
+
+  // Helper function for date validation
+  const validateDate = (dateStr: string): Date | null => {
+    const date = new Date(dateStr);
+    return !isNaN(date.getTime()) ? date : null;
+  };
+
+  let start: Date | null = validateDate(startDate as string);
+  let end: Date | null = validateDate(endDate as string);
+
+  // Default to one-month range if dates are missing
+  if (!start && !end) {
+    end = new Date();
+    start = new Date();
+    start.setMonth(start.getMonth() - 1);
+  } else if (!start || !end) {
+    return res.status(400).json({ error: "Invalid start or end date provided" });
+  }
+
+  // Previous time frame calculation
+  const previousEnd = new Date(start);
+  const previousStart = new Date(previousEnd);
+  previousStart.setMonth(previousStart.getMonth() - 1);
+
+  // Define the structure of `orderStatuses`
+  interface OrderStatus {
+    status: string;
+    date: string;
+  }
+
+  type OrderDocument = {
+    orderStatuses: OrderStatus[];
+    createdAt: Date;
+    [key: string]: any;
+  };
+
+  try {
+    // Create two separate filters - one for orders and one for statistics
+    const dateFilter = { "orderStatuses.date": { $gte: start.toISOString(), $lte: end.toISOString() } };
+
+    let statusFilter: Record<string, any> = {};
+    if (orderStatus) {
+      statusFilter["orderStatusState"] = orderStatus as string;
+    }
+
+    let searchFilter: Record<string, any> = {};
+    if (typeof searchText === "string" && searchText.trim()) {
+      searchFilter = {
+        "orderItems.productTitle": { $regex: searchText.trim(), $options: "i" }
+      };
+    }
+
+    // Combine filters for the orders query
+    const ordersFilter = { ...dateFilter, ...statusFilter, ...searchFilter };
+
+    // Fetch orders with all filters applied
+    const [orders, totalFilteredProducts] = await Promise.all([
+      Order.find(ordersFilter)
+        .sort("-createdAt")
+        .populate("user", "profile")
+        .skip(skip)
+        .limit(limit),
+      Order.countDocuments(ordersFilter)
+    ]);
+
+    // Total products in the current page
+    const currentPageTotalProducts = orders.length;
+
+    // Calculate pagination metadata based on filtered results
+    const totalPages = Math.ceil(totalFilteredProducts / limit);
+    const hasNextPage = parsedPage < totalPages;
+    const hasPreviousPage = parsedPage > 1;
+
+    // --------------------------------------------- order stats ----------------------------------------
+
+    // // Comprehensive status tracking function - this is working correctly
+    const thoroughStatusDebug = async (start: Date, end: Date) => {
+      try {
+        // Find all orders with statuses in the date range (no status filter)
+        const orders = await Order.find({
+          "orderStatuses": {
+            $elemMatch: {
+              date: {
+                $gte: start.toISOString(),
+                $lte: end.toISOString()
+              }
+            }
+          }
+        });
+
+        console.log('Total Orders in Range:', orders.length);
+
+        // Detailed status tracking
+        const statusTracker: Record<string, number> = {};
+
+        orders.forEach(order => {
+          console.log('Order ID:', order._id);
+          console.log('Full Order Statuses:', order.orderStatuses);
+
+          // Track all statuses in the date range
+          order.orderStatuses.forEach((status: any) => {
+            const statusDate = new Date(status.date);
+            if (statusDate >= start && statusDate <= end) {
+              console.log(`Status Found: ${status.status}, Date: ${status.date}`);
+              statusTracker[status.status] = (statusTracker[status.status] || 0) + 1;
+            }
+          });
+        });
+
+        console.log('Comprehensive Status Tracking:', statusTracker);
+        return statusTracker;
+      } catch (error) {
+        console.error('Thorough Debug Error:', error);
+        return {};
+      }
+    };
+
+    // Get the total count of all orders in the date range for statistics
+    const totalOrdersInDateRange = await Order.countDocuments(dateFilter);
+    const totalReadyToShipOrder = await Order.countDocuments({ orderStatusState: 'placed' })
+    // Get current and previous period status counts using thoroughStatusDebug
+    const currentStatusCounts = await thoroughStatusDebug(start, end);
+    const previousStatusCounts = await thoroughStatusDebug(previousStart, previousEnd);
+
+    // Calculate changes for each status - using thoroughStatusDebug results
+    const statuses = ["placed", "processed", "delivered", "cancelled"];
+
+    const statusChanges = statuses.map((status) => {
+      const currentInterval = currentStatusCounts[status] || 0;
+      const previousInterval = previousStatusCounts[status] || 0;
+      const difference = currentInterval - previousInterval;
+      const growth = previousInterval === 0
+        ? (currentInterval > 0 ? 100 : 0)
+        : Math.round(((currentInterval - previousInterval) / previousInterval) * 100);
+
+      return {
+        status,
+        currentInterval,
+        previousInterval,
+        difference,
+        growth
+      };
+    });
+
+    // Order Statistics object
+    const orderStatistics = {
+      statusChanges,
+      totalProducts: totalOrdersInDateRange,
+      filteredProducts: totalFilteredProducts,
+      currentPageTotalProducts
+    };
+
+    // Success response with pagination metadata
+    return res.status(200).json({
+      success: true,
+      message: "Orders fetched successfully",
+      totalProducts: totalFilteredProducts,
+      currentPageTotalProducts,
+      page: parsedPage,
+      totalPages,
+      hasNextPage,
+      hasPreviousPage,
+      totalReadyToShipOrder,
+      orders,
+      orderStatistics
+    });
+  } catch (err) {
+    console.error("Error fetching orders:", err);
+    return res.status(500).json({
+      success: false,
+      error: "Internal server error"
+    });
+  }
+});
+
+
+
+// ----------------------- Archived controllers ----------------------------------------
+
+
+// -----------------------!!!!!!!!!!!!! Track shipment !!!!!!!!!!!--------------------------
+// export const trackOrder = asyncErrorHandler(async (req, res, next) => {
+
+//   const { orderId } = req.body
+//   if (!orderId) {
+//     return res.status(400).send({ success: false, message: 'order id is required' })
+//   }
+
+//   const order = await Order.findById(orderId)
+
+//   if (!order) {
+//     return res.status(400).send({ success: false, message: 'order not found' })
+//   }
+
+
+//   const trackshipmentUrl = `https://apiv2.shiprocket.in/v1/external/courier/track?order_id=${order.courierOrderDetails.order_id}&channel_id=${order.courierOrderDetails.channel_id}`
+
+//   // const UserOrder = await Order.findOne({ _id: orderId }).populate("user")
+//   const ShipRocketCredentials = await ShipRocket.findOne({ email: "mobilenmobilebjnr1@gmail.com" })
+//   if (!ShipRocketCredentials) {
+//     return res.status(404).json({ success: false, message: "ShipRocket credentials not found" })
+//   }
+
+//   const config = {
+//     headers: {
+//       'Content-Type': 'application/json',
+//       'Authorization': `Bearer ${ShipRocketCredentials.token}`
+//     }
+//   };
+//   // console.log("awbdata------------>", cancellShipmetBodyData)
+//   try {
+//     const response = await axios.get(trackshipmentUrl, config)
+//     console.log('Response data for track shipment:', response.data);
+//     return res.status(200).json({ success: true, message: "successfully tracked shipment", data: response.data })
+//   } catch (error: any) {
+//     if (error.response) {
+//       // The request was made and the server responded with a status code
+//       // that falls out of the range of 2xx
+//       console.error('Error response data:', error.response.data.errors || error.response.data.message || error.response.data || 'No error message');
+//     } else if (error.request) {
+//       // The request was made but no response was received
+//       console.error('Error request:', error.request);
+//     } else {
+//       // Something happened in setting up the request that triggered an Error
+//       console.error('Error message:', error.message);
+//     }
+//     return res.status(400).json({ success: false, message: "Error in tracking order" })
+//   }
+
+// });
+
+
+
+
+// export const processOrder = asyncErrorHandler(async (req, res, next) => {
+//   const { id,stage } = req.params;
+//   const order = await Order.findById(id);
+
+//   if (!order) {
+//     return next(new ErrorHandler("order not found", 404));
+//   }
+//   console.log(order, "------and---------", order.orderStatuses.length)
+
+//   let orderStatus = order.orderStatuses[order.orderStatuses.length - 1]
+//   console.log(orderStatus)
+
+//   if (!orderStatus) {
+//     return next(new ErrorHandler("status not found", 404));
+//   }
+
+//   switch (stage) {
+//     case "pending":
+//       order.orderStatuses.push({
+//         date: new Date(),
+//         status: 'packed'
+//       });
+//       break;
+//     case "placed":
+//       order.orderStatuses.push({
+//         date: new Date(),
+//         status: 'packed'
+//       });
+//       break;
+//     case "packed":
+//       order.orderStatuses.push({
+//         date: new Date(),
+//         status: 'shipped'
+//       });
+//       break;
+//     case "shipped":
+//       order.orderStatuses.push({
+//         date: new Date(),
+//         status: 'outfordelivery'
+//       });
+//       break;
+//     case "outfordelivery":
+//       order.orderStatuses.push({
+//         date: new Date(),
+//         status: 'delivered'
+//       });
+//       break;
+//     case "delivered":
+//       break;
+//     // default:
+//     //   order.orderStatuses.push({
+//     //     date: new Date(),
+//     //     status: 'delivered'
+//     //   });
+//     //   break;
+//   }
+//   await order.save();
+//   return res.status(200).json({
+//     success: true,
+//     message: "Order processed Successfully",
+//   });
+// });
+
+//--------------------api to cancell order---------------------------------------------------
+
+
+// export const cancellOrder = asyncErrorHandler(async (req, res, next) => {
+//   const { id } = req.params;
+//   const order = await Order.findById(id);
+
+//   if (!order) {
+//     return next(new ErrorHandler("order not found", 404));
+//   }
+
+//   order.orderStatuses.push({
+//     date: new Date(),
+//     status: 'cancelled'
+//   });
+
+//   await order.save();
+
+//   return res.status(200).json({
+//     success: true,
+//     message: "Order Cancelled Successfully",
+//   });
+// });
+
+//-------------------api to delete order------------------------------------------------------
+// export const deleteOrder = asyncErrorHandler(async (req, res, next) => {
+//   const { id } = req.params;
+//   const order = await Order.findById(id);
+//   if (!order) {
+//     return next(new ErrorHandler("order not found", 404));
+//   }
+//   await order.deleteOne();
+//   return res.status(200).json({
+//     success: true,
+//     message: "Order Deleted Successfully",
+//   });
+// });
 
 
 // export const getSinglesOrderDetails = asyncErrorHandler(async (req, res, next) => {
@@ -722,401 +1148,6 @@ export const getAdminSingleOrderDetails = asyncErrorHandler(async (req, res, nex
 //   });
 // });
 
-
-
-//--------------------api to process order------------------------------------------------
-
-export const processOrder = asyncErrorHandler(async (req, res, next) => {
-  const { id } = req.params;
-  const { stage } = req.query;
-
-  if (!stage || typeof stage != "string") {
-    return next(new ErrorHandler("Stage is Not Valid", 404));
-  }
-
-  const order = await Order.findById(id);
-  if (!order) {
-    return next(new ErrorHandler("Order not found", 404));
-  }
-
-  console.log(order, "------and---------", order.orderStatuses.length);
-  let orderStatus = order.orderStatuses[order.orderStatuses.length - 1];
-  console.log(orderStatus);
-
-  if (!orderStatus) {
-    return next(new ErrorHandler("Status not found", 404));
-  }
-
-  // Define valid stages as a literal type
-  const validStages = ["placed", "processed", "delivered", "cancelled"] as const;
-
-  type OrderStage = typeof validStages[number];
-
-  // Type assertion: Ensure that 'stage' is one of the valid stages
-  const typedStage = stage as OrderStage;
-
-  if (!validStages.includes(typedStage)) {
-    return next(new ErrorHandler("Invalid stage", 400));
-  }
-
-  // Add type assertion for currentStage
-  const currentStage = order.orderStatusState as OrderStage;
-  // Prevent changes if the order is already delivered or cancelled
-  if (currentStage === "delivered" || currentStage === "cancelled") {
-    return next(new ErrorHandler("Cannot change status of a delivered or cancelled order", 400));
-  }
-
-  //change order status
-  order.orderStatusState = typedStage
-  // Push the new status to the order's status list
-  order.orderStatuses.push({
-    date: new Date(),
-    status: typedStage
-  });
-
-  await order.save();
-  return res.status(200).json({
-    success: true,
-    message: "Order processed successfully",
-  });
-});
-
-// export const processOrder = asyncErrorHandler(async (req, res, next) => {
-//   const { id,stage } = req.params;
-//   const order = await Order.findById(id);
-
-//   if (!order) {
-//     return next(new ErrorHandler("order not found", 404));
-//   }
-//   console.log(order, "------and---------", order.orderStatuses.length)
-
-//   let orderStatus = order.orderStatuses[order.orderStatuses.length - 1]
-//   console.log(orderStatus)
-
-//   if (!orderStatus) {
-//     return next(new ErrorHandler("status not found", 404));
-//   }
-
-//   switch (stage) {
-//     case "pending":
-//       order.orderStatuses.push({
-//         date: new Date(),
-//         status: 'packed'
-//       });
-//       break;
-//     case "placed":
-//       order.orderStatuses.push({
-//         date: new Date(),
-//         status: 'packed'
-//       });
-//       break;
-//     case "packed":
-//       order.orderStatuses.push({
-//         date: new Date(),
-//         status: 'shipped'
-//       });
-//       break;
-//     case "shipped":
-//       order.orderStatuses.push({
-//         date: new Date(),
-//         status: 'outfordelivery'
-//       });
-//       break;
-//     case "outfordelivery":
-//       order.orderStatuses.push({
-//         date: new Date(),
-//         status: 'delivered'
-//       });
-//       break;
-//     case "delivered":
-//       break;
-//     // default:
-//     //   order.orderStatuses.push({
-//     //     date: new Date(),
-//     //     status: 'delivered'
-//     //   });
-//     //   break;
-//   }
-//   await order.save();
-//   return res.status(200).json({
-//     success: true,
-//     message: "Order processed Successfully",
-//   });
-// });
-
-//--------------------api to cancell order---------------------------------------------------
-
-
-export const cancellOrder = asyncErrorHandler(async (req, res, next) => {
-  console.log("order cancellation called")
-  const { shipRocketId, orderId } = req.body;
-  console.log(req.body)
-
-  if (!orderId || !shipRocketId) {
-    return res.status(400).send({ success: false, message: 'orderId is required' });
-  }
-
-  const ShipRocketCredentials = await ShipRocket.findOne({ email: "mobilenmobilebjnr1@gmail.com" });
-  if (!ShipRocketCredentials) {
-    return res.status(404).json({ success: false, message: "ShipRocket credentials not found" });
-  }
-
-  const cancellOrderUrl = "https://apiv2.shiprocket.in/v1/external/orders/cancel";
-  const config = {
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${ShipRocketCredentials.token}`
-    }
-  };
-
-  const cancellOrderBodyData = {
-    "ids": [shipRocketId]
-  };
-
-  const session = await startSession();
-  session.startTransaction();
-
-  try {
-    const order = await Order.findById(orderId).session(session);
-    if (!order) {
-      await session.abortTransaction();
-      session.endSession();
-      return next(new ErrorHandler("Order not found", 404));
-    }
-
-    // Attempt to cancel the order on Shiprocket first
-    const response = await axios.post(cancellOrderUrl, cancellOrderBodyData, config);
-    console.log('Response data for cancel order:', response.data);
-
-    // If Shiprocket cancellation is successful, cancel the order in MongoDB
-    order.orderStatuses.push({
-      date: new Date(),
-      status: 'cancelled'
-    });
-    order.orderStatusState = "cancelled"
-    await order.save({ session });
-
-    await session.commitTransaction();
-    session.endSession();
-
-    return res.status(200).json({
-      success: true,
-      message: "Order cancelled and deleted successfully",
-      data: response.data
-    });
-
-  } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
-
-    if (axios.isAxiosError(error)) {
-      if (error.response) {
-        console.error('Error response data:', error.response.data.errors || error.response.data.message || error.response.data || 'No error message');
-      } else if (error.request) {
-        console.error('Error request:', error.request);
-      } else {
-        console.error('Error message:', error.message);
-      }
-    } else {
-      console.error('Unknown error:', error);
-    }
-
-    return res.status(500).json({ success: false, message: "Error in cancelling Shiprocket order", error });
-  }
-});
-
-
-// export const cancellOrder = asyncErrorHandler(async (req, res, next) => {
-//   const { id } = req.params;
-//   const order = await Order.findById(id);
-
-//   if (!order) {
-//     return next(new ErrorHandler("order not found", 404));
-//   }
-
-//   order.orderStatuses.push({
-//     date: new Date(),
-//     status: 'cancelled'
-//   });
-
-//   await order.save();
-
-//   return res.status(200).json({
-//     success: true,
-//     message: "Order Cancelled Successfully",
-//   });
-// });
-
-//-------------------api to delete order------------------------------------------------------
-// export const deleteOrder = asyncErrorHandler(async (req, res, next) => {
-//   const { id } = req.params;
-//   const order = await Order.findById(id);
-//   if (!order) {
-//     return next(new ErrorHandler("order not found", 404));
-//   }
-//   await order.deleteOne();
-//   return res.status(200).json({
-//     success: true,
-//     message: "Order Deleted Successfully",
-//   });
-// });
-
-
-export const deleteOrder = asyncErrorHandler(async (req, res, next) => {
-
-  const { shipRocketId, orderId } = req.body;
-  console.log(req.body)
-
-  if (!orderId || !shipRocketId) {
-    return res.status(400).send({ success: false, message: 'Both orderId is required' });
-  }
-
-  const orderInDb = await Order.findById(orderId)
-
-  if (!orderInDb) {
-    return res.status(400).send({ success: false, message: 'order does not exist in db' });
-  }
-
-
-  const ShipRocketCredentials = await ShipRocket.findOne({ email: "mobilenmobilebjnr1@gmail.com" });
-
-  if (!ShipRocketCredentials) {
-    return res.status(404).json({ success: false, message: "ShipRocket credentials not found" });
-  }
-
-  const cancellOrderUrl = "https://apiv2.shiprocket.in/v1/external/orders/cancel";
-  const config = {
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${ShipRocketCredentials.token}`
-    }
-  };
-
-  const cancellOrderBodyData = {
-    "ids": [shipRocketId]
-  };
-
-  const session = await startSession();
-  session.startTransaction();
-
-  try {
-    const order = await Order.findById(orderId).session(session);
-    if (!order) {
-      await session.abortTransaction();
-      session.endSession();
-      return next(new ErrorHandler("Order not found", 404));
-    }
-
-    // Attempt to cancel the order on Shiprocket first
-    const response = await axios.post(cancellOrderUrl, cancellOrderBodyData, config);
-    console.log('Response data for cancel order:', response.data);
-
-    // If Shiprocket cancellation is successful, delete the order from MongoDB
-    await order.deleteOne({ session });
-
-    await session.commitTransaction();
-    session.endSession();
-
-    return res.status(200).json({
-      success: true,
-      message: "Order cancelled and deleted successfully",
-      data: response.data
-    });
-
-  } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
-
-    if (axios.isAxiosError(error)) {
-      if (error.response) {
-        console.error('Error response data:', error.response.data.errors || error.response.data.message || error.response.data || 'No error message');
-      } else if (error.request) {
-        console.error('Error request:', error.request);
-      } else {
-        console.error('Error message:', error.message);
-      }
-    } else {
-      console.error('Unknown error:', error);
-    }
-
-    return res.status(500).json({ success: false, message: "Error in cancelling Shiprocket order", error });
-  }
-});
-
-//-----------------api to get all orders for the user logged in---------------------------------------------
-export const getAllOrders = asyncErrorHandler(async (req, res, next) => {
-  const userId = req.user._id; // Assuming req.user.id contains the user's ID
-  // Find all orders for the user
-  const orders = await Order.find({ user: userId });
-  if (!orders || orders.length === 0) {
-    return next(new ErrorHandler("order not found", 404));
-  }
-
-  // Create an array to store promises for fetching reviews for all items in all orders
-  const reviewPromises = orders.map(async (order) => {
-    const orderId = order._id;
-
-    // Fetch reviews for all items in the current order
-    const orderItemsWithReviews = await Promise.all(order.orderItems.map(async (item: any) => {
-
-      console.log("item", item)
-
-      // Find reviews based on userId and productId
-      const reviews = await Review.find({
-        reviewUser: userId,
-        reviewProduct: item.productId
-      });
-      console.log("reviews", reviews)
-      // Return an object with item details and associated reviews
-      return {
-        item,
-        reviews: reviews
-      };
-    }));
-    console.log("orderItemwithreviews", orderItemsWithReviews)
-    // Return an object with order details and items with reviews
-    return {
-      _id: orderId,
-      deliveryAddress: order.deliveryAddress,
-      discount: order.discount,
-      orderStatuses: order.orderStatuses,
-      orderItems: orderItemsWithReviews
-    };
-  });
-
-  // Execute all review promises concurrently
-  const ordersWithReviews = await Promise.all(reviewPromises);
-  // Define the desired order of statuses
-  const statusOrder = ['placed', 'packed', 'shipped', 'outfordelivery', 'delivered', 'cancelled'];
-
-  // Function to determine the last status of an order
-
-  function getLastStatus(order: any) {
-    if (order.orderStatuses.length > 0) {
-      return order.orderStatuses[order.orderStatuses.length - 1].status;
-    }
-    return null; // Return null if no statuses are present
-  }
-
-
-  // Sorting orders based on the last status
-  ordersWithReviews.sort((a, b) => {
-    let lastStatusA = getLastStatus(a);
-    let lastStatusB = getLastStatus(b);
-    console.log(lastStatusA, lastStatusB)
-    // Sort orders based on the index of their last status in statusOrder
-    return statusOrder.indexOf(lastStatusA) - statusOrder.indexOf(lastStatusB);
-  });
-  // res.json(jsonResponse);
-  return res.status(200).json({
-    success: true,
-    message: "orders fetched Successfully",
-    orders: ordersWithReviews
-  });
-
-})
-
-//-------------------api to get all orders----------------------------------------------------------------
 
 // export const getAllAdminOrders = asyncErrorHandler(async (req, res, next) => {
 //   console.log("Order controller called");
@@ -2098,191 +2129,155 @@ export const getAllOrders = asyncErrorHandler(async (req, res, next) => {
 // });
 
 
-export const getAllAdminOrders = asyncErrorHandler(async (req, res, next) => {
-  // console.log("Order controller called");
-  // const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-  // console.log(`Incoming request from IP: ${ip} to ${req.originalUrl}`);
-  const { startDate, endDate, page = 1, orderStatus, searchText } = req.query;
-  const limit = 20;
 
-  // Parse and validate page
-  const parsedPage = (page && typeof page === "string") ? parseInt(page, 10) : 1;
+// export const newOrder = asyncErrorHandler(
+//   async (req: Request, res, next) => {
 
-  if (isNaN(parsedPage) || parsedPage < 1) {
-    return res.status(400).json({ error: "Invalid page value" });
-  }
-  const skip = (parsedPage - 1) * limit;
+//     console.log("new order--------------->----------------------------------------------------------")
+//     console.log(req.body)
+//     console.log("new order--------------->----------------------------------------------------------")
 
-  // Helper function for date validation
-  const validateDate = (dateStr: string): Date | null => {
-    const date = new Date(dateStr);
-    return !isNaN(date.getTime()) ? date : null;
-  };
+//     const {
+//       orderItems,
+//       orderStatuses,
+//       total,
+//       couponcode,
+//       paymentMethod,
+//       paymentStatus,
+//       deliveryAddress,
+//       discount,
+//       discountedTotal,
+//       finalAmount,
+//       usableCoins,
+//       deliveryCharges
+//     } = req.body;
 
-  let start: Date | null = validateDate(startDate as string);
-  let end: Date | null = validateDate(endDate as string);
+//     if (!deliveryAddress || !orderItems || !total || !finalAmount) {
+//       return next(new ErrorHandler("Please Enter all Fields", 400));
+//     }
 
-  // Default to one-month range if dates are missing
-  if (!start && !end) {
-    end = new Date();
-    start = new Date();
-    start.setMonth(start.getMonth() - 1);
-  } else if (!start || !end) {
-    return res.status(400).json({ error: "Invalid start or end date provided" });
-  }
+//     console.log(JSON.parse(deliveryAddress))
 
-  // Previous time frame calculation
-  const previousEnd = new Date(start);
-  const previousStart = new Date(previousEnd);
-  previousStart.setMonth(previousStart.getMonth() - 1);
+//     if (!req.user._id) {
+//       return next(new ErrorHandler("unauthenticated user", 400));
+//     }
+//     // Start a session for transaction management
+//     const session = await mongoose.startSession();
+//     session.startTransaction();
+//     try {
 
-  // Define the structure of `orderStatuses`
-  interface OrderStatus {
-    status: string;
-    date: string;
-  }
+//       const newOrder = new Order({
+//         user: req.user._id,
+//         orderItems: JSON.parse(orderItems),
+//         orderStatuses: JSON.parse(orderStatuses),
+//         total,
+//         couponcode,
+//         paymentMethod: JSON.parse(paymentMethod),
+//         paymentStatus,
+//         deliveryAddress: JSON.parse(deliveryAddress),
+//         discount,
+//         discountedTotal,
+//         finalAmount,
+//         usableCoins,
+//         deliveryCharges,
+//       });
 
-  type OrderDocument = {
-    orderStatuses: OrderStatus[];
-    createdAt: Date;
-    [key: string]: any;
-  };
 
-  try {
-    // Create two separate filters - one for orders and one for statistics
-    const dateFilter = { "orderStatuses.date": { $gte: start.toISOString(), $lte: end.toISOString() } };
 
-    let statusFilter: Record<string, any> = {};
-    if (orderStatus) {
-      statusFilter["orderStatusState"] = orderStatus as string;
-    }
+//       const ItemCategory = newOrder.orderItems.some((item: { category: string }) => item.category === "smartphone") ? "smartphone" : "accessories";
 
-    let searchFilter: Record<string, any> = {};
-    if (typeof searchText === "string" && searchText.trim()) {
-      searchFilter = {
-        "orderItems.productTitle": { $regex: searchText.trim(), $options: "i" }
-      };
-    }
+//       const coinAccountData = await CoinAccount.findOne({ userId: req.user._id })
+//       const deductCoins = usableCoins | 0
+//       coinAccountData.coinAccountBalance -= coinAccountData.useCoinForPayment ? deductCoins : 0
 
-    // Combine filters for the orders query
-    const ordersFilter = { ...dateFilter, ...statusFilter, ...searchFilter };
+//       // Find the existing coin account or create a new one if not found
+//       let coinAccount = await CoinAccount.findOne({ userId: req.user._id }).session(session);
 
-    // Fetch orders with all filters applied
-    const [orders, totalFilteredProducts] = await Promise.all([
-      Order.find(ordersFilter)
-        .sort("-createdAt")
-        .populate("user", "profile")
-        .skip(skip)
-        .limit(limit),
-      Order.countDocuments(ordersFilter)
-    ]);
+//       if (!coinAccount) {
+//         // Create a new coin account if it doesn't exist
+//         coinAccount = new CoinAccount({ userId: req.user._id, coinAccountBalance: 0 });
+//         await coinAccount.save({ session });
+//       }
 
-    // Total products in the current page
-    const currentPageTotalProducts = orders.length;
+//       // Update the coin account balance
+//       coinAccount.coinAccountBalance -= deductCoins;
+//       await coinAccount.save({ session });
 
-    // Calculate pagination metadata based on filtered results
-    const totalPages = Math.ceil(totalFilteredProducts / limit);
-    const hasNextPage = parsedPage < totalPages;
-    const hasPreviousPage = parsedPage > 1;
+//       // console.log("rewardType:----->", rewardType)
 
-    // --------------------------------------------- order stats ----------------------------------------
+//       // Create a new transaction record
+//       const reducetransaction = new CoinTransaction({
+//         userId: req.user._id,
+//         orderId: newOrder._id,
+//         rewardType: `purchase of ${ItemCategory}`,
+//         amountSpent: deductCoins,
+//         amountReceived: 0,
+//         notes: 'Coins reduced for purchase'
+//       });
 
-    // // Comprehensive status tracking function - this is working correctly
-    const thoroughStatusDebug = async (start: Date, end: Date) => {
-      try {
-        // Find all orders with statuses in the date range (no status filter)
-        const orders = await Order.find({
-          "orderStatuses": {
-            $elemMatch: {
-              date: {
-                $gte: start.toISOString(),
-                $lte: end.toISOString()
-              }
-            }
-          }
-        });
+//       await reducetransaction.save({ session }); // Update the coin account balance
 
-        console.log('Total Orders in Range:', orders.length);
 
-        // Detailed status tracking
-        const statusTracker: Record<string, number> = {};
+//       // give coins for new purchase
+//       let coinPercentage = 0;
+//       if (ItemCategory == "smartphone") {
+//         coinPercentage = (1 / 100) * newOrder.finalAmount;
+//         // await IncreaseCoins(req.user._id, "Purchase of Smartphone", newOrder._id, Math.floor(coinPercentage))
+//       }
 
-        orders.forEach(order => {
-          console.log('Order ID:', order._id);
-          console.log('Full Order Statuses:', order.orderStatuses);
+//       if (ItemCategory == "accessories") {
+//         coinPercentage = (10 / 100) * newOrder.finalAmount;
+//         // await IncreaseCoins(req.user._id, "Purchase of Accessories", newOrder._id, Math.floor(coinPercentage))
+//       }
 
-          // Track all statuses in the date range
-          order.orderStatuses.forEach((status: any) => {
-            const statusDate = new Date(status.date);
-            if (statusDate >= start && statusDate <= end) {
-              console.log(`Status Found: ${status.status}, Date: ${status.date}`);
-              statusTracker[status.status] = (statusTracker[status.status] || 0) + 1;
-            }
-          });
-        });
 
-        console.log('Comprehensive Status Tracking:', statusTracker);
-        return statusTracker;
-      } catch (error) {
-        console.error('Thorough Debug Error:', error);
-        return {};
-      }
-    };
+//       const coinsTobeAdded = Math.floor(coinPercentage)
+//       coinAccount.coinAccountBalance += coinsTobeAdded;
+//       await coinAccount.save({ session });
 
-    // Get the total count of all orders in the date range for statistics
-    const totalOrdersInDateRange = await Order.countDocuments(dateFilter);
-    const totalReadyToShipOrder = await Order.countDocuments({ orderStatusState: 'placed' })
-    // Get current and previous period status counts using thoroughStatusDebug
-    const currentStatusCounts = await thoroughStatusDebug(start, end);
-    const previousStatusCounts = await thoroughStatusDebug(previousStart, previousEnd);
+//       // console.log("rewardType:----->", rewardType)
 
-    // Calculate changes for each status - using thoroughStatusDebug results
-    const statuses = ["placed", "processed", "delivered", "cancelled"];
+//       // Create a new transaction record
+//       const addtransaction = new CoinTransaction({
+//         userId: req.user._id,
+//         orderId: newOrder._id,
+//         rewardType: `purchase of ${ItemCategory}`,
+//         amountSpent: 0,
+//         amountReceived: coinsTobeAdded,
+//         notes: 'Coins added for purchase'
+//       });
 
-    const statusChanges = statuses.map((status) => {
-      const currentInterval = currentStatusCounts[status] || 0;
-      const previousInterval = previousStatusCounts[status] || 0;
-      const difference = currentInterval - previousInterval;
-      const growth = previousInterval === 0
-        ? (currentInterval > 0 ? 100 : 0)
-        : Math.round(((currentInterval - previousInterval) / previousInterval) * 100);
+//       await addtransaction.save({ session });
 
-      return {
-        status,
-        currentInterval,
-        previousInterval,
-        difference,
-        growth
-      };
-    });
+//       newOrder.coinsCredited = coinsTobeAdded
+//       newOrder.coinsDebited = coinAccountData.useCoinForPayment ? deductCoins : 0
+//       coinAccountData.useCoinForPayment = false
 
-    // Order Statistics object
-    const orderStatistics = {
-      statusChanges,
-      totalProducts: totalOrdersInDateRange,
-      filteredProducts: totalFilteredProducts,
-      currentPageTotalProducts
-    };
+//       await coinAccountData.save({ session })
+//       await newOrder.save({ session })
+//       console.log("new order--------------->", newOrder)
+//       //also give coin for purchase
+//       // Commit the transaction
+//       await session.commitTransaction();
+//       session.endSession();
+//       console.log(newOrder, "....................newOrder//////////")
 
-    // Success response with pagination metadata
-    return res.status(200).json({
-      success: true,
-      message: "Orders fetched successfully",
-      totalProducts: totalFilteredProducts,
-      currentPageTotalProducts,
-      page: parsedPage,
-      totalPages,
-      hasNextPage,
-      hasPreviousPage,
-      totalReadyToShipOrder,
-      orders,
-      orderStatistics
-    });
-  } catch (err) {
-    console.error("Error fetching orders:", err);
-    return res.status(500).json({
-      success: false,
-      error: "Internal server error"
-    });
-  }
-});
+//       return res.status(201).json({
+//         success: true,
+//         message: "Order cr successfully",
+//         newMsg: "just checking",
+//         order: newOrder,
+//       });
+//       // console.log("Transaction successfully completed:", transaction);
+//     } catch (error) {
+//       // Abort the transaction in case of an error
+//       await session.abortTransaction();
+//       session.endSession();
+
+//       console.error("Error processing transaction:", error);
+//       throw error
+//     }
+
+
+//   }
+// );

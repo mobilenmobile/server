@@ -135,11 +135,11 @@ export const updateReview = asyncErrorHandler(
 
 export const allReviews = asyncErrorHandler(async (req, res, next) => {
     const id = (req.params as { id: string }).id;
-    
+
     if (!id) {
         return next(new ErrorHandler("Incorrect product ID", 400));
     }
-    
+
     // Pipeline to get aggregated statistics
     const aggregationPipeline = [
         {
@@ -187,7 +187,7 @@ export const allReviews = asyncErrorHandler(async (req, res, next) => {
             }
         }
     ];
-    
+
     // Pipeline to get all detailed reviews
     const detailedReviewsPipeline = [
         {
@@ -219,11 +219,11 @@ export const allReviews = asyncErrorHandler(async (req, res, next) => {
             }
         }
     ];
-    
+
     // Execute the aggregation pipelines
     const [stats] = await Review.aggregate(aggregationPipeline);
     const detailedReviews = await Review.aggregate(detailedReviewsPipeline);
-    
+
     if (!stats) {
         return res.status(200).json({
             success: true,
@@ -240,7 +240,7 @@ export const allReviews = asyncErrorHandler(async (req, res, next) => {
             allReviews: []
         });
     }
-    
+
     return res.status(200).json({
         success: true,
         message: "Reviews fetched successfully",
@@ -248,6 +248,120 @@ export const allReviews = asyncErrorHandler(async (req, res, next) => {
         allReviews: detailedReviews
     });
 });
+
+//----------------------api to get user reviews------------------------------------------------
+export const getSingleProductReview = asyncErrorHandler(async (req, res, next) => {
+
+    const id = (req.params as { id: string }).id;
+
+    if (!id) {
+        return next(new ErrorHandler("incorrect product id", 400));
+    }
+
+    const product = await Product.findById(id);
+
+    if (!product) {
+        return next(new ErrorHandler("product not found", 404));
+    }
+
+
+    const review = await Review.findOne({ reviewProduct: id, reviewUser: req.user._id })
+
+    if (!review) {
+        return next(new ErrorHandler("no reviews found", 202));
+    }
+
+    return res.status(200).json({
+        success: true,
+        message: "successfully fetched review",
+        review
+    });
+});
+
+//----------------------api to delete review----------------------------------------------------
+export const deleteReview = asyncErrorHandler(async (req, res, next) => {
+    const { id } = req.params;
+    const review = await Review.findById(id);
+
+    if (!review) {
+        return next(new ErrorHandler("review not found", 404));
+    }
+
+    await review.deleteOne();
+    await updateProductRating(review.productId);
+    return res.status(200).json({
+        success: true,
+        message: "Review Deleted Successfully",
+    });
+
+});
+
+
+//---------- Function to calculate and update product rating based on reviews-----------------------
+async function updateProductRating(productId: string) {
+    const reviews = await Review.find({ reviewProduct: productId });
+
+    try {
+        const result = await Review.aggregate([
+            {
+                $match: { reviewProduct: new mongoose.Types.ObjectId(productId) }
+            },
+
+            {
+                $group: {
+                    _id: '$reviewProduct',
+                    averageRating: { $avg: '$reviewRating' },
+                    count: { $sum: 1 }
+                }
+            }, {
+                $project: {
+                    averageRating: { $round: ['$averageRating', 0] }, // Round the number  
+                    count: 1
+                }
+            }
+        ]);
+
+        if (result.length > 0) {
+            const { averageRating, count } = result[0];
+            // Update product rating in Product collection
+            const product = await Product.findById(productId);
+            await Product.findByIdAndUpdate(productId, {
+                productRating: Math.round(averageRating),
+                productNumReviews: count
+            });
+
+
+        } else {
+            // If no reviews found, reset product rating
+            await Product.findByIdAndUpdate(productId, {
+                productRating: 0,
+                productNumReviews: 0
+            });
+        }
+    } catch (err) {
+        console.error('Error updating product rating:', err);
+    }
+}
+
+
+
+// Example usage: Call this function whenever a new review is added, updated, or deleted
+// Assuming you have reviewId, productId, and rating available when a review is modified
+async function handleReviewChange(reviewId: string, productId: string, rating: number) {
+    try {
+        // Update or create the review
+        // const review = await Review.findByIdAndUpdate(reviewId, { rating: rating }, { new: true });
+
+        // Update the product rating based on the reviews
+        await updateProductRating(productId);
+
+    } catch (err) {
+        console.error('Error handling review change:', err);
+    }
+}
+
+
+// ------------------------ Archived controllers ----------------------------------------
 
 // export const allReviews = asyncErrorHandler(async (req, res, next) => {
 //     const id = (req.params as { id: string }).id;
@@ -463,119 +577,4 @@ export const allReviews = asyncErrorHandler(async (req, res, next) => {
 //     });
 // });
 
-
-//----------------------api to get user reviews------------------------------------------------
-export const getSingleProductReview = asyncErrorHandler(async (req, res, next) => {
-
-    const id = (req.params as { id: string }).id;
-
-    if (!id) {
-        return next(new ErrorHandler("incorrect product id", 400));
-    }
-
-    const product = await Product.findById(id);
-
-    if (!product) {
-        return next(new ErrorHandler("product not found", 404));
-    }
-
-
-    const review = await Review.findOne({ reviewProduct: id, reviewUser: req.user._id })
-
-    if (!review) {
-        return next(new ErrorHandler("no reviews found", 202));
-    }
-
-    return res.status(200).json({
-        success: true,
-        message: "successfully fetched review",
-        review
-    });
-});
-
-//----------------------api to delete review----------------------------------------------------
-export const deleteReview = asyncErrorHandler(async (req, res, next) => {
-    const { id } = req.params;
-    const review = await Review.findById(id);
-
-    if (!review) {
-        return next(new ErrorHandler("review not found", 404));
-    }
-
-    await review.deleteOne();
-    await updateProductRating(review.productId);
-    return res.status(200).json({
-        success: true,
-        message: "Review Deleted Successfully",
-    });
-
-});
-
-
-//---------- Function to calculate and update product rating based on reviews-----------------------
-async function updateProductRating(productId: string) {
-    const reviews = await Review.find({ reviewProduct: productId });
-
-    try {
-        const result = await Review.aggregate([
-            {
-                $match: { reviewProduct: new mongoose.Types.ObjectId(productId) }
-            },
-
-            {
-                $group: {
-                    _id: '$reviewProduct',
-                    averageRating: { $avg: '$reviewRating' },
-                    count: { $sum: 1 }
-                }
-            }, {
-                $project: {
-                    averageRating: { $round: ['$averageRating', 0] }, // Round the number  
-                    count: 1
-                }
-            }
-        ]);
-
-        if (result.length > 0) {
-            const { averageRating, count } = result[0];
-            // Update product rating in Product collection
-            const product = await Product.findById(productId);
-            await Product.findByIdAndUpdate(productId, {
-                productRating: Math.round(averageRating),
-                productNumReviews: count
-            });
-
-
-        } else {
-            // If no reviews found, reset product rating
-            await Product.findByIdAndUpdate(productId, {
-                productRating: 0,
-                productNumReviews: 0
-            });
-        }
-    } catch (err) {
-        console.error('Error updating product rating:', err);
-    }
-}
-
-
-
-// Example usage: Call this function whenever a new review is added, updated, or deleted
-// Assuming you have reviewId, productId, and rating available when a review is modified
-async function handleReviewChange(reviewId: string, productId: string, rating: number) {
-    try {
-        // Update or create the review
-        // const review = await Review.findByIdAndUpdate(reviewId, { rating: rating }, { new: true });
-
-        // Update the product rating based on the reviews
-        await updateProductRating(productId);
-
-    } catch (err) {
-        console.error('Error handling review change:', err);
-    }
-}
-
-// Call handleReviewChange function with appropriate parameters
-// Example usage:
-// handleReviewChange(reviewId, productId, rating);
 

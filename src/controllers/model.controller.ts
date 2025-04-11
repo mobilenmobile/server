@@ -5,86 +5,6 @@ import { Model } from "../models/brand/model.model";
 import { Category } from "../models/category/category.model";
 import ErrorHandler from "../utils/errorHandler";
 
-// // Controller to create a new model
-// export const newModel = asyncErrorHandler(
-//     async (req, res, next) => {
-//         const { modelName, brandName, categoryName } = req.body;
-
-//         if (!brandName || !categoryName) {
-//             return next(new ErrorHandler("Brand name and category name are required", 400));
-//         }
-//         // Check if category exists by name
-//         const category = await Category.findOne({ categoryName: categoryName });
-//         if (!category) {
-//             return next(new ErrorHandler("Category not found", 404));
-//         }
-//         // Check if brand exists by name
-//         const brand = await Brand.findOne({ category: category._id, brandName: new RegExp(`^${brandName as string}$`, 'i') });
-//         if (!brand) {
-//             return next(new ErrorHandler("Brand not found", 404));
-//         }
-
-//         // Check if model already exists for the brand and category
-//         const existingModel = await Model.findOne({ modelName, brand: brand._id, category: category._id });
-//         if (existingModel) {
-//             return next(new ErrorHandler('Model name already exists for this brand and category', 400));
-//         }
-
-//         // Create the new model
-//         const model = await Model.create({
-//             modelName,
-//             brand: brand._id,
-//             category: category._id
-//         });
-
-//         return res.status(201).json({
-//             success: true,
-//             message: "New model created successfully",
-//             data: model,
-//         });
-//     }
-// );
-
-
-
-export const deleteTodayModels = async () => {
-    try {
-        const todayStart = new Date();
-        todayStart.setHours(0, 0, 0, 0);
-        const todayEnd = new Date();
-        todayEnd.setHours(23, 59, 59, 999);
-
-        // Find the smartphone category
-        const category = await Category.findOne({ categoryName: "smartphone" });
-
-        if (!category) {
-            console.log("Smartphone category not found");
-            return;
-        }
-
-        // Find and delete models created today under smartphone category
-        const result = await Model.deleteMany({
-            category: category._id,
-            createdAt: { $gte: todayStart, $lte: todayEnd }
-        });
-
-        console.log(`Deleted ${result.deletedCount} models created today under the smartphone category`);
-    } catch (error) {
-        console.error("Error deleting models:", error);
-    }
-};
-
-
-
-
-
-
-
-
-
-
-
-
 
 // Controller to create a new model
 export const newModel = asyncErrorHandler(async (req, res, next) => {
@@ -143,7 +63,6 @@ export const newModel = asyncErrorHandler(async (req, res, next) => {
     });
 })
 
-
 export const getSingleModel = asyncErrorHandler(async (req, res, next) => {
     const { id } = req.params;
 
@@ -157,14 +76,6 @@ export const getSingleModel = asyncErrorHandler(async (req, res, next) => {
     if (!model) {
         return next(new ErrorHandler("Model not found", 404));
     }
-
-    // Add any additional business logic or data transformations here
-    // For example, you might want to:
-    // - Add computed fields
-    // - Format dates
-    // - Filter sensitive information
-    // - Add related data from other collections
-
     return res.status(200).json({
         success: true,
         message: "Model details retrieved successfully",
@@ -172,7 +83,7 @@ export const getSingleModel = asyncErrorHandler(async (req, res, next) => {
     });
 });
 
-//update model 
+
 export const updateModel = asyncErrorHandler(async (req, res, next) => {
     const { id } = req.params;
     const { modelName, brandName, categoryName } = req.body;
@@ -244,7 +155,6 @@ export const updateModel = asyncErrorHandler(async (req, res, next) => {
         data: updatedModel
     });
 });
-// /-----------------Api to delete brand----------------------------------------
 
 export const deleteModel = asyncErrorHandler(
     async (req, res, next) => {
@@ -270,46 +180,6 @@ export const deleteModel = asyncErrorHandler(
         });
     }
 );
-
-
-
-
-
-// // Controller to create a new model
-// export const newModel = asyncErrorHandler(
-//     async (req, res, next) => {
-//         const { modelName, brandId, categoryId } = req.body;
-
-//         if (!brandId || !categoryId) return next(new ErrorHandler("Brand ID and Category ID are required", 400));
-
-//         // Check if brand exists
-//         const brand = await Brand.findById(brandId);
-//         if (!brand) return next(new ErrorHandler("Brand not found", 404));
-
-//         // Check if category exists
-//         const category = await Category.findById(categoryId);
-//         if (!category) return next(new ErrorHandler("Category not found", 404));
-
-//         // Check if model already exists for the brand and category
-//         const existingModel = await Model.findOne({ modelName, brand: brand._id, category: category._id });
-//         if (existingModel) return next(new ErrorHandler('Model name already exists for this brand and category', 400));
-
-//         // Create the new model
-//         const model = await Model.create({
-//             modelName,
-//             brand: brandId,
-//             category: categoryId
-//         });
-
-//         return res.status(201).json({
-//             success: true,
-//             message: "New model created successfully",
-//             data: model,
-//         });
-//     }
-// );
-
-
 
 // Controller to search models by category name and/or brand name
 export const searchModelsv2 = asyncErrorHandler(
@@ -355,8 +225,6 @@ export const searchModelsv2 = asyncErrorHandler(
     }
 );
 
-
-
 // Controller to search models by category and/or brand
 export const searchModels = asyncErrorHandler(
     async (req, res, next) => {
@@ -393,15 +261,6 @@ export const searchModels = asyncErrorHandler(
         }
     }
 );
-
-
-//get formatted data to show at skin page
-interface FormattedResponse {
-    [category: string]: { [brand: string]: string[] };
-}
-
-
-
 
 export const getFormattedModels = asyncErrorHandler(async (req, res, next) => {
     try {
@@ -497,6 +356,10 @@ export const getFormattedModels = asyncErrorHandler(async (req, res, next) => {
     }
 });
 
+
+// -------------------------------- Archived controllers -------------------------------------
+
+
 // export const getFormattedModels = asyncErrorHandler(async (req, res, next) => {
 //     try {
 //         const categoryNames = ["smartphone", "laptop", "tablet"];
@@ -558,3 +421,123 @@ export const getFormattedModels = asyncErrorHandler(async (req, res, next) => {
 //         return next(new ErrorHandler("Error fetching models", 500));
 //     }
 // });
+
+
+
+// // Controller to create a new model
+// export const newModel = asyncErrorHandler(
+//     async (req, res, next) => {
+//         const { modelName, brandName, categoryName } = req.body;
+
+//         if (!brandName || !categoryName) {
+//             return next(new ErrorHandler("Brand name and category name are required", 400));
+//         }
+//         // Check if category exists by name
+//         const category = await Category.findOne({ categoryName: categoryName });
+//         if (!category) {
+//             return next(new ErrorHandler("Category not found", 404));
+//         }
+//         // Check if brand exists by name
+//         const brand = await Brand.findOne({ category: category._id, brandName: new RegExp(`^${brandName as string}$`, 'i') });
+//         if (!brand) {
+//             return next(new ErrorHandler("Brand not found", 404));
+//         }
+
+//         // Check if model already exists for the brand and category
+//         const existingModel = await Model.findOne({ modelName, brand: brand._id, category: category._id });
+//         if (existingModel) {
+//             return next(new ErrorHandler('Model name already exists for this brand and category', 400));
+//         }
+
+//         // Create the new model
+//         const model = await Model.create({
+//             modelName,
+//             brand: brand._id,
+//             category: category._id
+//         });
+
+//         return res.status(201).json({
+//             success: true,
+//             message: "New model created successfully",
+//             data: model,
+//         });
+//     }
+// );
+
+
+
+// export const deleteTodayModels = async () => {
+//     try {
+//         const todayStart = new Date();
+//         todayStart.setHours(0, 0, 0, 0);
+//         const todayEnd = new Date();
+//         todayEnd.setHours(23, 59, 59, 999);
+
+//         // Find the smartphone category
+//         const category = await Category.findOne({ categoryName: "smartphone" });
+
+//         if (!category) {
+//             console.log("Smartphone category not found");
+//             return;
+//         }
+
+//         // Find and delete models created today under smartphone category
+//         const result = await Model.deleteMany({
+//             category: category._id,
+//             createdAt: { $gte: todayStart, $lte: todayEnd }
+//         });
+
+//         console.log(`Deleted ${result.deletedCount} models created today under the smartphone category`);
+//     } catch (error) {
+//         console.error("Error deleting models:", error);
+//     }
+// };
+
+
+
+
+
+
+
+// // Controller to create a new model
+// export const newModel = asyncErrorHandler(
+//     async (req, res, next) => {
+//         const { modelName, brandId, categoryId } = req.body;
+
+//         if (!brandId || !categoryId) return next(new ErrorHandler("Brand ID and Category ID are required", 400));
+
+//         // Check if brand exists
+//         const brand = await Brand.findById(brandId);
+//         if (!brand) return next(new ErrorHandler("Brand not found", 404));
+
+//         // Check if category exists
+//         const category = await Category.findById(categoryId);
+//         if (!category) return next(new ErrorHandler("Category not found", 404));
+
+//         // Check if model already exists for the brand and category
+//         const existingModel = await Model.findOne({ modelName, brand: brand._id, category: category._id });
+//         if (existingModel) return next(new ErrorHandler('Model name already exists for this brand and category', 400));
+
+//         // Create the new model
+//         const model = await Model.create({
+//             modelName,
+//             brand: brandId,
+//             category: categoryId
+//         });
+
+//         return res.status(201).json({
+//             success: true,
+//             message: "New model created successfully",
+//             data: model,
+//         });
+//     }
+// );
+
+
+
+
+
+
+
+
+
