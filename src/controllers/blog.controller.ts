@@ -3,6 +3,14 @@ import { asyncErrorHandler } from '../middleware/error.middleware';
 import Blog from '../models/blogModel';
 import ErrorHandler from '../utils/errorHandler';
 
+// -------------- List of Apis ------------------------
+// 1.newBlog
+// 2.getBlogs
+// 3.getBlogsByCategory
+// 4.getBlogById
+// 5.updateBlog
+// 6.deleteBlog
+
 
 export const newBlog = asyncErrorHandler(async (req: Request, res: Response, next: NextFunction) => {
   const { socialMediaUrl, thumbnailUrl, title, description, author, socialMediaType } = req.body;

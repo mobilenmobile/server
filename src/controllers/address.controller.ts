@@ -34,8 +34,8 @@ export const newAddress = asyncErrorHandler(
         }
         if (!req.user._id) {
             return next(new ErrorHandler("unauthenticated", 400));
-
         }
+
         const newAddress = await Address.create({
             user: req.user._id,
             fullName,
@@ -79,6 +79,9 @@ export const updateAddress = asyncErrorHandler(
         if (!address) {
             return next(new ErrorHandler("Address not found  ", 404));
         }
+        if (req.user._id != address.user) {
+            return next(new ErrorHandler("You are not authorized to update this address", 401));
+        }
 
         if (fullName) address.fullName = fullName
         if (mobileNo) address.mobileNo = mobileNo
@@ -118,6 +121,9 @@ export const deleteAddress = asyncErrorHandler(async (req, res, next) => {
     const address = await Address.findById(id);
     if (!address) {
         return next(new ErrorHandler("address not found", 404));
+    }
+    if (req.user._id != address.user) {
+        return next(new ErrorHandler("You are not authorized to delete this address", 401));
     }
     await address.deleteOne();
     return res.status(200).json({

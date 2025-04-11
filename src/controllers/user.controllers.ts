@@ -616,6 +616,7 @@ export const updateCart = asyncErrorHandler(async (req, res, next) => {
   } = req.body;
 
   console.log("-------------------- update cart------------------------", req.user._id);
+  const cartItem = await cart.findOne({ productId, selectedVarianceId, user: req.user._id });
 
   if (!customSkin) {
     if (!productId || !selectedVarianceId) {
@@ -631,12 +632,13 @@ export const updateCart = asyncErrorHandler(async (req, res, next) => {
       return variant.id.replace(/\s+/g, "") === selectedVarianceId.replace(/\s+/g, "");
     });
 
-    if (selectedVariantData?.quantity == "0" || selectedVariantData?.quantity == 0) {
+    //check if user adding more than available qty of product like qty is 2 but user adding 10 of that product
+    const productInStock = Number(selectedVariantData?.quantity) >= Number(cartItem.quantity);
+
+    if (selectedVariantData?.quantity == "0" || selectedVariantData?.quantity == 0 || !productInStock) {
       return next(new ErrorHandler("Product is out of stock", 404));
     }
   }
-
-  const cartItem = await cart.findOne({ productId, selectedVarianceId, user: req.user._id });
 
   if (cartItem && cartItem.quantity < 10) {
     cartItem.quantity = cartItem.quantity + 1;

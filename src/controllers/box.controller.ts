@@ -4,6 +4,15 @@ import ErrorHandler from "../utils/errorHandler"; // Custom error handler
 import { asyncErrorHandler } from "../middleware/error.middleware";
 import { Box } from "../models/boxModel";
 
+
+// ---------------- List of Apis ----------------------
+// 1.createBox
+// 2.getAllBoxes
+// 3.getBoxById
+// 4.updateBox
+// 5.deleteBox
+
+
 // Create a new Box
 export const createBox = asyncErrorHandler(
   async (req: Request, res: Response, next: NextFunction) => {
@@ -59,7 +68,7 @@ export const deleteBox = asyncErrorHandler(
   async (req: Request, res: Response, next: NextFunction) => {
     const boxId = req.params.id;
     const box = await Box.findById(boxId);
-    
+
     if (!box) {
       return next(new ErrorHandler("Box not found", 404));
     }

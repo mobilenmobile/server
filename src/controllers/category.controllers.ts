@@ -7,7 +7,6 @@ import {
   NewCategoryRequestBody,
   NewSubCategoryRequestBody,
   SearchCategoryQuery,
-  deleteCategoryQuery,
 } from "../types/types";
 import ErrorHandler from "../utils/errorHandler";
 import { subCategory } from "../models/subCategory/subCategory.model";

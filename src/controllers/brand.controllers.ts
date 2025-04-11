@@ -2,13 +2,18 @@ import { asyncErrorHandler } from "../middleware/error.middleware";
 import { Brand } from "../models/brand/brand.model";
 import { Category } from "../models/category/category.model";
 import {
-  NewBrandRequestBody,
   SearchBrandRequestQuery,
-  brandBaseQuery,
-  deleteBrandQuery,
 } from "../types/types";
 import { Request } from "express";
 import ErrorHandler from "../utils/errorHandler";
+
+
+// ------------- List of Apis ----------------------------------
+// 1.newBrand
+// 2.getAllBrand
+// 3.getAllBrandWithoutCategory
+// 4.deleteBrand
+
 
 //-------------Api to create new brand------------------------------------------------
 export const newBrand = asyncErrorHandler(
@@ -42,7 +47,7 @@ export const newBrand = asyncErrorHandler(
       }
       else {
         const brand = await Brand.create({
-          brandName:brandNameTrimmedLowercase,
+          brandName: brandNameTrimmedLowercase,
           brandImgUrl: null,
           brandLogoUrl: null,
           categories: [category._id]
@@ -127,10 +132,7 @@ export const getAllBrand = asyncErrorHandler(
   }
 );
 
-
-interface brandWithoutCategory {
-  categories?: string;
-}
+//-----------------Api to get brand without category---------------------------------------------
 export const getAllBrandWithoutCategory = asyncErrorHandler(
   async (req: Request<{}, {}, SearchBrandRequestQuery>, res, next) => {
     const { categoryName, brandId } = req.query;

@@ -1,16 +1,16 @@
 import { asyncErrorHandler } from "../middleware/error.middleware";
 import Banner from "../models/bannerModel";
 import { Request, Response } from "express";
+import isValidUrl from "../utils/isValidUrl";
 
-const isValidUrl = (url: string) => {
-    if (!url) return true; // Allow empty redirectUrl
-    try {
-        new URL(url);
-        return true;
-    } catch (error) {
-        return false;
-    }
-};
+
+// ------------- List of apis --------------------
+
+// 1.new banner
+// 2.get all banners
+// 3.get banner by id
+// 4.update banner
+
 
 export const newBanner = asyncErrorHandler(async (req: Request, res: Response) => {
     const { page, mainImage, otherImages } = req.body;

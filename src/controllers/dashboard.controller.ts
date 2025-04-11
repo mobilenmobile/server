@@ -2,7 +2,6 @@ import moment from "moment";
 import { asyncErrorHandler } from "../middleware/error.middleware";
 import { Order } from "../models/order/order.model";
 import { Product } from "../models/product/product.model";
-import ErrorHandler from "../utils/errorHandler";
 import { Category } from "../models/category/category.model";
 
 //--------------------------------api to get inventory data---------------------------------------
@@ -95,6 +94,81 @@ export const getInventoryData = asyncErrorHandler(async (req, res, next) => {
     });
 });
 
+//--------------------------------api to get monthly order stats---------------------------------------
+export const getMonthlyOrderStats = asyncErrorHandler(async (req, res, next) => {
+    // Aggregation pipeline
+    const result = await Order.aggregate([
+        // Stage 1: Project necessary fields and extract the month from `createdAt`
+        {
+            $project: {
+                month: { $dateToString: { format: "%Y-%m", date: "$createdAt" } }, // Extract month and year in "YYYY-MM" format
+                orderItems: 1,
+                orderStatusState: 1,
+                finalAmount: 1,
+                discount: 1,
+                deliveryCharges: 1,
+            },
+        },
+        // Stage 2: Group by month and calculate the stats
+        {
+            $group: {
+                _id: "$month", // Group by month
+                deliveredProducts: {
+                    $sum: {
+                        $cond: [{ $eq: ["$orderStatusState", "delivered"] }, { $size: "$orderItems" }, 0],
+                    },
+                },
+                canceledProducts: {
+                    $sum: {
+                        $cond: [{ $eq: ["$orderStatusState", "cancelled"] }, { $size: "$orderItems" }, 0],
+                    },
+                },
+                totalPlacedOrders: {
+                    $sum: {
+                        $cond: [{ $eq: ["$orderStatusState", "placed"] }, 1, 0], // Count orders with 'placed' status
+                    },
+                },
+                totalSales: {
+                    $sum: {
+                        $cond: [{ $eq: ["$orderStatusState", "delivered"] }, "$finalAmount", 0],
+                    },
+                },
+                totalProfit: {
+                    $sum: {
+                        $cond: [
+                            { $eq: ["$orderStatusState", "delivered"] },
+                            { $subtract: ["$finalAmount", { $add: ["$discount", "$deliveryCharges"] }] }, // totalSales - (discount + deliveryCharges)
+                            0,
+                        ],
+                    },
+                },
+            },
+        },
+        // Stage 3: Sort the results by month (optional)
+        {
+            $sort: { _id: 1 }, // Sort by month in ascending order
+        },
+    ]);
+
+    // Return the formatted response
+    return res.status(200).json({
+        success: true,
+        monthlyStats: result.map((entry) => ({
+            month: moment(entry._id, "YYYY-MM").format("MMMM-YYYY"),
+            deliveredProducts: entry.deliveredProducts,
+            canceledProducts: entry.canceledProducts,
+            totalPlacedOrders: entry.totalPlacedOrders,
+            totalSales: entry.totalSales,
+            totalProfit: entry.totalProfit,
+        })),
+    });
+});
+
+
+
+
+
+// -------------------------------- Archived controllers---------------------------------------------------
 
 
 // export const getInventoryData = asyncErrorHandler(async (req, res, next) => {
@@ -213,76 +287,4 @@ export const getInventoryData = asyncErrorHandler(async (req, res, next) => {
 //         inventory: inventoryByCategory,
 //     });
 // });
-
-
-//--------------------------------api to get monthly order stats---------------------------------------
-export const getMonthlyOrderStats = asyncErrorHandler(async (req, res, next) => {
-    // Aggregation pipeline
-    const result = await Order.aggregate([
-        // Stage 1: Project necessary fields and extract the month from `createdAt`
-        {
-            $project: {
-                month: { $dateToString: { format: "%Y-%m", date: "$createdAt" } }, // Extract month and year in "YYYY-MM" format
-                orderItems: 1,
-                orderStatusState: 1,
-                finalAmount: 1,
-                discount: 1,
-                deliveryCharges: 1,
-            },
-        },
-        // Stage 2: Group by month and calculate the stats
-        {
-            $group: {
-                _id: "$month", // Group by month
-                deliveredProducts: {
-                    $sum: {
-                        $cond: [{ $eq: ["$orderStatusState", "delivered"] }, { $size: "$orderItems" }, 0],
-                    },
-                },
-                canceledProducts: {
-                    $sum: {
-                        $cond: [{ $eq: ["$orderStatusState", "cancelled"] }, { $size: "$orderItems" }, 0],
-                    },
-                },
-                totalPlacedOrders: {
-                    $sum: {
-                        $cond: [{ $eq: ["$orderStatusState", "placed"] }, 1, 0], // Count orders with 'placed' status
-                    },
-                },
-                totalSales: {
-                    $sum: {
-                        $cond: [{ $eq: ["$orderStatusState", "delivered"] }, "$finalAmount", 0],
-                    },
-                },
-                totalProfit: {
-                    $sum: {
-                        $cond: [
-                            { $eq: ["$orderStatusState", "delivered"] },
-                            { $subtract: ["$finalAmount", { $add: ["$discount", "$deliveryCharges"] }] }, // totalSales - (discount + deliveryCharges)
-                            0,
-                        ],
-                    },
-                },
-            },
-        },
-        // Stage 3: Sort the results by month (optional)
-        {
-            $sort: { _id: 1 }, // Sort by month in ascending order
-        },
-    ]);
-
-    // Return the formatted response
-    return res.status(200).json({
-        success: true,
-        monthlyStats: result.map((entry) => ({
-            month: moment(entry._id, "YYYY-MM").format("MMMM-YYYY"),
-            deliveredProducts: entry.deliveredProducts,
-            canceledProducts: entry.canceledProducts,
-            totalPlacedOrders: entry.totalPlacedOrders,
-            totalSales: entry.totalSales,
-            totalProfit: entry.totalProfit,
-        })),
-    });
-});
-
 

@@ -9,9 +9,7 @@ import { Timestamp, Transaction } from "firebase-admin/firestore";
 
 
 
-// -------------------------------------- coin settings--------------------------------------------
-
-// -------------------------------------- coin settings--------------------------------------------
+// -------------------------------------- Coin Account Controllers--------------------------------------------
 
 const createNewCoinAccount = async (userId: any) => {
     // Create a new coin account for the user
@@ -31,7 +29,6 @@ const createNewCoinAccount = async (userId: any) => {
 
 }
 
-//-----------------Api to get all brand---------------------------------------------
 export const getCoinAccount = asyncErrorHandler(
     async (req: Request, res, next) => {
         // Fetch coin account data and transactions
@@ -85,60 +82,6 @@ export const getCoinAccount = asyncErrorHandler(
     }
 );
 
-// export const getCoinAccount = asyncErrorHandler(
-//     async (req: Request, res, next) => {
-//         const coinAccountData = await CoinAccount.find({ userId: req.user._id })
-//         const coinAccountTransaction = await CoinTransaction.find({ userId: req.user._id }).populate("orderId")
-
-//         if (!coinAccountData) {
-//             return res.status(404).json({ message: "Coin account not found" });
-//         }
-
-//         console.log("-------------------------------- coin account transaction-------------------------", coinAccountTransaction)
-
-//         const transactionData = coinAccountTransaction?.map((transaction: any) => {
-//             if (transaction.orderId) {
-//                 console.log("----------------------------------------entering orderid----------------------------------------------")
-//                 console.log(transaction.orderId.orderItems)
-//                 console.log("----------------------------------------entering orderid----------------------------------------------")
-
-//                 const orderData = transaction.orderId?.orderItems?.map((productData: any) => {
-//                     return {
-//                         title: productData.productTitle,
-//                         thumbnail: productData.thumbnail
-//                     }
-//                 })
-
-
-//                 return {
-//                     _id: transaction._id,
-//                     notes: transaction.notes,
-//                     rewardType: transaction.rewardType,
-//                     amountSpent: transaction.amountSpent,
-//                     amountReceived: transaction.amountReceived,
-//                     timestamp: transaction.timestamp,
-//                     orderData
-//                 }
-
-//             }
-//             return transaction
-//         })
-
-//         console.log("-------coinaccount-----", transactionData)
-//         const coinAccountCreditTransaction = transactionData.filter((Transaction: { amountReceived: number }) => Transaction.amountReceived > 0)
-//         const coinAccountRedeemedTransaction = transactionData.filter((Transaction: { amountSpent: number }) => Transaction.amountSpent > 0)
-
-//         return res.status(200).json({
-//             success: true,
-//             message: "coin Account feteced successfully",
-//             coinAccountData,
-//             coinAccountCreditTransaction,
-//             coinAccountRedeemedTransaction
-//             // coinAccountTransaction
-//         });
-//     }
-// );
-//-----------------Api to get all brand---------------------------------------------
 export const setUseCoinBalance = asyncErrorHandler(
     async (req: Request, res, next) => {
 

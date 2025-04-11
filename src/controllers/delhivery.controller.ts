@@ -444,7 +444,6 @@ export const generatePickup = asyncErrorHandler(async (req, res, next) => {
 });
 
 
-
 export const cancelShipment = asyncErrorHandler(async (req, res, next) => {
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -604,6 +603,10 @@ export const trackPackage = asyncErrorHandler(async (req, res, next) => {
         });
     }
 });
+
+
+// --------------------------------- Archived controllers-----------------------------------------------------------
+
 // export const cancelShipment = asyncErrorHandler(async (req, res, next) => {
 //     try {
 //         const { orderId, shipmentId } = req.body;

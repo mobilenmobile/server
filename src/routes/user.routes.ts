@@ -40,7 +40,11 @@ userRouter.get("/userDetails/:uid", authenticated, getUser);
 userRouter.get("/userDetails", UserInfo);
 userRouter.post("/userBasicInfo", findUser);
 userRouter.post("/userExist", checkIfUserExist);
-userRouter.put("/updaterole", updateRole)
+
+/**
+ * Admin routes to change user role 
+ */
+userRouter.put("/updaterole", adminOnly, updateRole)
 
 //----------------------- USER COIN SECTION --------------------------------
 userRouter.get("/getCoinAccountDetails", authenticated, getCoinAccount);
@@ -86,7 +90,7 @@ userRouter.post("/removeFreeItem", authenticated, removeFreeItem)
 // ====================== admin user =============================
 userRouter.get("/getallusers", adminOnly, listAllUsers)
 userRouter.post("/changeroles", adminOnly, changeUserRole);
-userRouter.get("/userOrderAnalytic/:userId", userOrderAnalytic)
+userRouter.get("/userOrderAnalytic/:userId", EditorOnly, userOrderAnalytic)
 
 
 export default userRouter;
