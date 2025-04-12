@@ -670,10 +670,11 @@ export const updateCart = asyncErrorHandler(async (req, res, next) => {
     });
 
     //check if user adding more than available qty of product like qty is 2 but user adding 10 of that product
-    const productInStock = Number(selectedVariantData?.quantity) >= Number(cartItem.quantity);
 
-    if (selectedVariantData?.quantity == "0" || selectedVariantData?.quantity == 0 || !productInStock) {
-      return next(new ErrorHandler("Product is out of stock", 404));
+    const productInStock = Number(selectedVariantData?.quantity)
+
+    if (selectedVariantData?.quantity == "0" || selectedVariantData?.quantity == 0 || (cartItem && cartItem.quantity + 1 > productInStock)) {
+      return next(new ErrorHandler("Product is out of stock", 400));
     }
   }
 
