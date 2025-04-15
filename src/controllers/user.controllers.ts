@@ -834,7 +834,6 @@ export const removeComboItem = asyncErrorHandler(async (req: Request, res, next)
 
 
 // ------------------------- remove free item--------------------------------------------------
-
 export const removeFreeItem = asyncErrorHandler(async (req: Request, res, next) => {
   // console.log("remove free item------------->", req.body)
   if (!req.user._id) {
@@ -995,7 +994,7 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
               category: item.productId?.productCategory?.categoryName,
               subCategoryId: item.productId?.productSubCategory?._id,
               subCategory: item.productId?.productSubCategory?.subCategoryName,
-              productTitle: item.productId.productTitle,
+              title: item.productId.productTitle,
               thumbnail: variantData?.thumbnail,
               boxPrice: variantData?.boxPrice || 0,  // Ensure a valid number
               sellingPrice: variantData?.sellingPrice || 0,  // Ensure a valid number
@@ -1371,6 +1370,7 @@ export const getUnAuthenticatedCartDetails = asyncErrorHandler(async (req: Reque
     cartDetails: { ...totals, finalCartTotal, deliveryCharges, comboTotals: ComboAccumulator }
   });
 });
+
 // ------------------ api to get cart details -------------------------------------------------------
 export const storeCartItemsInDb = asyncErrorHandler(async (req: Request, res, next) => {
 
@@ -1410,6 +1410,7 @@ export const clearCart = asyncErrorHandler(async (req: Request, res, next) => {
     message: `${deletedItems.deletedCount} Cart items deleted successfully`,
   });
 });
+
 
 export const getBuyNowCartDetails = asyncErrorHandler(async (req: Request, res, next) => {
 

@@ -13,12 +13,16 @@ import {
   deleteImgInCloudinary,
   uploadMultipleCloudinary,
 } from "../utils/cloudinary.js";
-import { FilterQuery } from "mongoose";
+import { FilterQuery, Types } from "mongoose";
 import { subCategory } from "../models/subCategory/subCategory.model.js";
 import { Box } from "../models/boxModel.js";
-import { AdminSearchRequestQuery, fProductWiseQty, InputData, ProductVariance } from "../types/productTypes.js";
+import { AdminSearchRequestQuery, FlatProduct, fProductWiseQty, InputData, ProductVariance } from "../types/productTypes.js";
 import formatProductWiseQty from "../utils/formatProductWiseQty.js";
 
+import * as XLSX from 'xlsx';
+import path from 'path';
+import fs from 'fs';
+import productSoldHistory from "../models/product/productSoldHistory.js";
 
 //----------------------xxxxxx ListOfApis xxxxxxxxx-------------------
 
@@ -650,38 +654,165 @@ export const deletePreviewCloudinary = asyncErrorHandler(
 
 
 // API to get all products
-export const getAllAdminProducts = asyncErrorHandler(
-  async (req: Request<{}, {}, {}, AdminSearchRequestQuery>, res: Response, next: NextFunction) => {
-    const { searchQuery, category, sort, page = 1 } = req.query;
-    const limit = 10; // Set a default limit for pagination
-    const skip = (page - 1) * limit;
-    let baseQuery: any = {}; // Define base query for filtering
+// export const getAllAdminProducts = asyncErrorHandler(
+//   async (req: Request<{}, {}, {}, AdminSearchRequestQuery>, res: Response, next: NextFunction) => {
+//     const { searchQuery, category, sort, page = 1 } = req.query;
+//     const limit = 10; // Set a default limit for pagination
+//     const skip = (page - 1) * limit;
+//     let baseQuery: any = {}; // Define base query for filtering
 
-    if (searchQuery) {
-      baseQuery = {
-        $or: [
-          { productTitle: { $regex: searchQuery, $options: 'i' } },
-          { productKeyword: { $regex: searchQuery, $options: 'i' } },
-          // { productCategory: { $regex: searchTerm, $options: 'i' } },
-        ]
+//     if (searchQuery) {
+//       baseQuery = {
+//         $or: [
+//           { productTitle: { $regex: searchQuery, $options: 'i' } },
+//           { productKeyword: { $regex: searchQuery, $options: 'i' } },
+//           // { productCategory: { $regex: searchTerm, $options: 'i' } },
+//         ]
+//       };
+//     }
+
+//     if (category && category.toLowerCase() !== "all") {
+//       const findCategory = await Category.findOne({ categoryName: category });
+//       if (findCategory) {
+//         baseQuery.productCategory = findCategory._id;
+//       } else {
+//         // If the category is not found, return an empty result
+//         return res.status(404).json({
+//           success: false,
+//           message: 'Category not found',
+//           products: [],
+//           totalPage: 0,
+//           totalProducts: 0,
+//         });
+//       }
+//     }
+
+//     const sortBy: any = {};
+
+//     if (sort) {
+//       if (sort === "A-Z") {
+//         sortBy.productTitle = 1;
+//       } else if (sort === "Z-A") {
+//         sortBy.productTitle = -1;
+//       } else if (sort === "oldest") {
+//         sortBy.createdAt = 1;
+//       } else {
+//         // Default to newest if an unknown sort is provided
+//         sortBy.createdAt = -1;
+//       }
+//     } else {
+//       // Default to sorting by newest products if no sort query is provided
+//       sortBy.createdAt = -1;
+//     }
+
+//     // Fetch products with applied filters, sorting, and pagination
+//     const [products, totalProductsCount] = await Promise.all([
+//       Product.find(baseQuery)
+//         .populate('productCategory')
+//         .populate('productBrand')
+//         .populate('productComboProducts')
+//         .populate('productFreeProducts')
+//         .sort(sortBy)
+//         .skip(skip)
+//         .limit(limit),
+//       Product.countDocuments(baseQuery),
+//     ]);
+
+//     const totalPage = Math.ceil(totalProductsCount / limit);
+
+//     return res.status(200).json({
+//       success: true,
+//       products,
+//       totalPage,
+//       totalProducts: totalProductsCount,
+//     });
+//   }
+// );
+
+export const getAllAdminProducts = asyncErrorHandler(
+  async (req, res, next) => {
+    const {
+      search,
+      sort = "hl",
+      category,
+      subcategory,
+      price,
+      device,
+      isfeatured,
+      isarchived,
+      status,
+      export: exportToExcel
+    } = req.query;
+
+    console.log("Search query:-", search, sort, category, subcategory, price, device, isfeatured, isarchived, status);
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 20; // Increased to 20 products per request
+    const skip = (page - 1) * limit;
+
+    // Define current date and date one month ago for active/inactive filtering
+    const currentDate = new Date();
+    const oneMonthAgo = new Date();
+    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+
+    let baseQuery: FilterQuery<BaseQuery> = {};
+
+    // Handle archived filter
+    if (isarchived === 'true') {
+      baseQuery.isArchived = true;
+    } else if (isarchived === 'false') {
+      baseQuery.isArchived = false;
+    } else {
+      // Default behavior: exclude archived products
+      baseQuery.isArchived = { $ne: true };
+    }
+
+    // Apply price filter if provided
+    if (price) {
+      baseQuery.price = {
+        $lte: Number(price),
       };
     }
 
-    if (category && category.toLowerCase() !== "all") {
+    // Apply category filter if provided
+    if (category) {
       const findCategory = await Category.findOne({ categoryName: category });
       if (findCategory) {
         baseQuery.productCategory = findCategory._id;
-      } else {
-        // If the category is not found, return an empty result
-        return res.status(404).json({
-          success: false,
-          message: 'Category not found',
-          products: [],
-          totalPage: 0,
-          totalProducts: 0,
-        });
       }
     }
+
+    // Apply subcategory filter if provided
+    if (subcategory) {
+      const findSubCategory = await subCategory.findOne({ subCategoryName: subcategory });
+      if (findSubCategory) {
+        baseQuery.productSubCategory = findSubCategory._id;
+      }
+    }
+
+    // Apply featured filter if provided
+    if (isfeatured) {
+      baseQuery.isFeatured = isfeatured === 'true';
+    }
+
+    // Apply search query if provided
+    let searchQuery: FilterQuery<BaseQuery> = {};
+    if (search && typeof search === 'string') {
+      const searchTerm = search.toLowerCase().trim();
+
+      if (searchTerm) {
+        searchQuery = {
+          $or: [
+            { productTitle: { $regex: searchTerm, $options: 'i' } },
+            { productKeyword: { $regex: searchTerm, $options: 'i' } },
+          ]
+        };
+      }
+    }
+
+    const combinedQuery = {
+      ...baseQuery,
+      ...(Object.keys(searchQuery).length > 0 ? searchQuery : {})
+    };
 
     const sortBy: any = {};
 
@@ -692,44 +823,218 @@ export const getAllAdminProducts = asyncErrorHandler(
         sortBy.productTitle = -1;
       } else if (sort === "oldest") {
         sortBy.createdAt = 1;
+      } else if (sort === "lh") {
+        // Sort by lowest price handled after processing
+      } else if (sort === "hl") {
+        // Sort by highest price handled after processing
       } else {
-        // Default to newest if an unknown sort is provided
         sortBy.createdAt = -1;
       }
-    } else {
-      // Default to sorting by newest products if no sort query is provided
-      sortBy.createdAt = -1;
     }
 
-    // Fetch products with applied filters, sorting, and pagination
-    const [products, totalProductsCount] = await Promise.all([
-      Product.find(baseQuery)
-        .populate('productCategory')
-        .populate('productBrand')
-        .populate('productComboProducts')
-        .populate('productFreeProducts')
-        .sort(sortBy)
-        .skip(skip)
-        .limit(limit),
-      Product.countDocuments(baseQuery),
+    // Get products with populated fields
+    const productPromise = Product.find(combinedQuery)
+      .populate("productCategory")
+      .populate("productSubCategory")
+      .populate("productBrand")
+      .populate("selectedBox")
+      .sort(Object.keys(sortBy).length > 0 ? sortBy : { createdAt: -1 });
+
+    // Get all products for counting total
+    let [products, filteredProductwithoutlimit] = await Promise.all([
+      productPromise,
+      Product.find(combinedQuery),
     ]);
 
-    const totalPage = Math.ceil(totalProductsCount / limit);
+    const totalProducts = await Product.countDocuments(combinedQuery);
+    if (!totalProducts) {
+      return res.status(200).json({ success: false, products: [] });
+    }
+
+    // Apply device filter for skin category
+    if (category === "skin" && typeof device === 'string' && device.length > 1) {
+      console.log("skin filter according to device :---", device);
+      products = products.filter((item) => {
+        return item.ProductSkinSelectedItems.includes(device.toLowerCase().trim());
+      });
+    }
+
+    // Get active product IDs based on sales in the last month
+    let activeProductIds: Types.ObjectId[] = [];
+    if (status === 'active' || status === 'inactive') {
+      activeProductIds = await productSoldHistory.distinct('product_id', {
+        sold_at: { $gte: oneMonthAgo }
+      });
+
+      // Filter products based on active/inactive status
+      if (status === 'active') {
+        products = products.filter(product =>
+          activeProductIds.some(id => id.toString() === product._id.toString())
+        );
+      } else if (status === 'inactive') {
+        products = products.filter(product =>
+          !activeProductIds.some(id => id.toString() === product._id.toString())
+        );
+      }
+    }
+
+    // Process products to flatten variants
+    let flatProducts: FlatProduct[] = [];
+
+    products.forEach(product => {
+      const isProductActive = activeProductIds.some(id => id.toString() === product._id.toString());
+
+      product.productVariance.forEach((variant: ProductVariance) => {
+        const productDiscount = calculateDiscount(variant.boxPrice, variant.sellingPrice);
+
+        let title = product.productTitle;
+
+        if (variant['ramAndStorage']?.length > 0 && variant.ramAndStorage[0]?.ram) {
+          title = `${product.productTitle} ${variant.ramAndStorage[0].storage !== '0' ?
+            `(${variant.color} ${variant.ramAndStorage[0].storage}GB)` :
+            `(${variant.color})`}`;
+        } else {
+          title = `${product.productTitle} (${variant.color})`;
+        }
+
+        // Find last sold date for this product from ProductSoldHistory
+        const lastSoldDate = null; // This will be populated if you add a query to fetch last sold date
+
+        const newProduct: FlatProduct = {
+          productid: product._id.toString(),
+          keyid: `${product._id}${variant.id.replace(/\s+/g, "")}`,
+          variantid: variant.id.replace(/\s+/g, ""),
+          title: title.toLowerCase(),
+          category: product?.productCategory?.categoryName || '',
+          subcategory: product?.productSubCategory?.subCategoryName || '',
+          thumbnail: variant.thumbnail,
+          boxPrice: Number(variant.boxPrice),
+          sellingPrice: Number(variant.sellingPrice),
+          discount: productDiscount,
+          rating: product.productRating,
+          color: variant.color?.split("-")[0] || '',
+          brand: product.productBrand?.brandName || 'nobrand',
+          model: product.productModel,
+          isFeatured: product.isFeatured || false,
+          isArchived: product.isArchived || false,
+          isActive: isProductActive,
+          lastSoldDate: null, // Would require additional query to get this
+          outofstock: Number(variant?.quantity) === 0,
+          quantity: Number(variant?.quantity) || 0,
+          dimensions: `${product.length}x${product.breadth}x${product.height}`,
+          weight: product.weight,
+          createdAt: product.createdAt,
+        };
+        flatProducts.push(newProduct);
+      });
+    });
+
+    // Handle export to Excel if requested
+    if (exportToExcel === 'true') {
+      // Include all products without pagination for export
+      const workbook = XLSX.utils.book_new();
+
+      // Format data for Excel
+      const exportData = flatProducts.map(product => ({
+        'Product ID': product.productid,
+        'Title': product.title,
+        'Category': product.category,
+        'Subcategory': product.subcategory,
+        'Brand': product.brand,
+        'Model': product.model,
+        'Color': product.color,
+        'Box Price': product.boxPrice,
+        'Selling Price': product.sellingPrice,
+        'Discount %': product.discount,
+        'Quantity': product.quantity,
+        'Out of Stock': product.outofstock ? 'Yes' : 'No',
+        'Featured': product.isFeatured ? 'Yes' : 'No',
+        'Archived': product.isArchived ? 'Yes' : 'No',
+        'Status': product.isActive ? 'Active' : 'Inactive',
+        // 'Last Sold Date': product.lastSoldDate ? new Date(product.lastSoldDate).toLocaleDateString() : 'N/A',
+        'Dimensions': product.dimensions,
+        'Weight': product.weight,
+        'Rating': product.rating,
+        'Created At': new Date(product.createdAt).toLocaleDateString()
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(exportData);
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Products');
+
+      // Generate a filename with timestamp
+      const fileName = `products_export_${Date.now()}.xlsx`;
+      const filePath = path.join(__dirname, '../public/exports', fileName);
+
+      // Ensure directory exists
+      const dir = path.dirname(filePath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+
+      // Write file
+      XLSX.writeFile(workbook, filePath);
+
+      // Send download link
+      const downloadUrl = `/exports/${fileName}`;
+      return res.status(200).json({
+        success: true,
+        message: "Products exported successfully",
+        downloadUrl
+      });
+    }
+
+    // Separate in-stock and out-of-stock products
+    const inStockProducts = flatProducts.filter(product => !product.outofstock);
+    const outOfStockProducts = flatProducts.filter(product => product.outofstock);
+
+    // Apply sorting to each array separately based on the sort parameter
+    if (sort === "lh") {
+      // Sort by selling price from low to high
+      inStockProducts.sort((a, b) => a.sellingPrice - b.sellingPrice);
+      outOfStockProducts.sort((a, b) => a.sellingPrice - b.sellingPrice);
+    } else if (sort === "hl") {
+      // Sort by selling price from high to low
+      inStockProducts.sort((a, b) => b.sellingPrice - a.sellingPrice);
+      outOfStockProducts.sort((a, b) => b.sellingPrice - a.sellingPrice);
+    }
+
+    // Combine in-stock and out-of-stock products
+    const allSortedProducts = [...inStockProducts, ...outOfStockProducts];
+
+    // Calculate pagination for the combined array
+    const totalAllProducts = allSortedProducts.length;
+    const totalPage = Math.ceil(totalAllProducts / limit);
+
+    // Get the products for the current page
+    const paginatedProducts = allSortedProducts.slice(skip, skip + limit);
+
+    // Get all subcategories for the selected category for filtering options
+    let subcategories: any = [];
+    if (category) {
+      const findCategory = await Category.findOne({ categoryName: category });
+      if (findCategory) {
+        subcategories = await subCategory.find({ category: findCategory._id })
+          .select('subCategoryName')
+          .lean();
+      }
+    }
 
     return res.status(200).json({
       success: true,
-      products,
+      message: "All products fetched successfully",
+      products: paginatedProducts,
+      subcategories: subcategories.map((sub: any) => sub.subCategoryName),
       totalPage,
-      totalProducts: totalProductsCount,
+      currentPage: Number(page),
+      totalProducts: totalAllProducts,
     });
   }
 );
 
 
-
 export const getAllProducts = asyncErrorHandler(
   async (req, res, next) => {
-    const { search, sort="hl", category, price, device, isfeatured } = req.query;
+    const { search, sort = "hl", category, price, device, isfeatured } = req.query;
     console.log("Search query:-", search, sort, category, price, device, isfeatured);
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 20;
@@ -758,7 +1063,7 @@ export const getAllProducts = asyncErrorHandler(
     if (isfeatured) {
       baseQuery.isFeatured = isfeatured === 'true';
     }
-    
+
     let searchQuery: FilterQuery<BaseQuery> = {};
 
     if (search && typeof search === 'string') {
@@ -885,7 +1190,7 @@ export const getAllProducts = asyncErrorHandler(
     // Calculate pagination for the combined array
     const totalAllProducts = allSortedProducts.length;
     const totalPage = Math.ceil(totalAllProducts / limit);
-    
+
     // Get the products for the current page
     const paginatedProducts = allSortedProducts.slice(skip, skip + limit);
 

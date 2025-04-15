@@ -8,6 +8,8 @@ dotenv.config({
   path: "./env",
 });
 
+
+
 // console.log(process.env.PORT);
 function startServer(port: number) {
   const server = app.listen(port, () => {

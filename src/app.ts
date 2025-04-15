@@ -32,6 +32,7 @@ import cookieParser from "cookie-parser";
 import rateLimit from "express-rate-limit";
 import { ApiError } from "./utils/ApiError.js";
 import { params } from "firebase-functions";
+import path from "path";
 
 //Handle cors
 app.use(
@@ -67,13 +68,33 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(express.static("public"));
 
+
+
 app.use(morgan("dev"));
+
 //Routes
 app.get("/", (req, res) => {
   res.send("Server is up to date");
 });
 
 app.use(cookieParser());
+
+
+
+// /export route to send the Excel file
+app.get('/exports/:fileName', (req, res) => {
+  const { fileName } = req.params;
+  if (!fileName) return res.status(400).send('File name is required');
+  const filePath = path.join(__dirname, 'public', 'exports', fileName);
+
+  res.download(filePath, 'products_export.xlsx', (err) => {
+    if (err) {
+      console.error('Error downloading file:', err);
+      res.status(500).json({ success: false, message: "file not present" })
+    }
+  });
+});
+
 
 app.use("/api/v1/user", userRoute);
 app.use("/api/v1/product", productRoute);

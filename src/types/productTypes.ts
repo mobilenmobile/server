@@ -89,3 +89,48 @@ export interface fProductWiseQty {
         quantity: number;
     }[];
 }
+
+
+
+
+
+
+
+
+
+
+
+export interface BaseQuery {
+    isArchived?: boolean | { $ne: boolean };
+    price?: { $lte: number };
+    productCategory?: any;
+    productSubCategory?: any;
+    isFeatured?: boolean;
+  }
+  
+  
+  export interface FlatProduct {
+    productid: string;
+    keyid: string;
+    variantid: string;
+    title: string;
+    category: string;
+    subcategory: string;
+    thumbnail: string;
+    boxPrice: number;
+    sellingPrice: number;
+    discount: number;
+    rating: number;
+    color: string;
+    brand: string;
+    model: string;
+    isFeatured: boolean;
+    isArchived: boolean;
+    isActive: boolean;
+    lastSoldDate: Date | null;
+    outofstock: boolean;
+    quantity: number;
+    dimensions: string;
+    weight: number;
+    createdAt: Date;
+  }
