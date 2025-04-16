@@ -729,11 +729,13 @@ export const deletePreviewCloudinary = asyncErrorHandler(
 //   }
 // );
 
+
+
 export const getAllAdminProducts = asyncErrorHandler(
-  async (req, res, next) => {
+  async (req, res: Response, next: NextFunction) => {
     const {
-      search,
-      sort = "hl",
+      searchQuery,
+      sort = "createdAt",
       category,
       subcategory,
       price,
@@ -741,20 +743,20 @@ export const getAllAdminProducts = asyncErrorHandler(
       isfeatured,
       isarchived,
       status,
-      export: exportToExcel
+      export: exportToExcel,
+      page = 1,
+      limit = 10
     } = req.query;
 
-    console.log("Search query:-", search, sort, category, subcategory, price, device, isfeatured, isarchived, status);
-    const page = Number(req.query.page) || 1;
-    const limit = Number(req.query.limit) || 20; // Increased to 20 products per request
-    const skip = (page - 1) * limit;
+    console.log("Search query:-", searchQuery, sort, category, subcategory, price, device, isfeatured, isarchived, status);
+    const skip = (Number(page) - 1) * Number(limit);
 
     // Define current date and date one month ago for active/inactive filtering
     const currentDate = new Date();
     const oneMonthAgo = new Date();
     oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
 
-    let baseQuery: FilterQuery<BaseQuery> = {};
+    let baseQuery: any = {};
 
     // Handle archived filter
     if (isarchived === 'true') {
@@ -778,6 +780,15 @@ export const getAllAdminProducts = asyncErrorHandler(
       const findCategory = await Category.findOne({ categoryName: category });
       if (findCategory) {
         baseQuery.productCategory = findCategory._id;
+      } else {
+        // If the category is not found, return an empty result
+        return res.status(404).json({
+          success: false,
+          message: 'Category not found',
+          products: [],
+          totalPage: 0,
+          totalProducts: 0,
+        });
       }
     }
 
@@ -795,24 +806,16 @@ export const getAllAdminProducts = asyncErrorHandler(
     }
 
     // Apply search query if provided
-    let searchQuery: FilterQuery<BaseQuery> = {};
-    if (search && typeof search === 'string') {
-      const searchTerm = search.toLowerCase().trim();
+    if (searchQuery && typeof searchQuery === 'string') {
+      const searchTerm = searchQuery.toLowerCase().trim();
 
       if (searchTerm) {
-        searchQuery = {
-          $or: [
-            { productTitle: { $regex: searchTerm, $options: 'i' } },
-            { productKeyword: { $regex: searchTerm, $options: 'i' } },
-          ]
-        };
+        baseQuery.$or = [
+          { productTitle: { $regex: searchTerm, $options: 'i' } },
+          { productKeyword: { $regex: searchTerm, $options: 'i' } },
+        ];
       }
     }
-
-    const combinedQuery = {
-      ...baseQuery,
-      ...(Object.keys(searchQuery).length > 0 ? searchQuery : {})
-    };
 
     const sortBy: any = {};
 
@@ -824,139 +827,92 @@ export const getAllAdminProducts = asyncErrorHandler(
       } else if (sort === "oldest") {
         sortBy.createdAt = 1;
       } else if (sort === "lh") {
-        // Sort by lowest price handled after processing
+        sortBy.price = 1; // Sort by lowest price
       } else if (sort === "hl") {
-        // Sort by highest price handled after processing
+        sortBy.price = -1; // Sort by highest price
       } else {
+        // Default to newest
         sortBy.createdAt = -1;
       }
+    } else {
+      // Default to sorting by newest products if no sort query is provided
+      sortBy.createdAt = -1;
     }
 
-    // Get products with populated fields
-    const productPromise = Product.find(combinedQuery)
-      .populate("productCategory")
-      .populate("productSubCategory")
-      .populate("productBrand")
-      .populate("selectedBox")
-      .sort(Object.keys(sortBy).length > 0 ? sortBy : { createdAt: -1 });
-
-    // Get all products for counting total
-    let [products, filteredProductwithoutlimit] = await Promise.all([
-      productPromise,
-      Product.find(combinedQuery),
-    ]);
-
-    const totalProducts = await Product.countDocuments(combinedQuery);
-    if (!totalProducts) {
-      return res.status(200).json({ success: false, products: [] });
-    }
-
-    // Apply device filter for skin category
-    if (category === "skin" && typeof device === 'string' && device.length > 1) {
-      console.log("skin filter according to device :---", device);
-      products = products.filter((item) => {
-        return item.ProductSkinSelectedItems.includes(device.toLowerCase().trim());
-      });
-    }
-
-    // Get active product IDs based on sales in the last month
-    let activeProductIds: Types.ObjectId[] = [];
+    // Get active product IDs based on sales in the last month if status filter is applied
     if (status === 'active' || status === 'inactive') {
-      activeProductIds = await productSoldHistory.distinct('product_id', {
+      const activeProductIds = await productSoldHistory.distinct('product_id', {
         sold_at: { $gte: oneMonthAgo }
       });
 
-      // Filter products based on active/inactive status
       if (status === 'active') {
-        products = products.filter(product =>
-          activeProductIds.some(id => id.toString() === product._id.toString())
-        );
+        baseQuery._id = { $in: activeProductIds };
       } else if (status === 'inactive') {
-        products = products.filter(product =>
-          !activeProductIds.some(id => id.toString() === product._id.toString())
-        );
+        baseQuery._id = { $nin: activeProductIds };
       }
     }
 
-    // Process products to flatten variants
-    let flatProducts: FlatProduct[] = [];
+    // Get products with applied filters
+    const productQuery = Product.find(baseQuery)
+      .populate('productCategory')
+      .populate('productSubCategory')
+      .populate('productBrand')
+      .populate('productComboProducts')
+      .populate('productFreeProducts')
+      .populate('selectedBox')
+      .sort(sortBy);
 
-    products.forEach(product => {
-      const isProductActive = activeProductIds.some(id => id.toString() === product._id.toString());
+    // Get all products for counting total and possible Excel export
+    let [products, totalProductsCount] = await Promise.all([
+      productQuery.clone().skip(skip).limit(Number(limit)),
+      Product.countDocuments(baseQuery)
+    ]);
 
-      product.productVariance.forEach((variant: ProductVariance) => {
-        const productDiscount = calculateDiscount(variant.boxPrice, variant.sellingPrice);
-
-        let title = product.productTitle;
-
-        if (variant['ramAndStorage']?.length > 0 && variant.ramAndStorage[0]?.ram) {
-          title = `${product.productTitle} ${variant.ramAndStorage[0].storage !== '0' ?
-            `(${variant.color} ${variant.ramAndStorage[0].storage}GB)` :
-            `(${variant.color})`}`;
-        } else {
-          title = `${product.productTitle} (${variant.color})`;
-        }
-
-        // Find last sold date for this product from ProductSoldHistory
-        const lastSoldDate = null; // This will be populated if you add a query to fetch last sold date
-
-        const newProduct: FlatProduct = {
-          productid: product._id.toString(),
-          keyid: `${product._id}${variant.id.replace(/\s+/g, "")}`,
-          variantid: variant.id.replace(/\s+/g, ""),
-          title: title.toLowerCase(),
-          category: product?.productCategory?.categoryName || '',
-          subcategory: product?.productSubCategory?.subCategoryName || '',
-          thumbnail: variant.thumbnail,
-          boxPrice: Number(variant.boxPrice),
-          sellingPrice: Number(variant.sellingPrice),
-          discount: productDiscount,
-          rating: product.productRating,
-          color: variant.color?.split("-")[0] || '',
-          brand: product.productBrand?.brandName || 'nobrand',
-          model: product.productModel,
-          isFeatured: product.isFeatured || false,
-          isArchived: product.isArchived || false,
-          isActive: isProductActive,
-          lastSoldDate: null, // Would require additional query to get this
-          outofstock: Number(variant?.quantity) === 0,
-          quantity: Number(variant?.quantity) || 0,
-          dimensions: `${product.length}x${product.breadth}x${product.height}`,
-          weight: product.weight,
-          createdAt: product.createdAt,
-        };
-        flatProducts.push(newProduct);
+    // Apply device filter for skin category after the database query
+    if (category === "skin" && typeof device === 'string' && device.length > 1) {
+      console.log("skin filter according to device :---", device);
+      products = products.filter((item) => {
+        return item.ProductSkinSelectedItems && 
+               item.ProductSkinSelectedItems.includes(device.toLowerCase().trim());
       });
-    });
+      
+      // Recalculate totals for filtered results
+      totalProductsCount = products.length;
+    }
 
     // Handle export to Excel if requested
     if (exportToExcel === 'true') {
-      // Include all products without pagination for export
+      // Get all products without pagination for export
+      const allProducts = await productQuery.clone();
+      
       const workbook = XLSX.utils.book_new();
 
       // Format data for Excel
-      const exportData = flatProducts.map(product => ({
-        'Product ID': product.productid,
-        'Title': product.title,
-        'Category': product.category,
-        'Subcategory': product.subcategory,
-        'Brand': product.brand,
-        'Model': product.model,
-        'Color': product.color,
-        'Box Price': product.boxPrice,
-        'Selling Price': product.sellingPrice,
-        'Discount %': product.discount,
-        'Quantity': product.quantity,
-        'Out of Stock': product.outofstock ? 'Yes' : 'No',
-        'Featured': product.isFeatured ? 'Yes' : 'No',
-        'Archived': product.isArchived ? 'Yes' : 'No',
-        'Status': product.isActive ? 'Active' : 'Inactive',
-        // 'Last Sold Date': product.lastSoldDate ? new Date(product.lastSoldDate).toLocaleDateString() : 'N/A',
-        'Dimensions': product.dimensions,
-        'Weight': product.weight,
-        'Rating': product.rating,
-        'Created At': new Date(product.createdAt).toLocaleDateString()
-      }));
+      const exportData = allProducts.map(product => {
+        // Handle products with variants if they exist
+        const baseProduct = {
+          'Product ID': product._id.toString(),
+          'Title': product.productTitle,
+          'Category': product.productCategory?.categoryName || '',
+          'Subcategory': product.productSubCategory?.subCategoryName || '',
+          'Brand': product.productBrand?.brandName || 'No Brand',
+          'Model': product.productModel || '',
+          'Price': product.price || 0,
+          'Box Price': product.boxPrice || 0,
+          'Selling Price': product.sellingPrice || 0,
+          'Discount %': ((product.boxPrice - product.sellingPrice) / product.boxPrice * 100).toFixed(2),
+          'Quantity': product.quantity || 0,
+          'Out of Stock': (product.quantity <= 0) ? 'Yes' : 'No',
+          'Featured': product.isFeatured ? 'Yes' : 'No',
+          'Archived': product.isArchived ? 'Yes' : 'No',
+          'Dimensions': `${product.length || 0}x${product.breadth || 0}x${product.height || 0}`,
+          'Weight': product.weight || 0,
+          'Rating': product.productRating || 0,
+          'Created At': new Date(product.createdAt).toLocaleDateString()
+        };
+        
+        return baseProduct;
+      });
 
       const worksheet = XLSX.utils.json_to_sheet(exportData);
       XLSX.utils.book_append_sheet(workbook, worksheet, 'Products');
@@ -983,30 +939,7 @@ export const getAllAdminProducts = asyncErrorHandler(
       });
     }
 
-    // Separate in-stock and out-of-stock products
-    const inStockProducts = flatProducts.filter(product => !product.outofstock);
-    const outOfStockProducts = flatProducts.filter(product => product.outofstock);
-
-    // Apply sorting to each array separately based on the sort parameter
-    if (sort === "lh") {
-      // Sort by selling price from low to high
-      inStockProducts.sort((a, b) => a.sellingPrice - b.sellingPrice);
-      outOfStockProducts.sort((a, b) => a.sellingPrice - b.sellingPrice);
-    } else if (sort === "hl") {
-      // Sort by selling price from high to low
-      inStockProducts.sort((a, b) => b.sellingPrice - a.sellingPrice);
-      outOfStockProducts.sort((a, b) => b.sellingPrice - a.sellingPrice);
-    }
-
-    // Combine in-stock and out-of-stock products
-    const allSortedProducts = [...inStockProducts, ...outOfStockProducts];
-
-    // Calculate pagination for the combined array
-    const totalAllProducts = allSortedProducts.length;
-    const totalPage = Math.ceil(totalAllProducts / limit);
-
-    // Get the products for the current page
-    const paginatedProducts = allSortedProducts.slice(skip, skip + limit);
+    const totalPage = Math.ceil(totalProductsCount / Number(limit));
 
     // Get all subcategories for the selected category for filtering options
     let subcategories: any = [];
@@ -1021,15 +954,317 @@ export const getAllAdminProducts = asyncErrorHandler(
 
     return res.status(200).json({
       success: true,
-      message: "All products fetched successfully",
-      products: paginatedProducts,
+      products,
       subcategories: subcategories.map((sub: any) => sub.subCategoryName),
       totalPage,
       currentPage: Number(page),
-      totalProducts: totalAllProducts,
+      totalProducts: totalProductsCount,
     });
   }
 );
+
+
+// export const getAllAdminProducts = asyncErrorHandler(
+//   async (req, res, next) => {
+//     const {
+//       search,
+//       sort = "hl",
+//       category,
+//       subcategory,
+//       price,
+//       device,
+//       isfeatured,
+//       isarchived,
+//       status,
+//       export: exportToExcel
+//     } = req.query;
+
+//     console.log("Search query:-", search, sort, category, subcategory, price, device, isfeatured, isarchived, status);
+//     const page = Number(req.query.page) || 1;
+//     const limit = Number(req.query.limit) || 20; // Increased to 20 products per request
+//     const skip = (page - 1) * limit;
+
+//     // Define current date and date one month ago for active/inactive filtering
+//     const currentDate = new Date();
+//     const oneMonthAgo = new Date();
+//     oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+
+//     let baseQuery: FilterQuery<BaseQuery> = {};
+
+//     // Handle archived filter
+//     if (isarchived === 'true') {
+//       baseQuery.isArchived = true;
+//     } else if (isarchived === 'false') {
+//       baseQuery.isArchived = false;
+//     } else {
+//       // Default behavior: exclude archived products
+//       baseQuery.isArchived = { $ne: true };
+//     }
+
+//     // Apply price filter if provided
+//     if (price) {
+//       baseQuery.price = {
+//         $lte: Number(price),
+//       };
+//     }
+
+//     // Apply category filter if provided
+//     if (category) {
+//       const findCategory = await Category.findOne({ categoryName: category });
+//       if (findCategory) {
+//         baseQuery.productCategory = findCategory._id;
+//       }
+//     }
+
+//     // Apply subcategory filter if provided
+//     if (subcategory) {
+//       const findSubCategory = await subCategory.findOne({ subCategoryName: subcategory });
+//       if (findSubCategory) {
+//         baseQuery.productSubCategory = findSubCategory._id;
+//       }
+//     }
+
+//     // Apply featured filter if provided
+//     if (isfeatured) {
+//       baseQuery.isFeatured = isfeatured === 'true';
+//     }
+
+//     // Apply search query if provided
+//     let searchQuery: FilterQuery<BaseQuery> = {};
+//     if (search && typeof search === 'string') {
+//       const searchTerm = search.toLowerCase().trim();
+
+//       if (searchTerm) {
+//         searchQuery = {
+//           $or: [
+//             { productTitle: { $regex: searchTerm, $options: 'i' } },
+//             { productKeyword: { $regex: searchTerm, $options: 'i' } },
+//           ]
+//         };
+//       }
+//     }
+
+//     const combinedQuery = {
+//       ...baseQuery,
+//       ...(Object.keys(searchQuery).length > 0 ? searchQuery : {})
+//     };
+
+//     const sortBy: any = {};
+
+//     if (sort) {
+//       if (sort === "A-Z") {
+//         sortBy.productTitle = 1;
+//       } else if (sort === "Z-A") {
+//         sortBy.productTitle = -1;
+//       } else if (sort === "oldest") {
+//         sortBy.createdAt = 1;
+//       } else if (sort === "lh") {
+//         // Sort by lowest price handled after processing
+//       } else if (sort === "hl") {
+//         // Sort by highest price handled after processing
+//       } else {
+//         sortBy.createdAt = -1;
+//       }
+//     }
+
+//     // Get products with populated fields
+//     const productPromise = Product.find(combinedQuery)
+//       .populate("productCategory")
+//       .populate("productSubCategory")
+//       .populate("productBrand")
+//       .populate("selectedBox")
+//       .sort(Object.keys(sortBy).length > 0 ? sortBy : { createdAt: -1 });
+
+//     // Get all products for counting total
+//     let [products, filteredProductwithoutlimit] = await Promise.all([
+//       productPromise,
+//       Product.find(combinedQuery),
+//     ]);
+
+//     const totalProducts = await Product.countDocuments(combinedQuery);
+//     if (!totalProducts) {
+//       return res.status(200).json({ success: false, products: [] });
+//     }
+
+//     // Apply device filter for skin category
+//     if (category === "skin" && typeof device === 'string' && device.length > 1) {
+//       console.log("skin filter according to device :---", device);
+//       products = products.filter((item) => {
+//         return item.ProductSkinSelectedItems.includes(device.toLowerCase().trim());
+//       });
+//     }
+
+//     // Get active product IDs based on sales in the last month
+//     let activeProductIds: Types.ObjectId[] = [];
+//     if (status === 'active' || status === 'inactive') {
+//       activeProductIds = await productSoldHistory.distinct('product_id', {
+//         sold_at: { $gte: oneMonthAgo }
+//       });
+
+//       // Filter products based on active/inactive status
+//       if (status === 'active') {
+//         products = products.filter(product =>
+//           activeProductIds.some(id => id.toString() === product._id.toString())
+//         );
+//       } else if (status === 'inactive') {
+//         products = products.filter(product =>
+//           !activeProductIds.some(id => id.toString() === product._id.toString())
+//         );
+//       }
+//     }
+
+//     // Process products to flatten variants
+//     let flatProducts: FlatProduct[] = [];
+
+//     products.forEach(product => {
+//       const isProductActive = activeProductIds.some(id => id.toString() === product._id.toString());
+
+//       product.productVariance.forEach((variant: ProductVariance) => {
+//         const productDiscount = calculateDiscount(variant.boxPrice, variant.sellingPrice);
+
+//         let title = product.productTitle;
+
+//         if (variant['ramAndStorage']?.length > 0 && variant.ramAndStorage[0]?.ram) {
+//           title = `${product.productTitle} ${variant.ramAndStorage[0].storage !== '0' ?
+//             `(${variant.color} ${variant.ramAndStorage[0].storage}GB)` :
+//             `(${variant.color})`}`;
+//         } else {
+//           title = `${product.productTitle} (${variant.color})`;
+//         }
+
+//         // Find last sold date for this product from ProductSoldHistory
+//         const lastSoldDate = null; // This will be populated if you add a query to fetch last sold date
+
+//         const newProduct: FlatProduct = {
+//           productid: product._id.toString(),
+//           keyid: `${product._id}${variant.id.replace(/\s+/g, "")}`,
+//           variantid: variant.id.replace(/\s+/g, ""),
+//           title: title.toLowerCase(),
+//           category: product?.productCategory?.categoryName || '',
+//           subcategory: product?.productSubCategory?.subCategoryName || '',
+//           thumbnail: variant.thumbnail,
+//           boxPrice: Number(variant.boxPrice),
+//           sellingPrice: Number(variant.sellingPrice),
+//           discount: productDiscount,
+//           rating: product.productRating,
+//           color: variant.color?.split("-")[0] || '',
+//           brand: product.productBrand?.brandName || 'nobrand',
+//           model: product.productModel,
+//           isFeatured: product.isFeatured || false,
+//           isArchived: product.isArchived || false,
+//           isActive: isProductActive,
+//           lastSoldDate: null, // Would require additional query to get this
+//           outofstock: Number(variant?.quantity) === 0,
+//           quantity: Number(variant?.quantity) || 0,
+//           dimensions: `${product.length}x${product.breadth}x${product.height}`,
+//           weight: product.weight,
+//           createdAt: product.createdAt,
+//         };
+//         flatProducts.push(newProduct);
+//       });
+//     });
+
+//     // Handle export to Excel if requested
+//     if (exportToExcel === 'true') {
+//       // Include all products without pagination for export
+//       const workbook = XLSX.utils.book_new();
+
+//       // Format data for Excel
+//       const exportData = flatProducts.map(product => ({
+//         'Product ID': product.productid,
+//         'Title': product.title,
+//         'Category': product.category,
+//         'Subcategory': product.subcategory,
+//         'Brand': product.brand,
+//         'Model': product.model,
+//         'Color': product.color,
+//         'Box Price': product.boxPrice,
+//         'Selling Price': product.sellingPrice,
+//         'Discount %': product.discount,
+//         'Quantity': product.quantity,
+//         'Out of Stock': product.outofstock ? 'Yes' : 'No',
+//         'Featured': product.isFeatured ? 'Yes' : 'No',
+//         'Archived': product.isArchived ? 'Yes' : 'No',
+//         'Status': product.isActive ? 'Active' : 'Inactive',
+//         // 'Last Sold Date': product.lastSoldDate ? new Date(product.lastSoldDate).toLocaleDateString() : 'N/A',
+//         'Dimensions': product.dimensions,
+//         'Weight': product.weight,
+//         'Rating': product.rating,
+//         'Created At': new Date(product.createdAt).toLocaleDateString()
+//       }));
+
+//       const worksheet = XLSX.utils.json_to_sheet(exportData);
+//       XLSX.utils.book_append_sheet(workbook, worksheet, 'Products');
+
+//       // Generate a filename with timestamp
+//       const fileName = `products_export_${Date.now()}.xlsx`;
+//       const filePath = path.join(__dirname, '../public/exports', fileName);
+
+//       // Ensure directory exists
+//       const dir = path.dirname(filePath);
+//       if (!fs.existsSync(dir)) {
+//         fs.mkdirSync(dir, { recursive: true });
+//       }
+
+//       // Write file
+//       XLSX.writeFile(workbook, filePath);
+
+//       // Send download link
+//       const downloadUrl = `/exports/${fileName}`;
+//       return res.status(200).json({
+//         success: true,
+//         message: "Products exported successfully",
+//         downloadUrl
+//       });
+//     }
+
+//     // Separate in-stock and out-of-stock products
+//     const inStockProducts = flatProducts.filter(product => !product.outofstock);
+//     const outOfStockProducts = flatProducts.filter(product => product.outofstock);
+
+//     // Apply sorting to each array separately based on the sort parameter
+//     if (sort === "lh") {
+//       // Sort by selling price from low to high
+//       inStockProducts.sort((a, b) => a.sellingPrice - b.sellingPrice);
+//       outOfStockProducts.sort((a, b) => a.sellingPrice - b.sellingPrice);
+//     } else if (sort === "hl") {
+//       // Sort by selling price from high to low
+//       inStockProducts.sort((a, b) => b.sellingPrice - a.sellingPrice);
+//       outOfStockProducts.sort((a, b) => b.sellingPrice - a.sellingPrice);
+//     }
+
+//     // Combine in-stock and out-of-stock products
+//     const allSortedProducts = [...inStockProducts, ...outOfStockProducts];
+
+//     // Calculate pagination for the combined array
+//     const totalAllProducts = allSortedProducts.length;
+//     const totalPage = Math.ceil(totalAllProducts / limit);
+
+//     // Get the products for the current page
+//     const paginatedProducts = allSortedProducts.slice(skip, skip + limit);
+
+//     // Get all subcategories for the selected category for filtering options
+//     let subcategories: any = [];
+//     if (category) {
+//       const findCategory = await Category.findOne({ categoryName: category });
+//       if (findCategory) {
+//         subcategories = await subCategory.find({ category: findCategory._id })
+//           .select('subCategoryName')
+//           .lean();
+//       }
+//     }
+
+//     return res.status(200).json({
+//       success: true,
+//       message: "All products fetched successfully",
+//       products: paginatedProducts,
+//       subcategories: subcategories.map((sub: any) => sub.subCategoryName),
+//       totalPage,
+//       currentPage: Number(page),
+//       totalProducts: totalAllProducts,
+//     });
+//   }
+// );
 
 
 export const getAllProducts = asyncErrorHandler(
