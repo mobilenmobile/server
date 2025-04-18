@@ -644,7 +644,7 @@ export const updateCart = asyncErrorHandler(async (req, res, next) => {
   const {
     productId,
     selectedVarianceId,
-    quantity,
+    quantity=1,
     customSkin,
     isCombo,
     skinProductDetails,

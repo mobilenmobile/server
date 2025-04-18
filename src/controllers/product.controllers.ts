@@ -745,7 +745,7 @@ export const getAllAdminProducts = asyncErrorHandler(
       status,
       export: exportToExcel,
       page = 1,
-      limit = 10
+      limit = 20
     } = req.query;
 
     console.log("Search query:-", searchQuery, sort, category, subcategory, price, device, isfeatured, isarchived, status);
