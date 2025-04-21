@@ -59,8 +59,6 @@ export const OfferSchema = new Schema(
       required: true,
       default: '0'
     },
-
-
     createdAt: {
       type: Date,
       default: Date.now

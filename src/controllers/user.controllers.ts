@@ -1105,7 +1105,7 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
 
         case 'percentage':
           couponDiscount = Math.round((Number(appliedCoupon.offerDiscountValue) * totals.DiscountedTotal) / 100);
-          couponDiscount = Math.min(2400, couponDiscount); // Cap discount at 2000
+          // couponDiscount = Math.min(2400, couponDiscount); // Cap discount at 2000
           break;
 
         case 'fixedamount':
