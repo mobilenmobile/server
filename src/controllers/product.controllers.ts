@@ -872,10 +872,10 @@ export const getAllAdminProducts = asyncErrorHandler(
     if (category === "skin" && typeof device === 'string' && device.length > 1) {
       console.log("skin filter according to device :---", device);
       products = products.filter((item) => {
-        return item.ProductSkinSelectedItems && 
-               item.ProductSkinSelectedItems.includes(device.toLowerCase().trim());
+        return item.ProductSkinSelectedItems &&
+          item.ProductSkinSelectedItems.includes(device.toLowerCase().trim());
       });
-      
+
       // Recalculate totals for filtered results
       totalProductsCount = products.length;
     }
@@ -884,7 +884,7 @@ export const getAllAdminProducts = asyncErrorHandler(
     if (exportToExcel === 'true') {
       // Get all products without pagination for export
       const allProducts = await productQuery.clone();
-      
+
       const workbook = XLSX.utils.book_new();
 
       // Format data for Excel
@@ -910,7 +910,7 @@ export const getAllAdminProducts = asyncErrorHandler(
           'Rating': product.productRating || 0,
           'Created At': new Date(product.createdAt).toLocaleDateString()
         };
-        
+
         return baseProduct;
       });
 
@@ -1267,6 +1267,8 @@ export const getAllAdminProducts = asyncErrorHandler(
 // );
 
 
+
+
 export const getAllProducts = asyncErrorHandler(
   async (req, res, next) => {
     const { search, sort = "hl", category, price, device, isfeatured } = req.query;
@@ -1355,11 +1357,45 @@ export const getAllProducts = asyncErrorHandler(
       });
     }
 
+    // ---- ADD NEW CODE: Add variables to collect filter options ----
+    const colors = new Set<string>();
+    const rams = new Set<string>();
+    const storages = new Set<string>();
+    const brands = new Set<string>();
+    const prices: number[] = [];
+    // ---- END NEW CODE ----
+
     let flatProducts: any = [];
 
     products.forEach(product => {
+      // ---- ADD NEW CODE: Collect brand filter options ----
+      if (product.productBrand?.brandName) {
+        brands.add(product.productBrand.brandName);
+      }
+      // ---- END NEW CODE ----
+
       product.productVariance.forEach((variant: ProductVariance) => {
         const productDiscount = calculateDiscount(variant.boxPrice, variant.sellingPrice);
+
+        // ---- ADD NEW CODE: Collect color, RAM, storage, and price filter options ----
+        if (variant.color) {
+          colors.add(variant.color.split("-")[0]);
+        }
+
+        if (variant.id) {
+          const variantIdParts = variant.id.replace(/\s+/g, "").split('-');
+          if (variantIdParts[1] && variantIdParts[1] !== '0') {
+            rams.add(variantIdParts[1]);
+          }
+          if (variantIdParts[2]) {
+            storages.add(variantIdParts[2]);
+          }
+        }
+
+        if (variant.sellingPrice && Number(variant.sellingPrice) > 0) {
+          prices.push(Number(variant.sellingPrice));
+        }
+        // ---- END NEW CODE ----
 
         let title = product.productTitle;
 
@@ -1404,6 +1440,81 @@ export const getAllProducts = asyncErrorHandler(
       outofstock: boolean;
     }
 
+    // ---- ADD NEW CODE: Define and implement price filter functions ----
+    interface PriceFilter {
+      label: string;
+      min: number;
+      max: number;
+    }
+
+    function createPriceFilters(prices: number[]): PriceFilter[] {
+      if (prices.length === 0) return [];
+
+      // Sort prices
+      prices.sort((a, b) => a - b);
+
+      const minPrice = prices[0];
+      const maxPrice = prices[prices.length - 1];
+      const totalRange = maxPrice - minPrice;
+      const segmentSize = totalRange / 5;
+
+      const roundToNearestThousand = (value: number) => Math.round(value / 1000) * 1000;
+
+      const priceFilters: PriceFilter[] = [];
+
+      for (let i = 0; i < 5; i++) {
+        const categoryMin = roundToNearestThousand(minPrice + i * segmentSize);
+        const categoryMax = roundToNearestThousand(minPrice + (i + 1) * segmentSize);
+
+        if (i === 0) {
+          priceFilters.push({
+            label: `Below ₹${categoryMax}`,
+            min: categoryMin,
+            max: categoryMax
+          });
+        } else if (i === 4) {
+          priceFilters.push({
+            label: `Above ₹${categoryMin}`,
+            min: categoryMin,
+            max: maxPrice
+          });
+        } else {
+          priceFilters.push({
+            label: `₹${categoryMin} to ₹${categoryMax}`,
+            min: categoryMin,
+            max: categoryMax
+          });
+        }
+      }
+
+      return removeDuplicatesFromPriceFilter(priceFilters);
+    }
+
+    function removeDuplicatesFromPriceFilter(priceFilters: PriceFilter[]): PriceFilter[] {
+      const uniqueRanges: PriceFilter[] = [];
+      const seenRanges: Set<string> = new Set();
+
+      priceFilters.forEach(item => {
+        const range = `${item.min}-${item.max}`;
+        if (!seenRanges.has(range)) {
+          seenRanges.add(range);
+          uniqueRanges.push(item);
+        }
+      });
+
+      return uniqueRanges;
+    }
+
+    // Create filter options object
+    const filterOptions = {
+      colors: Array.from(colors),
+      rams: Array.from(rams),
+      storages: Array.from(storages),
+      brands: Array.from(brands),
+      priceRanges: createPriceFilters(prices)
+    };
+    // ---- END NEW CODE ----
+
     // Separate in-stock and out-of-stock products
     const inStockProducts: FlatProduct[] = flatProducts.filter((product: any) => !product.outofstock);
     const outOfStockProducts: FlatProduct[] = flatProducts.filter((product: any) => product.outofstock);
@@ -1421,7 +1532,7 @@ export const getAllProducts = asyncErrorHandler(
 
     // Combine in-stock and out-of-stock products
     const allSortedProducts = [...inStockProducts, ...outOfStockProducts];
-
+    console.log("sorted products", allSortedProducts)
     // Calculate pagination for the combined array
     const totalAllProducts = allSortedProducts.length;
     const totalPage = Math.ceil(totalAllProducts / limit);
@@ -1436,9 +1547,188 @@ export const getAllProducts = asyncErrorHandler(
       totalPage,
       currentPage: Number(page),
       totalProducts: totalAllProducts,
+      // ---- ADD NEW CODE: Add filters to response ----
+      filters: filterOptions,
+      // ---- END NEW CODE ----
     });
   }
 );
+
+
+
+
+// export const getAllProducts = asyncErrorHandler(
+//   async (req, res, next) => {
+//     const { search, sort = "hl", category, price, device, isfeatured } = req.query;
+//     console.log("Search query:-", search, sort, category, price, device, isfeatured);
+//     const page = Number(req.query.page) || 1;
+//     const limit = Number(req.query.limit) || 20;
+//     const skip = (page - 1) * limit;
+
+//     let baseQuery: FilterQuery<BaseQuery> = {
+//       isArchived: { $ne: true }  // Exclude archived products
+//     };
+
+//     if (price) {
+//       baseQuery.price = {
+//         $lte: Number(price),
+//       };
+//     }
+
+//     // Apply category filter if provided
+//     console.log("category for search product", category);
+//     if (category) {
+//       const findCategory = await Category.findOne({ categoryName: category });
+//       if (findCategory) {
+//         baseQuery.productCategory = findCategory._id;
+//       }
+//     }
+
+//     // Apply isfeatured filter if provided
+//     if (isfeatured) {
+//       baseQuery.isFeatured = isfeatured === 'true';
+//     }
+
+//     let searchQuery: FilterQuery<BaseQuery> = {};
+
+//     if (search && typeof search === 'string') {
+//       const searchTerm = search.toLowerCase().trim();
+
+//       if (searchTerm) {
+//         searchQuery = {
+//           $or: [
+//             { productTitle: { $regex: searchTerm, $options: 'i' } },
+//             { productKeyword: { $regex: searchTerm, $options: 'i' } },
+//           ]
+//         };
+//       }
+//     }
+
+//     const combinedQuery = {
+//       ...baseQuery,
+//       ...(Object.keys(searchQuery).length > 0 ? searchQuery : {})
+//     };
+
+//     const sortBy: any = {};
+
+//     if (sort) {
+//       if (sort === "A-Z") {
+//         sortBy.productTitle = 1;
+//       } else if (sort === "Z-A") {
+//         sortBy.productTitle = -1;
+//       } else if (sort === "oldest") {
+//         sortBy.createdAt = 1;
+//       } else {
+//         sortBy.createdAt = -1;
+//       }
+//     }
+
+//     const productPromise = Product.find(combinedQuery)
+//       .populate("productCategory")
+//       .populate("productBrand")
+//       .sort(sort ? sortBy : { createdAt: -1 });
+
+//     let [products, filteredProductwithoutlimit] = await Promise.all([
+//       productPromise,
+//       Product.find(combinedQuery),
+//     ]);
+
+//     const totalProducts = await Product.countDocuments(combinedQuery);
+//     if (!totalProducts) {
+//       return res.status(200).json({ success: false, products: [] })
+//     }
+
+//     if (category === "skin" && typeof device === 'string' && device.length > 1) {
+//       console.log("skin filter according to device :---", device);
+//       products = products.filter((item) => {
+//         return item.ProductSkinSelectedItems.includes(device.toLowerCase().trim());
+//       });
+//     }
+
+//     let flatProducts: any = [];
+
+//     products.forEach(product => {
+//       product.productVariance.forEach((variant: ProductVariance) => {
+//         const productDiscount = calculateDiscount(variant.boxPrice, variant.sellingPrice);
+
+//         let title = product.productTitle;
+
+//         if (variant['ramAndStorage'].length > 0 && variant.ramAndStorage[0]?.ram) {
+//           title = `${product.productTitle} ${variant.ramAndStorage[0].storage !== '0' ? `(${variant.color} ${variant.ramAndStorage[0].storage}GB)` : `(${variant.color})`}`;
+//         } else {
+//           title = `${product.productTitle} (${variant.color})`;
+//         }
+
+//         const newProduct = {
+//           productid: `${product._id}`,
+//           keyid: `${product._id}${variant.id.replace(/\s+/g, "")}`,
+//           variantid: `${variant.id.replace(/\s+/g, "")}`,
+//           title: title.toLowerCase(),
+//           category: product?.productCategory?.categoryName,
+//           thumbnail: variant.thumbnail,
+//           boxPrice: variant.boxPrice,
+//           sellingPrice: variant.sellingPrice,
+//           discount: productDiscount,
+//           rating: product.productRating,
+//           color: variant.color?.split("-")[0],
+//           brand: product.productBrand?.brandName || 'nobrand',
+//           outofstock: Number(variant?.quantity) === 0,
+//         };
+//         flatProducts.push(newProduct);
+//       });
+//     });
+
+//     interface FlatProduct {
+//       productid: string;
+//       keyid: string;
+//       variantid: string;
+//       title: string;
+//       category: string;
+//       thumbnail: string;
+//       boxPrice: number;
+//       sellingPrice: number;
+//       discount: number;
+//       rating: number;
+//       color: string;
+//       brand: string;
+//       outofstock: boolean;
+//     }
+
+//     // Separate in-stock and out-of-stock products
+//     const inStockProducts: FlatProduct[] = flatProducts.filter((product: any) => !product.outofstock);
+//     const outOfStockProducts: FlatProduct[] = flatProducts.filter((product: any) => product.outofstock);
+
+//     // Apply sorting to each array separately based on the sort parameter
+//     if (sort === "lh") {
+//       // Sort by selling price from low to high
+//       inStockProducts.sort((a: FlatProduct, b: FlatProduct) => a.sellingPrice - b.sellingPrice);
+//       outOfStockProducts.sort((a: FlatProduct, b: FlatProduct) => a.sellingPrice - b.sellingPrice);
+//     } else if (sort === "hl") {
+//       // Sort by selling price from high to low
+//       inStockProducts.sort((a: FlatProduct, b: FlatProduct) => b.sellingPrice - a.sellingPrice);
+//       outOfStockProducts.sort((a: FlatProduct, b: FlatProduct) => b.sellingPrice - a.sellingPrice);
+//     }
+
+//     // Combine in-stock and out-of-stock products
+//     const allSortedProducts = [...inStockProducts, ...outOfStockProducts];
+
+//     // Calculate pagination for the combined array
+//     const totalAllProducts = allSortedProducts.length;
+//     const totalPage = Math.ceil(totalAllProducts / limit);
+
+//     // Get the products for the current page
+//     const paginatedProducts = allSortedProducts.slice(skip, skip + limit);
+
+//     return res.status(200).json({
+//       success: true,
+//       message: "All products fetched successfully",
+//       products: paginatedProducts,
+//       totalPage,
+//       currentPage: Number(page),
+//       totalProducts: totalAllProducts,
+//     });
+//   }
+// );
 
 // export const getAllProducts = asyncErrorHandler(
 //   async (req, res, next) => {
