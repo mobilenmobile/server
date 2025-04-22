@@ -730,7 +730,6 @@ export const deletePreviewCloudinary = asyncErrorHandler(
 // );
 
 
-
 export const getAllAdminProducts = asyncErrorHandler(
   async (req, res: Response, next: NextFunction) => {
     const {
@@ -935,10 +934,10 @@ export const getAllAdminProducts = asyncErrorHandler(
         if (product.productVariance && product.productVariance.length > 0) {
           product.productVariance.forEach((variant: ProductVariance, index: number) => {
             // Calculate discount percentage for the variant
-            const discountPercent = variant.boxPrice > 0 
+            const discountPercent = variant.boxPrice > 0
               ? ((variant.boxPrice - variant.sellingPrice) / variant.boxPrice * 100).toFixed(2)
               : '0.00';
-            
+
             // Build RAM/Storage info
             let ramStorageInfo = '';
             if (variant.ramAndStorage && variant.ramAndStorage.length > 0) {
@@ -1645,32 +1644,45 @@ export const getAllProducts = asyncErrorHandler(
 );
 
 
+function parseArrayParam<T extends string | number>(value: any, isNumber = false): T[] {
+  if (!value) return [];
+
+  try {
+    const parsed = typeof value === "string" ? JSON.parse(value) : value;
+    if (Array.isArray(parsed)) {
+      return isNumber ? parsed.map((v: any) => Number(v)) as T[] : parsed as T[];
+    }
+    return isNumber ? [Number(parsed)] as T[] : [parsed] as T[];
+  } catch {
+    return isNumber ? [Number(value)] as T[] : [value] as T[];
+  }
+}
+
+
 export const getAllProductsv2 = asyncErrorHandler(
   async (req, res, next) => {
     // Extract all possible filter parameters from both query and body
     // Support both query params (GET) and request body (POST)
-    const params = req.method === 'POST' ? req.body : req.query;
-    
-    const { 
-      search, 
-      searchText,
-      sort = "hl", 
-      sortBy = "hl",
-      category, 
-      price,
-      minPrice = [0],
-      maxPrice = [1000000],
-      device, 
-      isfeatured,
-      rating,
-      brand,
-      color,
-      memory,
-      storage 
-    } = params;
-    
-    console.log("Search/Filter params:", params);
-    
+    // Extract parameters from query
+    const params = req.query;
+
+    // Parse query parameters with proper type handling and defaults
+    const search = params.search as string || "";
+    const sort = params.sort as string || "lh";
+    const category = params.category as string || "";
+    const isfeatured = params.category as string || "";
+    const price = params.price ? Number(params.price) : undefined;
+
+    const minPrice = parseArrayParam<number>(params.minPrice, true).length ? parseArrayParam<number>(params.minPrice, true) : [0];;
+    const maxPrice = parseArrayParam<number>(params.maxPrice, true).length ? parseArrayParam<number>(params.maxPrice, true) : [1000000];
+    const rating = parseArrayParam<number>(params.rating, true);
+    const brand = parseArrayParam<string>(params.brand);
+    const color = parseArrayParam<string>(params.color);
+    const memory = parseArrayParam<string>(params.memory);
+    const storage = parseArrayParam<string>(params.storage);
+
+    console.log("Search/Filter params:", params, minPrice);
+
     const page = Number(params.page) || 1;
     const limit = Number(params.limit) || 20;
     const skip = (page - 1) * limit;
@@ -1694,32 +1706,20 @@ export const getAllProductsv2 = asyncErrorHandler(
       isFeatured?: boolean;
       device?: string;
       sort?: string;
-    } = {};
+    } = {
+      search: "",
+      category: "",
+      price: { min: 0, max: 0 },
+      brand: [],
+      color: [],
+      memory: [],
+      storage: [],
+      rating: [],
+      isFeatured: false,
+      device: "",
+      sort: ""
+    };
 
-    // Handle price filters (support both single price and min/max)
-    if (price) {
-      baseQuery.price = {
-        $lte: Number(price),
-      };
-      appliedFilters.price = { min: 0, max: Number(price) };
-    } else {
-      const minPriceValue = Array.isArray(minPrice) ? Math.min(...minPrice.map(Number)) : Number(minPrice);
-      const maxPriceValue = Array.isArray(maxPrice) ? Math.max(...maxPrice.map(Number)) : Number(maxPrice);
-      
-      if (minPriceValue > 0 || maxPriceValue < 1000000) {
-        baseQuery.price = {};
-        
-        if (minPriceValue > 0) {
-          baseQuery.price.$gte = minPriceValue;
-        }
-        
-        if (maxPriceValue < 1000000) {
-          baseQuery.price.$lte = maxPriceValue;
-        }
-        
-        appliedFilters.price = { min: minPriceValue, max: maxPriceValue };
-      }
-    }
 
     // Apply category filter if provided
     if (category) {
@@ -1737,7 +1737,7 @@ export const getAllProductsv2 = asyncErrorHandler(
     }
 
     // Apply search filter - handle both search and searchText params
-    const searchTerm = (search || searchText)?.toLowerCase().trim();
+    const searchTerm = typeof search == 'string' && search?.toLowerCase().trim();
     let searchQuery: FilterQuery<BaseQuery> = {};
 
     if (searchTerm && typeof searchTerm === 'string') {
@@ -1757,43 +1757,12 @@ export const getAllProductsv2 = asyncErrorHandler(
       ...(Object.keys(searchQuery).length > 0 ? searchQuery : {})
     };
 
-    // Handle sorting
-    const finalSortBy = sortBy || sort;
-    const sortOptions: any = {};
 
-    if (finalSortBy) {
-      if (finalSortBy === "A-Z") {
-        sortOptions.productTitle = 1;
-        appliedFilters.sort = "A-Z";
-      } else if (finalSortBy === "Z-A") {
-        sortOptions.productTitle = -1;
-        appliedFilters.sort = "Z-A";
-      } else if (finalSortBy === "oldest") {
-        sortOptions.createdAt = 1;
-        appliedFilters.sort = "oldest";
-      } else if (finalSortBy === "lh" || finalSortBy === "priceLowToHigh") {
-        // We'll handle this in memory after fetching variants
-        appliedFilters.sort = "priceLowToHigh";
-      } else if (finalSortBy === "hl" || finalSortBy === "priceHighToLow") {
-        // We'll handle this in memory after fetching variants
-        appliedFilters.sort = "priceHighToLow";
-      } else if (finalSortBy === "topRated") {
-        sortOptions.productRating = -1;
-        appliedFilters.sort = "topRated";
-      } else {
-        sortOptions.createdAt = -1;
-        appliedFilters.sort = "newest";
-      }
-    } else {
-      sortOptions.createdAt = -1;
-      appliedFilters.sort = "newest";
-    }
 
     // Fetch products with populated fields
     const productPromise = Product.find(combinedQuery)
       .populate("productCategory")
       .populate("productBrand")
-      .sort(Object.keys(sortOptions).length > 0 ? sortOptions : { createdAt: -1 });
 
     let [products] = await Promise.all([
       productPromise,
@@ -1802,21 +1771,21 @@ export const getAllProductsv2 = asyncErrorHandler(
 
     const totalProducts = await Product.countDocuments(combinedQuery);
     if (!totalProducts) {
-      return res.status(200).json({ 
-        success: false, 
+      return res.status(200).json({
+        success: false,
         products: [],
-        appliedFilters 
+        appliedFilters
       });
     }
 
-    // Handle skin device filter
-    if (category === "skin" && typeof device === 'string' && device.length > 1) {
-      console.log("skin filter according to device :---", device);
-      products = products.filter((item) => {
-        return item.ProductSkinSelectedItems.includes(device.toLowerCase().trim());
-      });
-      appliedFilters.device = device;
-    }
+    // // Handle skin device filter
+    // if (category === "skin" && typeof device === 'string' && device.length > 1) {
+    //   console.log("skin filter according to device :---", device);
+    //   products = products.filter((item) => {
+    //     return item.ProductSkinSelectedItems.includes(device.toLowerCase().trim());
+    //   });
+    //   appliedFilters.device = device;
+    // }
 
     // Variables to collect filter options
     const colors = new Set<string>();
@@ -1908,27 +1877,45 @@ export const getAllProductsv2 = asyncErrorHandler(
     // Apply additional filters from filterAndSort
     let filteredProducts = [...flatProducts];
 
-    // Apply rating filter
-    if (rating && (Array.isArray(rating) ? rating.length > 0 : rating)) {
-      const ratingValues = Array.isArray(rating) ? rating.map(Number) : [Number(rating)];
-      filteredProducts = filteredProducts.filter(product => ratingValues.includes(product.rating));
-      appliedFilters.rating = ratingValues;
+
+
+
+    const minPriceValue = minPrice.sort((a: number, b: number) => a-b)[0];
+    const maxPriceValue = maxPrice.sort((a: number, b: number) => b - a)[0];
+    appliedFilters.price = { min: minPriceValue, max: maxPriceValue }
+    console.log("minprice arr", minPrice.sort((a: number, b: number) => a-b))
+    if (minPriceValue && maxPriceValue) {
+      filteredProducts = filteredProducts.filter(product => {
+        const sellingPrice = Number(product.sellingPrice);
+        return sellingPrice >= Number(minPriceValue) && sellingPrice <= Number(maxPriceValue);
+      });
+
+    } else if (maxPriceValue) {
+      filteredProducts = filteredProducts.filter(product => {
+        const sellingPrice = Number(product.sellingPrice);
+        return sellingPrice <= Number(maxPriceValue);
+      });
+
+    } else if (minPriceValue) {
+      filteredProducts = filteredProducts.filter(product => {
+        const sellingPrice = Number(product.sellingPrice);
+        return sellingPrice >= Number(minPriceValue);
+      });
     }
 
-    // Apply brand filter
-    if (brand && (Array.isArray(brand) ? brand.length > 0 : brand)) {
-      const brandValues = Array.isArray(brand) ? brand : [brand];
-      filteredProducts = filteredProducts.filter(product => brandValues.includes(product.brand));
-      appliedFilters.brand = brandValues;
+    if (rating && rating.length > 0) {
+      filteredProducts = filteredProducts.filter(product => rating.includes(product.rating));
     }
 
-    // Apply color filter
-    if (color && (Array.isArray(color) ? color.length > 0 : color)) {
-      const colorValues = Array.isArray(color) ? color : [color];
+    if (brand && brand.length > 0) {
+      filteredProducts = filteredProducts.filter(product => brand.includes(product.brand));
+    }
+
+    if (color && color.length > 0) {
       filteredProducts = filteredProducts.filter(product => {
         let matches = 0;
 
-        colorValues.forEach((arrcolor: string) => {
+        color.forEach((arrcolor: string) => {
           const arrColors = arrcolor.toLowerCase().split(/\s+/);
           const productColors = product.color.toLowerCase().split(/\s+/);
 
@@ -1941,22 +1928,18 @@ export const getAllProductsv2 = asyncErrorHandler(
 
         return matches > 0;
       });
-      appliedFilters.color = colorValues;
     }
 
-    // Apply memory filter
-    if (memory && (Array.isArray(memory) ? memory.length > 0 : memory)) {
-      const memoryValues = Array.isArray(memory) ? memory : [memory];
-      filteredProducts = filteredProducts.filter(product => product.memory && memoryValues.includes(product.memory));
-      appliedFilters.memory = memoryValues;
+    if (memory && memory.length > 0) {
+      filteredProducts = filteredProducts.filter(product => memory.includes(product.memory));
     }
 
-    // Apply storage filter
-    if (storage && (Array.isArray(storage) ? storage.length > 0 : storage)) {
-      const storageValues = Array.isArray(storage) ? storage : [storage];
-      filteredProducts = filteredProducts.filter(product => product.storage && storageValues.includes(product.storage));
-      appliedFilters.storage = storageValues;
+    if (storage && storage.length > 0) {
+      filteredProducts = filteredProducts.filter(product => storage.includes(product.storage));
     }
+
+
+
 
     // Define price filter functions
     interface PriceFilter {
@@ -2037,15 +2020,15 @@ export const getAllProductsv2 = asyncErrorHandler(
     const outOfStockProducts: FlatProduct[] = filteredProducts.filter((product: any) => product.outofstock);
 
     // Apply sorting to each array separately based on the sort parameter
-    if (finalSortBy === "lh" || finalSortBy === "priceLowToHigh") {
+    if (sort === "lh" || sort === "priceLowToHigh") {
       // Sort by selling price from low to high
       inStockProducts.sort((a: FlatProduct, b: FlatProduct) => a.sellingPrice - b.sellingPrice);
       outOfStockProducts.sort((a: FlatProduct, b: FlatProduct) => a.sellingPrice - b.sellingPrice);
-    } else if (finalSortBy === "hl" || finalSortBy === "priceHighToLow") {
+    } else if (sort === "hl" || sort === "priceHighToLow") {
       // Sort by selling price from high to low
       inStockProducts.sort((a: FlatProduct, b: FlatProduct) => b.sellingPrice - a.sellingPrice);
       outOfStockProducts.sort((a: FlatProduct, b: FlatProduct) => b.sellingPrice - a.sellingPrice);
-    } else if (finalSortBy === "topRated") {
+    } else if (sort === "topRated") {
       // Sort by rating
       inStockProducts.sort((a: FlatProduct, b: FlatProduct) => b.rating - a.rating);
       outOfStockProducts.sort((a: FlatProduct, b: FlatProduct) => b.rating - a.rating);
@@ -2053,7 +2036,7 @@ export const getAllProductsv2 = asyncErrorHandler(
 
     // Combine in-stock and out-of-stock products
     const allSortedProducts = [...inStockProducts, ...outOfStockProducts];
-    
+
     // Calculate pagination for the combined array
     const totalAllProducts = allSortedProducts.length;
     const totalPage = Math.ceil(totalAllProducts / limit);
@@ -2069,7 +2052,8 @@ export const getAllProductsv2 = asyncErrorHandler(
       currentPage: Number(page),
       totalProducts: totalAllProducts,
       filters: filterOptions,
-      appliedFilters: appliedFilters
+      appliedFilters: appliedFilters,
+     
     });
   }
 );

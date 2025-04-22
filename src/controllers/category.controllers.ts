@@ -83,7 +83,7 @@ export const addNewSubCategory = asyncErrorHandler(
     const { categoryName, subCategoryName } = req.body;
 
     // Normalize the categoryName
-    const CategoryName = categoryName
+    const normalizedCategoryName = categoryName
       .toLowerCase()         // Convert to lowercase
       .trim()                // Remove extra spaces from the sides
       .replace(/\s+/g, ' '); // Replace multiple spaces with a single space
@@ -102,14 +102,17 @@ export const addNewSubCategory = asyncErrorHandler(
     }
 
 
-    const exisitingCategory = await Category.findOne({ categoryName: categoryName })
+    const existingCategory = await Category.findOne({
+      categoryName: { $regex: `^${normalizedCategoryName}$`, $options: 'i' },
+    });
+
     // console.log(exisitingCategory, "category eixsitn")
-    if (!exisitingCategory) {
+    if (!existingCategory) {
       return next(new ErrorHandler("No category found.", 400));
     }
 
     const category = await subCategory.create({
-      categoryId: exisitingCategory._id,
+      categoryId: existingCategory._id,
       subCategoryName: normalizedSubCategoryName,
     });
 
@@ -156,7 +159,9 @@ export const getAllSubCategory = asyncErrorHandler(
     console.log(categoryName)
     const query: any = {};
     if (categoryName) {
-      const category = await Category.findOne({ categoryName: categoryName });
+      const category = await Category.findOne({
+        categoryName: { $regex: `^${categoryName}$`, $options: 'i' },
+      });
       if (!category) {
         return res.status(404).json({
           success: false,

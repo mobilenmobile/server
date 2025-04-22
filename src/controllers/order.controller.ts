@@ -5,7 +5,7 @@ import { Request } from "express";
 import { Review } from "../models/review/review.model.js";
 import { CoinAccount } from "../models/coins/coinAccount.js";
 import { CoinTransaction } from "../models/coins/coinTransaction.js";
-import mongoose, {startSession } from "mongoose";
+import mongoose, { startSession } from "mongoose";
 import { ShipRocket } from "../models/shiprocket/shiprocket.model.js";
 import axios from "axios";
 import productSoldHistory from "../models/product/productSoldHistory.js";
@@ -238,9 +238,9 @@ export const newOrder = asyncErrorHandler(
       // Commit the transaction
       await session.commitTransaction();
       session.endSession();
-      console.log("------------------------------ new order-----------------------------------")
-      console.log(newOrder)
-      console.log("------------------------------ new order-----------------------------------")
+      // console.log("------------------------------ new order-----------------------------------")
+      // console.log(newOrder)
+      // console.log("------------------------------ new order-----------------------------------")
       return res.status(201).json({
         success: true,
         message: "Order created successfully",
@@ -251,12 +251,13 @@ export const newOrder = asyncErrorHandler(
       // Abort the transaction in case of an error
       await session.abortTransaction();
       session.endSession();
-
-      console.error("Error processing transaction:", error);
+      // console.error("Error processing transaction:", error);
       throw error;
     }
   }
 );
+
+
 
 //--------------------api to get single order details---------------------------------------
 export const getSingleOrderDetails = asyncErrorHandler(async (req, res, next) => {

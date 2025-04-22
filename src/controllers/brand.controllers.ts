@@ -29,7 +29,9 @@ export const newBrand = asyncErrorHandler(
     if (categoryName) {
 
       const categoryNameTrimmedLowercase = categoryName.trim().toLowerCase();
-      const category = await Category.findOne({ categoryName: categoryNameTrimmedLowercase });
+      const category = await Category.findOne({
+        categoryName: { $regex: `^${categoryNameTrimmedLowercase}$`, $options: 'i' },
+      });
       if (!category) return next(new ErrorHandler("category not found", 400));
 
       if (existingBrand) {
@@ -115,7 +117,10 @@ export const getAllBrand = asyncErrorHandler(
     const baseQuery = { categories: "" };
 
     if (categoryName) {
-      const category = await Category.findOne({ categoryName: categoryName });
+      // const category = await Category.findOne({ categoryName: categoryName });
+      const category = await Category.findOne({
+        categoryName: { $regex: `^${categoryName}$`, $options: 'i' },
+      });
       if (!category) return next(new ErrorHandler("category not found", 400));
       baseQuery.categories = category._id;
     }

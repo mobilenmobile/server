@@ -1154,14 +1154,14 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
   const finalCartTotalBeforeCoins = totals.DiscountedTotal - (couponDiscount)
   const fiftyPercentOfFinalCartTotal = finalCartTotalBeforeCoins * 0.5;
 
-  console.log(availableCoins, "available coin ............")
-  console.log("hey som val")
-  console.log("totals", totals)
-  console.log(couponDiscount, "couponDiscount")
-  console.log(finalCartTotalBeforeCoins, "final cart total before coins ................")
-  console.log(fiftyPercentOfFinalCartTotal, "fifty percent of cart total ..................")
+  // console.log(availableCoins, "available coin ............")
+  // console.log("hey som val")
+  // console.log("totals", totals)
+  // console.log(couponDiscount, "couponDiscount")
+  // console.log(finalCartTotalBeforeCoins, "final cart total before coins ................")
+  // console.log(fiftyPercentOfFinalCartTotal, "fifty percent of cart total ..................")
   const usableCoins = availableCoins > fiftyPercentOfFinalCartTotal ? Math.floor(fiftyPercentOfFinalCartTotal) : availableCoins
-  console.log(usableCoins, "usable coin ............")
+  // console.log(usableCoins, "usable coin ............")
 
 
   let deductCoinsForCart = coinAccountData[0].useCoinForPayment ? usableCoins : 0

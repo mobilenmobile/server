@@ -1,4 +1,4 @@
-import express, { Request, Response } from "express";
+import express from "express";
 const app = express();
 
 import cors from "cors";
@@ -31,7 +31,6 @@ import offerRoute from "./routes/offer.routes.js";
 import cookieParser from "cookie-parser";
 import rateLimit from "express-rate-limit";
 import { ApiError } from "./utils/ApiError.js";
-import { params } from "firebase-functions";
 import path from "path";
 
 //Handle cors
