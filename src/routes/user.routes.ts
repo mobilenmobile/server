@@ -90,7 +90,7 @@ userRouter.post("/removeFreeItem", authenticated, removeFreeItem)
 // ====================== admin user =============================
 userRouter.get("/getallusers", adminOnly, listAllUsers)
 userRouter.post("/changeroles", adminOnly, changeUserRole);
-userRouter.get("/userOrderAnalytic/:userId", EditorOnly, userOrderAnalytic)
+userRouter.get("/userOrderAnalytic/:userId", userOrderAnalytic)
 
 
 export default userRouter;

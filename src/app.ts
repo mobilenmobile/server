@@ -116,10 +116,11 @@ app.use("/api/v1/boxes", boxRoute);
 app.use("/api/v1/roles", rolesRoute);
 app.use("/api/v1/delhivery", delhiveryRoute);
 app.use("/api/v1/suggestion", suggestionRoute);
+
 //Error middleware to be used below route
 //to cache err from routes
-app.use(errorMiddleware);
 
+app.use(errorMiddleware);
 
 export const myCache = new NodeCache();
 export default app;

@@ -194,6 +194,36 @@ export const findUser = asyncErrorHandler(
   }
 );
 
+// ----------------------------- Search User -----------------------------------------------
+export const SearchUser = asyncErrorHandler(
+  async (req: Request<{}, {}, { email?: string; phoneNumber?: string }>, res: Response, next: NextFunction) => {
+    const { email, phoneNumber } = req.body;
+    console.log("find user called")
+    console.log(req.body)
+
+    if (!email && !phoneNumber) {
+      return next(new ErrorHandler("Please provide either email or phone number", 400));
+    }
+
+    const query: { [key: string]: string } = {};
+    if (email) query.email = email;
+    if (phoneNumber) query.phoneNumber = phoneNumber;
+
+    const user = await User.findOne(query);
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        email: user.email,
+        phoneNumber: user.phoneNumber
+      }
+    });
+  }
+);
 //------------------------api to get user details ----------------------------------
 export const getUser = asyncErrorHandler(async (req: Request, res, next) => {
   const uid = req.params.uid;
@@ -644,7 +674,7 @@ export const updateCart = asyncErrorHandler(async (req, res, next) => {
   const {
     productId,
     selectedVarianceId,
-    quantity=1,
+    quantity = 1,
     customSkin,
     isCombo,
     skinProductDetails,
@@ -946,7 +976,7 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
               // ramAndStorage: variantData?.ramAndStorage[0],
               productRating: item.productId.productRating,
               quantity: item.quantity,
-              stock:variantData?.quantity,
+              stock: variantData?.quantity,
               productId: item.productId._id,
               // selectedVarianceId: item.selectedVarianceId,
               discount: productDiscount,
@@ -1004,7 +1034,7 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
               // ramAndStorage: variantData?.ramAndStorage[0],
               productRating: item.productId.productRating,
               quantity: item.quantity,
-              stock:variantData?.quantity,
+              stock: variantData?.quantity,
               productId: item.productId._id,
               // selectedVarianceId: item.selectedVarianceId,
               discount: productDiscount,
@@ -1034,7 +1064,7 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
         ramAndStorage: variantData?.ramAndStorage[0],
         productRating: item.productId.productRating,
         quantity: item.quantity,
-        stock:variantData?.quantity,
+        stock: variantData?.quantity,
         productId: item.productId._id,
         selectedVarianceId: item.selectedVarianceId,
         discount: productDiscount,
@@ -1130,11 +1160,7 @@ export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) 
   console.log(couponDiscount, "couponDiscount")
   console.log(finalCartTotalBeforeCoins, "final cart total before coins ................")
   console.log(fiftyPercentOfFinalCartTotal, "fifty percent of cart total ..................")
-
-
-
   const usableCoins = availableCoins > fiftyPercentOfFinalCartTotal ? Math.floor(fiftyPercentOfFinalCartTotal) : availableCoins
-
   console.log(usableCoins, "usable coin ............")
 
 

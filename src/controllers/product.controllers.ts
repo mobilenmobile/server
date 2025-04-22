@@ -887,31 +887,120 @@ export const getAllAdminProducts = asyncErrorHandler(
 
       const workbook = XLSX.utils.book_new();
 
-      // Format data for Excel
-      const exportData = allProducts.map(product => {
-        // Handle products with variants if they exist
-        const baseProduct = {
-          'Product ID': product._id.toString(),
-          'Title': product.productTitle,
-          'Category': product.productCategory?.categoryName || '',
-          'Subcategory': product.productSubCategory?.subCategoryName || '',
-          'Brand': product.productBrand?.brandName || 'No Brand',
-          'Model': product.productModel || '',
-          'Price': product.price || 0,
-          'Box Price': product.boxPrice || 0,
-          'Selling Price': product.sellingPrice || 0,
-          'Discount %': ((product.boxPrice - product.sellingPrice) / product.boxPrice * 100).toFixed(2),
-          'Quantity': product.quantity || 0,
-          'Out of Stock': (product.quantity <= 0) ? 'Yes' : 'No',
-          'Featured': product.isFeatured ? 'Yes' : 'No',
-          'Archived': product.isArchived ? 'Yes' : 'No',
-          'Dimensions': `${product.length || 0}x${product.breadth || 0}x${product.height || 0}`,
-          'Weight': product.weight || 0,
-          'Rating': product.productRating || 0,
-          'Created At': new Date(product.createdAt).toLocaleDateString()
-        };
+      // Define product export record type
+      interface ProductExportRecord {
+        'Product ID': string;
+        'Variant ID': string;
+        'Title': string;
+        'Color': string;
+        'RAM/Storage': string;
+        'Category': string;
+        'Subcategory': string;
+        'Brand': string;
+        'Model': string;
+        'Base Price': number;
+        'Box Price': number;
+        'Selling Price': number;
+        'Discount %': string;
+        'Quantity': number;
+        'Out of Stock': string;
+        'Featured': string;
+        'Archived': string;
+        'Dimensions': string;
+        'Weight': number;
+        'Rating': number;
+        'Created At': string;
+      }
 
-        return baseProduct;
+      // Define variant and RAM/Storage interface based on your data structure
+      interface ProductVariance {
+        id: string;
+        color: string;
+        boxPrice: number;
+        sellingPrice: number;
+        quantity: number;
+        thumbnail: string;
+        ramAndStorage: {
+          ram: string;
+          storage: string;
+        }[];
+      }
+
+      // Initialize with proper typing
+      const exportData: ProductExportRecord[] = [];
+
+      // Process each product and its variants
+      allProducts.forEach(product => {
+        // If the product has variants, create a row for each variant
+        if (product.productVariance && product.productVariance.length > 0) {
+          product.productVariance.forEach((variant: ProductVariance, index: number) => {
+            // Calculate discount percentage for the variant
+            const discountPercent = variant.boxPrice > 0 
+              ? ((variant.boxPrice - variant.sellingPrice) / variant.boxPrice * 100).toFixed(2)
+              : '0.00';
+            
+            // Build RAM/Storage info
+            let ramStorageInfo = '';
+            if (variant.ramAndStorage && variant.ramAndStorage.length > 0) {
+              const ramStorage = variant.ramAndStorage[0];
+              if (ramStorage.ram && ramStorage.ram !== '0') {
+                ramStorageInfo += `${ramStorage.ram}GB RAM`;
+              }
+              if (ramStorage.storage && ramStorage.storage !== '0') {
+                ramStorageInfo += ramStorageInfo ? `, ${ramStorage.storage}GB Storage` : `${ramStorage.storage}GB Storage`;
+              }
+            }
+
+            exportData.push({
+              'Product ID': product._id.toString(),
+              'Variant ID': variant.id || `variant-${index + 1}`,
+              'Title': product.productTitle,
+              'Color': variant.color || 'N/A',
+              'RAM/Storage': ramStorageInfo || 'N/A',
+              'Category': product.productCategory?.categoryName || '',
+              'Subcategory': product.productSubCategory?.subCategoryName || '',
+              'Brand': product.productBrand?.brandName || 'No Brand',
+              'Model': product.productModel || '',
+              'Base Price': product.price || 0,
+              'Box Price': variant.boxPrice || 0,
+              'Selling Price': variant.sellingPrice || 0,
+              'Discount %': discountPercent,
+              'Quantity': variant.quantity || 0,
+              'Out of Stock': (variant.quantity <= 0) ? 'Yes' : 'No',
+              'Featured': product.isFeatured ? 'Yes' : 'No',
+              'Archived': product.isArchived ? 'Yes' : 'No',
+              'Dimensions': `${product.length || 0}x${product.breadth || 0}x${product.height || 0}`,
+              'Weight': product.weight || 0,
+              'Rating': product.productRating || 0,
+              'Created At': new Date(product.createdAt).toLocaleDateString()
+            });
+          });
+        } else {
+          // For products without variants, create a single row
+          exportData.push({
+            'Product ID': product._id.toString(),
+            'Variant ID': 'No Variant',
+            'Title': product.productTitle,
+            'Color': 'N/A',
+            'RAM/Storage': 'N/A',
+            'Category': product.productCategory?.categoryName || '',
+            'Subcategory': product.productSubCategory?.subCategoryName || '',
+            'Brand': product.productBrand?.brandName || 'No Brand',
+            'Model': product.productModel || '',
+            'Base Price': product.price || 0,
+            'Box Price': product.boxPrice || 0,
+            'Selling Price': product.sellingPrice || 0,
+            'Discount %': ((product.boxPrice - product.sellingPrice) / product.boxPrice * 100).toFixed(2),
+            'Quantity': product.quantity || 0,
+            'Out of Stock': (product.quantity <= 0) ? 'Yes' : 'No',
+            'Featured': product.isFeatured ? 'Yes' : 'No',
+            'Archived': product.isArchived ? 'Yes' : 'No',
+            'Dimensions': `${product.length || 0}x${product.breadth || 0}x${product.height || 0}`,
+            'Weight': product.weight || 0,
+            'Rating': product.productRating || 0,
+            'Created At': new Date(product.createdAt).toLocaleDateString()
+          });
+        }
       });
 
       const worksheet = XLSX.utils.json_to_sheet(exportData);
@@ -1340,7 +1429,7 @@ export const getAllProducts = asyncErrorHandler(
       .populate("productBrand")
       .sort(sort ? sortBy : { createdAt: -1 });
 
-    let [products, filteredProductwithoutlimit] = await Promise.all([
+    let [products] = await Promise.all([
       productPromise,
       Product.find(combinedQuery),
     ]);
@@ -1372,6 +1461,7 @@ export const getAllProducts = asyncErrorHandler(
       if (product.productBrand?.brandName) {
         brands.add(product.productBrand.brandName);
       }
+
       // ---- END NEW CODE ----
 
       product.productVariance.forEach((variant: ProductVariance) => {
@@ -1555,7 +1645,434 @@ export const getAllProducts = asyncErrorHandler(
 );
 
 
+export const getAllProductsv2 = asyncErrorHandler(
+  async (req, res, next) => {
+    // Extract all possible filter parameters from both query and body
+    // Support both query params (GET) and request body (POST)
+    const params = req.method === 'POST' ? req.body : req.query;
+    
+    const { 
+      search, 
+      searchText,
+      sort = "hl", 
+      sortBy = "hl",
+      category, 
+      price,
+      minPrice = [0],
+      maxPrice = [1000000],
+      device, 
+      isfeatured,
+      rating,
+      brand,
+      color,
+      memory,
+      storage 
+    } = params;
+    
+    console.log("Search/Filter params:", params);
+    
+    const page = Number(params.page) || 1;
+    const limit = Number(params.limit) || 20;
+    const skip = (page - 1) * limit;
 
+    // Build base query - common to both approaches
+    let baseQuery: FilterQuery<BaseQuery> = {
+      isArchived: { $ne: true },  // Exclude archived products
+      archived: { $ne: true }     // Support both archive field naming patterns
+    };
+
+    // Track applied filters to return to the user
+    const appliedFilters: {
+      search?: string;
+      category?: string;
+      price?: { min: number; max: number };
+      brand?: string[];
+      color?: string[];
+      memory?: string[];
+      storage?: string[];
+      rating?: number[];
+      isFeatured?: boolean;
+      device?: string;
+      sort?: string;
+    } = {};
+
+    // Handle price filters (support both single price and min/max)
+    if (price) {
+      baseQuery.price = {
+        $lte: Number(price),
+      };
+      appliedFilters.price = { min: 0, max: Number(price) };
+    } else {
+      const minPriceValue = Array.isArray(minPrice) ? Math.min(...minPrice.map(Number)) : Number(minPrice);
+      const maxPriceValue = Array.isArray(maxPrice) ? Math.max(...maxPrice.map(Number)) : Number(maxPrice);
+      
+      if (minPriceValue > 0 || maxPriceValue < 1000000) {
+        baseQuery.price = {};
+        
+        if (minPriceValue > 0) {
+          baseQuery.price.$gte = minPriceValue;
+        }
+        
+        if (maxPriceValue < 1000000) {
+          baseQuery.price.$lte = maxPriceValue;
+        }
+        
+        appliedFilters.price = { min: minPriceValue, max: maxPriceValue };
+      }
+    }
+
+    // Apply category filter if provided
+    if (category) {
+      const findCategory = await Category.findOne({ categoryName: category });
+      if (findCategory) {
+        baseQuery.productCategory = findCategory._id;
+        appliedFilters.category = category;
+      }
+    }
+
+    // Apply isfeatured filter if provided
+    if (isfeatured) {
+      baseQuery.isFeatured = isfeatured === 'true';
+      appliedFilters.isFeatured = isfeatured === 'true';
+    }
+
+    // Apply search filter - handle both search and searchText params
+    const searchTerm = (search || searchText)?.toLowerCase().trim();
+    let searchQuery: FilterQuery<BaseQuery> = {};
+
+    if (searchTerm && typeof searchTerm === 'string') {
+      if (searchTerm) {
+        searchQuery = {
+          $or: [
+            { productTitle: { $regex: searchTerm, $options: 'i' } },
+            { productKeyword: { $regex: searchTerm, $options: 'i' } },
+          ]
+        };
+        appliedFilters.search = searchTerm;
+      }
+    }
+
+    const combinedQuery = {
+      ...baseQuery,
+      ...(Object.keys(searchQuery).length > 0 ? searchQuery : {})
+    };
+
+    // Handle sorting
+    const finalSortBy = sortBy || sort;
+    const sortOptions: any = {};
+
+    if (finalSortBy) {
+      if (finalSortBy === "A-Z") {
+        sortOptions.productTitle = 1;
+        appliedFilters.sort = "A-Z";
+      } else if (finalSortBy === "Z-A") {
+        sortOptions.productTitle = -1;
+        appliedFilters.sort = "Z-A";
+      } else if (finalSortBy === "oldest") {
+        sortOptions.createdAt = 1;
+        appliedFilters.sort = "oldest";
+      } else if (finalSortBy === "lh" || finalSortBy === "priceLowToHigh") {
+        // We'll handle this in memory after fetching variants
+        appliedFilters.sort = "priceLowToHigh";
+      } else if (finalSortBy === "hl" || finalSortBy === "priceHighToLow") {
+        // We'll handle this in memory after fetching variants
+        appliedFilters.sort = "priceHighToLow";
+      } else if (finalSortBy === "topRated") {
+        sortOptions.productRating = -1;
+        appliedFilters.sort = "topRated";
+      } else {
+        sortOptions.createdAt = -1;
+        appliedFilters.sort = "newest";
+      }
+    } else {
+      sortOptions.createdAt = -1;
+      appliedFilters.sort = "newest";
+    }
+
+    // Fetch products with populated fields
+    const productPromise = Product.find(combinedQuery)
+      .populate("productCategory")
+      .populate("productBrand")
+      .sort(Object.keys(sortOptions).length > 0 ? sortOptions : { createdAt: -1 });
+
+    let [products] = await Promise.all([
+      productPromise,
+      Product.find(combinedQuery),
+    ]);
+
+    const totalProducts = await Product.countDocuments(combinedQuery);
+    if (!totalProducts) {
+      return res.status(200).json({ 
+        success: false, 
+        products: [],
+        appliedFilters 
+      });
+    }
+
+    // Handle skin device filter
+    if (category === "skin" && typeof device === 'string' && device.length > 1) {
+      console.log("skin filter according to device :---", device);
+      products = products.filter((item) => {
+        return item.ProductSkinSelectedItems.includes(device.toLowerCase().trim());
+      });
+      appliedFilters.device = device;
+    }
+
+    // Variables to collect filter options
+    const colors = new Set<string>();
+    const rams = new Set<string>();
+    const storages = new Set<string>();
+    const brands = new Set<string>();
+    const prices: number[] = [];
+
+    let flatProducts: any = [];
+
+    // Process products and their variants
+    products.forEach(product => {
+      // Collect brand filter options
+      if (product.productBrand?.brandName) {
+        brands.add(product.productBrand.brandName);
+      }
+
+      product.productVariance.forEach((variant: ProductVariance) => {
+        const productDiscount = calculateDiscount(variant.boxPrice, variant.sellingPrice);
+
+        // Collect color, RAM, storage, and price filter options
+        if (variant.color) {
+          colors.add(variant.color.split("-")[0]);
+        }
+
+        if (variant.id) {
+          const variantIdParts = variant.id.replace(/\s+/g, "").split('-');
+          if (variantIdParts[1] && variantIdParts[1] !== '0') {
+            rams.add(variantIdParts[1]);
+          }
+          if (variantIdParts[2]) {
+            storages.add(variantIdParts[2]);
+          }
+        }
+
+        if (variant.sellingPrice && Number(variant.sellingPrice) > 0) {
+          prices.push(Number(variant.sellingPrice));
+        }
+
+        let title = product.productTitle;
+
+        if (variant['ramAndStorage'] && variant['ramAndStorage'].length > 0 && variant.ramAndStorage[0]?.ram) {
+          title = `${product.productTitle} ${variant.ramAndStorage[0].storage !== '0' ? `(${variant.color} ${variant.ramAndStorage[0].storage}GB)` : `(${variant.color})`}`;
+        } else {
+          title = `${product.productTitle} (${variant.color})`;
+        }
+
+        const newProduct = {
+          productid: `${product._id}`,
+          keyid: `${product._id}${variant.id.replace(/\s+/g, "")}`,
+          variantid: `${variant.id.replace(/\s+/g, "")}`,
+          title: title.toLowerCase(),
+          category: product?.productCategory?.categoryName,
+          thumbnail: variant.thumbnail,
+          boxPrice: variant.boxPrice,
+          sellingPrice: variant.sellingPrice,
+          discount: productDiscount,
+          rating: product.productRating,
+          reviews: product.productNumReviews,
+          color: variant.color?.split("-")[0],
+          brand: product.productBrand?.brandName || 'nobrand',
+          memory: variant?.ramAndStorage && variant.ramAndStorage[0]?.ram,
+          storage: variant?.ramAndStorage && variant.ramAndStorage[0]?.storage,
+          outofstock: Number(variant?.quantity) === 0,
+        };
+        flatProducts.push(newProduct);
+      });
+    });
+
+    interface FlatProduct {
+      productid: string;
+      keyid: string;
+      variantid: string;
+      title: string;
+      category: string;
+      thumbnail: string;
+      boxPrice: number;
+      sellingPrice: number;
+      discount: number;
+      rating: number;
+      reviews?: number;
+      color: string;
+      brand: string;
+      memory?: string;
+      storage?: string;
+      outofstock: boolean;
+    }
+
+    // Apply additional filters from filterAndSort
+    let filteredProducts = [...flatProducts];
+
+    // Apply rating filter
+    if (rating && (Array.isArray(rating) ? rating.length > 0 : rating)) {
+      const ratingValues = Array.isArray(rating) ? rating.map(Number) : [Number(rating)];
+      filteredProducts = filteredProducts.filter(product => ratingValues.includes(product.rating));
+      appliedFilters.rating = ratingValues;
+    }
+
+    // Apply brand filter
+    if (brand && (Array.isArray(brand) ? brand.length > 0 : brand)) {
+      const brandValues = Array.isArray(brand) ? brand : [brand];
+      filteredProducts = filteredProducts.filter(product => brandValues.includes(product.brand));
+      appliedFilters.brand = brandValues;
+    }
+
+    // Apply color filter
+    if (color && (Array.isArray(color) ? color.length > 0 : color)) {
+      const colorValues = Array.isArray(color) ? color : [color];
+      filteredProducts = filteredProducts.filter(product => {
+        let matches = 0;
+
+        colorValues.forEach((arrcolor: string) => {
+          const arrColors = arrcolor.toLowerCase().split(/\s+/);
+          const productColors = product.color.toLowerCase().split(/\s+/);
+
+          const foundMatches = arrColors.filter(colorWord => productColors.includes(colorWord));
+
+          if (foundMatches.length > 0) {
+            matches += foundMatches.length;
+          }
+        });
+
+        return matches > 0;
+      });
+      appliedFilters.color = colorValues;
+    }
+
+    // Apply memory filter
+    if (memory && (Array.isArray(memory) ? memory.length > 0 : memory)) {
+      const memoryValues = Array.isArray(memory) ? memory : [memory];
+      filteredProducts = filteredProducts.filter(product => product.memory && memoryValues.includes(product.memory));
+      appliedFilters.memory = memoryValues;
+    }
+
+    // Apply storage filter
+    if (storage && (Array.isArray(storage) ? storage.length > 0 : storage)) {
+      const storageValues = Array.isArray(storage) ? storage : [storage];
+      filteredProducts = filteredProducts.filter(product => product.storage && storageValues.includes(product.storage));
+      appliedFilters.storage = storageValues;
+    }
+
+    // Define price filter functions
+    interface PriceFilter {
+      label: string;
+      min: number;
+      max: number;
+    }
+
+    function createPriceFilters(prices: number[]): PriceFilter[] {
+      if (prices.length === 0) return [];
+
+      // Sort prices
+      prices.sort((a, b) => a - b);
+
+      const minPrice = prices[0];
+      const maxPrice = prices[prices.length - 1];
+      const totalRange = maxPrice - minPrice;
+      const segmentSize = totalRange / 5;
+
+      const roundToNearestThousand = (value: number) => Math.round(value / 1000) * 1000;
+
+      const priceFilters: PriceFilter[] = [];
+
+      for (let i = 0; i < 5; i++) {
+        const categoryMin = roundToNearestThousand(minPrice + i * segmentSize);
+        const categoryMax = roundToNearestThousand(minPrice + (i + 1) * segmentSize);
+
+        if (i === 0) {
+          priceFilters.push({
+            label: `Below ₹${categoryMax}`,
+            min: categoryMin,
+            max: categoryMax
+          });
+        } else if (i === 4) {
+          priceFilters.push({
+            label: `Above ₹${categoryMin}`,
+            min: categoryMin,
+            max: maxPrice
+          });
+        } else {
+          priceFilters.push({
+            label: `₹${categoryMin} to ₹${categoryMax}`,
+            min: categoryMin,
+            max: categoryMax
+          });
+        }
+      }
+
+      return removeDuplicatesFromPriceFilter(priceFilters);
+    }
+
+    function removeDuplicatesFromPriceFilter(priceFilters: PriceFilter[]): PriceFilter[] {
+      const uniqueRanges: PriceFilter[] = [];
+      const seenRanges: Set<string> = new Set();
+
+      priceFilters.forEach(item => {
+        const range = `${item.min}-${item.max}`;
+        if (!seenRanges.has(range)) {
+          seenRanges.add(range);
+          uniqueRanges.push(item);
+        }
+      });
+
+      return uniqueRanges;
+    }
+
+    // Create filter options object
+    const filterOptions = {
+      colors: Array.from(colors),
+      rams: Array.from(rams),
+      storages: Array.from(storages),
+      brands: Array.from(brands),
+      priceRanges: createPriceFilters(prices)
+    };
+
+    // Separate in-stock and out-of-stock products
+    const inStockProducts: FlatProduct[] = filteredProducts.filter((product: any) => !product.outofstock);
+    const outOfStockProducts: FlatProduct[] = filteredProducts.filter((product: any) => product.outofstock);
+
+    // Apply sorting to each array separately based on the sort parameter
+    if (finalSortBy === "lh" || finalSortBy === "priceLowToHigh") {
+      // Sort by selling price from low to high
+      inStockProducts.sort((a: FlatProduct, b: FlatProduct) => a.sellingPrice - b.sellingPrice);
+      outOfStockProducts.sort((a: FlatProduct, b: FlatProduct) => a.sellingPrice - b.sellingPrice);
+    } else if (finalSortBy === "hl" || finalSortBy === "priceHighToLow") {
+      // Sort by selling price from high to low
+      inStockProducts.sort((a: FlatProduct, b: FlatProduct) => b.sellingPrice - a.sellingPrice);
+      outOfStockProducts.sort((a: FlatProduct, b: FlatProduct) => b.sellingPrice - a.sellingPrice);
+    } else if (finalSortBy === "topRated") {
+      // Sort by rating
+      inStockProducts.sort((a: FlatProduct, b: FlatProduct) => b.rating - a.rating);
+      outOfStockProducts.sort((a: FlatProduct, b: FlatProduct) => b.rating - a.rating);
+    }
+
+    // Combine in-stock and out-of-stock products
+    const allSortedProducts = [...inStockProducts, ...outOfStockProducts];
+    
+    // Calculate pagination for the combined array
+    const totalAllProducts = allSortedProducts.length;
+    const totalPage = Math.ceil(totalAllProducts / limit);
+
+    // Get the products for the current page
+    const paginatedProducts = allSortedProducts.slice(skip, skip + limit);
+
+    return res.status(200).json({
+      success: true,
+      message: "Products fetched successfully",
+      products: paginatedProducts,
+      totalPage,
+      currentPage: Number(page),
+      totalProducts: totalAllProducts,
+      filters: filterOptions,
+      appliedFilters: appliedFilters
+    });
+  }
+);
 
 // export const getAllProducts = asyncErrorHandler(
 //   async (req, res, next) => {
@@ -2115,7 +2632,7 @@ export const getFilterAndSortProducts = asyncErrorHandler(async (req, res, next)
     storage,
     sortBy = 'priceLowToHigh',
     page = 1,  // Default to page 1 if not provided
-    limit = 6 // Default to 12 products per page
+    limit = 24 // Default to 12 products per page
   } = req.body;
 
   console.log("---------------------------->>>>>>>>", req.body, "<<<<<<<<<---------------------------------");

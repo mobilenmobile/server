@@ -16,6 +16,7 @@ import {
   getSimilarProducts,
   getSingleProductDetails,
   getFilterAndSortSkinProducts,
+  getAllProductsv2,
 } from "../controllers/product.controllers.js";
 
 import { authenticated, EditorOnly } from "../middleware/auth.middleware.js";
@@ -32,7 +33,7 @@ productRouter.post("/deletePreviewImage", deletePreviewCloudinary);
 productRouter.get("/latest", getLatestProduct);
 productRouter.get("/getsingleproduct/:id", getSingleProduct);
 productRouter.get("/getsingleproductdetails/:id", getSingleProductDetails);
-productRouter.get("/search", getAllProducts);
+productRouter.get("/search", getAllProductsv2);
 productRouter.post("/searchfilterandsort", getFilterAndSortProducts);
 productRouter.post("/skinfilterandsort", getFilterAndSortSkinProducts);
 productRouter.get("/getlimitedproductsbybrand", getLimitedProductsByBrands);

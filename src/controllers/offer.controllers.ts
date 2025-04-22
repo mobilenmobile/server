@@ -21,9 +21,12 @@ import ErrorHandler from "../utils/errorHandler";
 //-------------------api to create new offer-----------------------------------------
 export const addNewOffer = asyncErrorHandler(
   async (req: Request<{}, {}, any>, res, next) => {
+
     const { couponId } = req.query as any
     const { offerIsActive, offerStartDate, offerEndDate, offerCouponCode, offerDiscountCategory, offerDiscountState, offerLimit, offerCouponType, offerDiscountValue } = req.body;
+
     console.log(req.body)
+
     console.log(offerIsActive, "coupon ocde")
     if (!offerEndDate || !offerCouponCode || !offerDiscountCategory || !offerLimit || !offerCouponType || !offerDiscountValue) {
       return next(new ErrorHandler("please provide all fields", 400));
@@ -39,15 +42,16 @@ export const addNewOffer = asyncErrorHandler(
 
 
     console.log(existingOffer, "existing offer")
+
     if (existingOffer) {
       if (offerCouponCode) {
         existingOffer.offerCouponCode = offerCouponCode
       }
       if (offerIsActive) {
-
         existingOffer.offerIsActive = offerIsActive === "active" ? true : false
         console.log(existingOffer.offerIsActive, "isactive")
       }
+
       if (offerStartDate) {
         existingOffer.offerStartDate = offerStartDate;
       }
@@ -69,7 +73,9 @@ export const addNewOffer = asyncErrorHandler(
       if (offerDiscountValue !== undefined) {
         existingOffer.offerDiscountValue = offerDiscountValue;
       }
+
       await existingOffer.save()
+
       return res.status(201).json({
         success: true,
         message: "Offer updated successfully",
@@ -80,7 +86,6 @@ export const addNewOffer = asyncErrorHandler(
 
     const offer = await Offer.create({
       offerIsActive: offerIsActive === "active" ? true : false,
-
       offerStartDate: offerStartDate && offerStartDate, offerEndDate, offerCouponCode, offerDiscountCategory, offerDiscountState, offerLimit, offerCouponType, offerDiscountValue
     });
 
@@ -172,7 +177,7 @@ export const searchAllOffer = asyncErrorHandler(
   async (req: Request<{}, {}, SearchOfferQuery>, res, next) => {
     const { couponId, state, amount } = req.query;
     const currentDate = new Date();
-    
+
     let baseQuery: any = {
       offerIsActive: true,
       offerStartDate: { $lte: currentDate },
@@ -189,7 +194,7 @@ export const searchAllOffer = asyncErrorHandler(
 
     if (amount) {
       const numericAmount = Number(amount);
-      
+
       // Use MongoDB's $expr to convert strings to numbers during comparison
       baseQuery.$expr = {
         $and: [
@@ -200,7 +205,7 @@ export const searchAllOffer = asyncErrorHandler(
     }
 
     console.log('Base Query:', JSON.stringify(baseQuery, null, 2));
-    
+
     const offers = await Offer.find(baseQuery);
     console.log('Offers found:', JSON.stringify(offers, null, 2));
 
@@ -227,44 +232,3 @@ export const deleteOffer = asyncErrorHandler(async (req, res, next) => {
   });
 });
 
-
-
-// ------------------------- Archived controllers -----------------------------------
-// export const searchAllOffer = asyncErrorHandler(
-//   async (req: Request<{}, {}, SearchOfferQuery>, res, next) => {
-//     const { couponId, state } = req.query;
-//     const currentDate = new Date();
-
-//     let baseQuery: any = {
-//       offerIsActive: true,
-//       offerStartDate: { $lte: currentDate },
-//       offerEndDate: { $gte: currentDate }
-//     };
-
-//     if (couponId) {
-//       baseQuery._id = couponId;
-//     }
-
-//     if (state) {new Date();
-//     }
-
-//     console.log('Base Query:', baseQuery);
-//     const offers = await Offer.find(baseQuery);
-
-//     console.log('Offers found:', offers);
-
-//     if (!offers.length) {
-//       return res.status(201).json({
-//         success: true,
-//         message: "No Offer available",
-//         offers
-//       });
-//     }
-
-//     return res.status(200).json({
-//       success: true,
-//       message: "Offers found successfully",
-//       offers
-//     });
-//   }
-// );

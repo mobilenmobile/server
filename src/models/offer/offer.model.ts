@@ -7,7 +7,6 @@ export interface CouponDocument extends Document {
   // Other fields
 }
 
-
 export const OfferSchema = new Schema(
   {
     offerIsActive: {
@@ -52,8 +51,8 @@ export const OfferSchema = new Schema(
       enum: ["freeshipping", "percentage", "fixedamount"],
       type: String,
       required: true
-
     },
+
     offerDiscountValue: {
       type: String,
       required: true,
