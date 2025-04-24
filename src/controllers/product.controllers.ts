@@ -2093,14 +2093,15 @@ export const getAllProductsv2 = asyncErrorHandler(async (req, res, next) => {
     const minPrice = prices[0];
     const maxPrice = prices[prices.length - 1];
     const totalRange = maxPrice - minPrice;
-    const segmentSize = totalRange / 5;
+    const idx = maxPrice > 1000 ? 5 : 2;
+    const segmentSize = totalRange / idx;
 
     const roundToNearestThousand = (value: number) =>
-      Math.round(value / 1000) * 1000;
+      Math.round(value / 50) * 50;
 
     const priceFilters: PriceFilter[] = [];
 
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < idx; i++) {
       const categoryMin = roundToNearestThousand(minPrice + i * segmentSize);
       const categoryMax =
         roundToNearestThousand(minPrice + (i + 1) * segmentSize) - 1;
@@ -2111,7 +2112,7 @@ export const getAllProductsv2 = asyncErrorHandler(async (req, res, next) => {
           min: categoryMin,
           max: categoryMax,
         });
-      } else if (i === 4) {
+      } else if (i === idx - 1) {
         priceFilters.push({
           label: `Above ₹${categoryMin}`,
           min: categoryMin,
