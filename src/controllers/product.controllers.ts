@@ -1511,6 +1511,7 @@ export const getAllProducts = asyncErrorHandler(
         };
         flatProducts.push(newProduct);
       });
+
     });
 
     interface FlatProduct {
@@ -1661,27 +1662,29 @@ function parseArrayParam<T extends string | number>(value: any, isNumber = false
 
 export const getAllProductsv2 = asyncErrorHandler(
   async (req, res, next) => {
-    // Extract all possible filter parameters from both query and body
-    // Support both query params (GET) and request body (POST)
-    // Extract parameters from query
+
     const params = req.query;
 
     // Parse query parameters with proper type handling and defaults
+    // Example query
+    // GET /api/v1/product/search?search=iphone&category=smartphone&sort=hl&minPrice=&maxPrice=&rating=5&brand=&color=&memory=&storage=&&page=1
+
     const search = params.search as string || "";
     const sort = params.sort as string || "lh";
     const category = params.category as string || "";
     const isfeatured = params.category as string || "";
     const price = params.price ? Number(params.price) : undefined;
 
-    const minPrice = parseArrayParam<number>(params.minPrice, true).length ? parseArrayParam<number>(params.minPrice, true) : [0];;
-    const maxPrice = parseArrayParam<number>(params.maxPrice, true).length ? parseArrayParam<number>(params.maxPrice, true) : [1000000];
-    const rating = parseArrayParam<number>(params.rating, true);
-    const brand = parseArrayParam<string>(params.brand);
-    const color = parseArrayParam<string>(params.color);
-    const memory = parseArrayParam<string>(params.memory);
-    const storage = parseArrayParam<string>(params.storage);
 
-    console.log("Search/Filter params:", params, minPrice);
+    const minPrice = parseArrayParam<number>(params.minPrice, true).length ? parseArrayParam<number>(params.minPrice, true) : [];;
+    const maxPrice = parseArrayParam<number>(params.maxPrice, true).length ? parseArrayParam<number>(params.maxPrice, true) : [];
+    const rating = parseArrayParam<number>(params.rating, true);
+    const brand = parseArrayParam<string>(params.brand, false);
+    const color = parseArrayParam<string>(params.color, false);
+    const memory = parseArrayParam<string>(params.memory, false);
+    const storage = parseArrayParam<string>(params.storage, false);
+
+    // console.log("Search/Filter params:", params, minPrice);
 
     const page = Number(params.page) || 1;
     const limit = Number(params.limit) || 20;
@@ -1880,10 +1883,13 @@ export const getAllProductsv2 = asyncErrorHandler(
 
 
 
-    const minPriceValue = minPrice.sort((a: number, b: number) => a-b)[0];
+    const minPriceValue = minPrice.sort((a: number, b: number) => a - b)[0];
     const maxPriceValue = maxPrice.sort((a: number, b: number) => b - a)[0];
+
     appliedFilters.price = { min: minPriceValue, max: maxPriceValue }
-    console.log("minprice arr", minPrice.sort((a: number, b: number) => a-b))
+
+    console.log("minprice arr", minPrice.sort((a: number, b: number) => a - b))
+
     if (minPriceValue && maxPriceValue) {
       filteredProducts = filteredProducts.filter(product => {
         const sellingPrice = Number(product.sellingPrice);
@@ -1905,33 +1911,36 @@ export const getAllProductsv2 = asyncErrorHandler(
 
     if (rating && rating.length > 0) {
       filteredProducts = filteredProducts.filter(product => rating.includes(product.rating));
+      appliedFilters.rating = rating
     }
 
     if (brand && brand.length > 0) {
       filteredProducts = filteredProducts.filter(product => brand.includes(product.brand));
+      appliedFilters.brand = brand
     }
 
     if (color && color.length > 0) {
       filteredProducts = filteredProducts.filter(product => {
-        let matches = 0;
-
-        color.forEach((arrcolor: string) => {
-          const arrColors = arrcolor.toLowerCase().split(/\s+/);
-          const productColors = product.color.toLowerCase().split(/\s+/);
-
-          const foundMatches = arrColors.filter(colorWord => productColors.includes(colorWord));
-
-          if (foundMatches.length > 0) {
-            matches += foundMatches.length;
-          }
+        return color.some(arrcolor => {
+          const arrColors = arrcolor.toLowerCase();
+          const productColors = product.color.toLowerCase();
+          // console.log("arr colro an dproduct color is", arrColors, productColors)
+          // Check if any color segment matches
+          return arrColors == productColors
         });
-
-        return matches > 0;
       });
     }
 
+
     if (memory && memory.length > 0) {
-      filteredProducts = filteredProducts.filter(product => memory.includes(product.memory));
+
+      filteredProducts = filteredProducts.filter(product => {
+        // console.log("memory", memory, product.memory, memory.includes(product.memory))
+        console.log("memory", memory, product.memory, typeof product.memory, typeof memory[0], memory.includes(product.memory));
+
+        return memory.includes(product.memory)
+
+      });
     }
 
     if (storage && storage.length > 0) {
@@ -1964,8 +1973,9 @@ export const getAllProductsv2 = asyncErrorHandler(
       const priceFilters: PriceFilter[] = [];
 
       for (let i = 0; i < 5; i++) {
+
         const categoryMin = roundToNearestThousand(minPrice + i * segmentSize);
-        const categoryMax = roundToNearestThousand(minPrice + (i + 1) * segmentSize);
+        const categoryMax = (roundToNearestThousand((minPrice + (i + 1) * segmentSize)) - 1);
 
         if (i === 0) {
           priceFilters.push({
@@ -1987,7 +1997,7 @@ export const getAllProductsv2 = asyncErrorHandler(
           });
         }
       }
-
+      console.log("price filters ", priceFilters)
       return removeDuplicatesFromPriceFilter(priceFilters);
     }
 
@@ -2024,14 +2034,20 @@ export const getAllProductsv2 = asyncErrorHandler(
       // Sort by selling price from low to high
       inStockProducts.sort((a: FlatProduct, b: FlatProduct) => a.sellingPrice - b.sellingPrice);
       outOfStockProducts.sort((a: FlatProduct, b: FlatProduct) => a.sellingPrice - b.sellingPrice);
+      appliedFilters.sort = "lh"
+
     } else if (sort === "hl" || sort === "priceHighToLow") {
       // Sort by selling price from high to low
       inStockProducts.sort((a: FlatProduct, b: FlatProduct) => b.sellingPrice - a.sellingPrice);
       outOfStockProducts.sort((a: FlatProduct, b: FlatProduct) => b.sellingPrice - a.sellingPrice);
+      appliedFilters.sort = "hl"
+
     } else if (sort === "topRated") {
       // Sort by rating
       inStockProducts.sort((a: FlatProduct, b: FlatProduct) => b.rating - a.rating);
       outOfStockProducts.sort((a: FlatProduct, b: FlatProduct) => b.rating - a.rating);
+      appliedFilters.sort = "topRated"
+
     }
 
     // Combine in-stock and out-of-stock products
@@ -2053,8 +2069,8 @@ export const getAllProductsv2 = asyncErrorHandler(
       totalProducts: totalAllProducts,
       filters: filterOptions,
       appliedFilters: appliedFilters,
-     
     });
+
   }
 );
 
