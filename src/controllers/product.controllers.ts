@@ -1792,8 +1792,9 @@ export const getAllProductsv2 = asyncErrorHandler(async (req, res, next) => {
   const search = (params.search as string) || "";
   const sort = (params.sort as string) || "lh";
   const category = (params.category as string) || "";
-  const isfeatured = (params.category as string) || "";
-  const price = params.price ? Number(params.price) : undefined;
+  const isfeatured = (params.isFeatured as string) || "";
+  const device = (params.device as string) || "";
+  // const price = params.price ? Number(params.price) : undefined;
 
   const minPrice = parseArrayParam<number>(params.minPrice, true).length
     ? parseArrayParam<number>(params.minPrice, true)
@@ -1885,10 +1886,21 @@ export const getAllProductsv2 = asyncErrorHandler(async (req, res, next) => {
     .populate("productCategory")
     .populate("productBrand");
 
-  let [products] = await Promise.all([
-    productPromise,
-    Product.find(combinedQuery),
-  ]);
+  // let [products] = await Promise.all([
+  //   productPromise,
+  //   Product.find(combinedQuery),
+  // ]);
+
+  let products = await productPromise;
+
+  if (category === "skin" && device && device.length > 1) {
+    products = products.filter((item) => {
+      return item.ProductSkinSelectedItems.includes(
+        device.toLowerCase().trim()
+      );
+    });
+    appliedFilters.device = device;
+  }
 
   const totalProducts = await Product.countDocuments(combinedQuery);
   if (!totalProducts) {
