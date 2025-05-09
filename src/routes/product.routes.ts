@@ -19,6 +19,7 @@ import {
 } from "../controllers/product.controllers.js";
 
 import { authenticated, EditorOnly } from "../middleware/auth.middleware.js";
+import { Product } from "../models/product/product.model.js";
 
 const productRouter = express.Router();
 
@@ -51,5 +52,6 @@ productRouter.delete(
   EditorOnly,
   deleteProductDirectly
 );
+
 
 export default productRouter;

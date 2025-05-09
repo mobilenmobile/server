@@ -50,6 +50,8 @@ export const newOrder = asyncErrorHandler(
       deliveryCharges
     } = req.body;
 
+    console.log(deliveryCharges)
+
     if (!deliveryAddress || !orderItems || !total || !finalAmount) {
       return next(new ErrorHandler("Please Enter all Fields", 400));
     }
@@ -81,7 +83,9 @@ export const newOrder = asyncErrorHandler(
         deliveryCharges,
       });
 
-      const ItemCategory = newOrder.orderItems.some((item: { category: string }) => item.category === "accessories") ? "accessories" : "smartphone";
+      
+
+      const ItemCategory = newOrder.orderItems.some((item: { category: string }) => item.category === "smartphone") ? "smartphone" : "accessories";
 
       // Find the existing coin account or create a new one if not found
       let coinAccount = await CoinAccount.findOne({ userId: req.user._id }).session(session);
@@ -110,15 +114,18 @@ export const newOrder = asyncErrorHandler(
       // Update coin account balance after deduction
       await coinAccount.save({ session });
 
+
       // Calculate coins to be added based on item category
       let coinPercentage = 0;
-      if (ItemCategory === "accessories") {
-        coinPercentage = (10 / 100) * newOrder.finalAmount;
+      if (ItemCategory === "smartphone") {
+        coinPercentage = (0.01) * newOrder.finalAmount;
       } else {
-        coinPercentage = (1 / 100) * newOrder.finalAmount;
+        coinPercentage = (0.1) * newOrder.finalAmount; 
       }
+      
 
       const coinsTobeAdded = Math.floor(coinPercentage);
+
       coinAccount.coinAccountBalance += coinsTobeAdded;
 
       // Create a new transaction record for adding coins
