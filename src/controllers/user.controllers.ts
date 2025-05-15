@@ -1311,12 +1311,6 @@ export const getCartDetails = asyncErrorHandler(
       deliveryCharges = 0;
     }
 
-    console.log(
-      '"final cart total", finalCartTotal);',
-      finalCartTotal,
-      deliveryCharges
-    );
-
     finalCartTotal = finalCartTotal + deliveryCharges;
 
     return res.status(200).json({
