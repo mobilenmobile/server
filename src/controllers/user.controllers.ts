@@ -14,8 +14,6 @@ import { PipelineStage } from "mongoose";
 import { CoinAccount } from "../models/coins/coinAccount";
 import { Role } from "../models/userRoleModel";
 
-
-
 //------------------------xxxxxx List-Of-Apis xxxxxxxxx-------------------
 
 // ########## User controllers ##########
@@ -39,7 +37,6 @@ import { Role } from "../models/userRoleModel";
 // 2.getAppliedCoupon
 // 3.removeCouponCode
 
-
 // ############ wishlist related controllers ###########
 
 // 1.updateWishlist
@@ -61,21 +58,19 @@ import { Role } from "../models/userRoleModel";
 
 //----------------------xxxxxx List-Of-Apis-End xxxxxxxxx-------------------------
 
-
 //------------------------api to create new user----------------------------------
 export const newUser = asyncErrorHandler(
   async (req: Request<{}, {}, NewUserRequestBody>, res, next) => {
     const { name, uid, email, phoneNumber, platform } = req.body;
-    console.log("creating new user ------------->", req.body)
+    console.log("creating new user ------------->", req.body);
     if (!email || !uid) {
       return next(new ErrorHandler("please provide email and uid", 400));
     }
 
     // const userExist = await User.findOne({ email });
     const userExist = await User.findOne({
-      $or: [{ email }, { phoneNumber }]
+      $or: [{ email }, { phoneNumber }],
     });
-
 
     if (userExist) {
       return res
@@ -83,11 +78,11 @@ export const newUser = asyncErrorHandler(
         .json({ success: false, message: `email or mobile no already used` });
     }
 
-    let customerRole = await Role.findOne({ roleName: 'Customer' });
+    let customerRole = await Role.findOne({ roleName: "Customer" });
 
     if (!customerRole) {
       customerRole = await Role.create({
-        roleName: 'Customer',
+        roleName: "Customer",
         permissions: [], // Define minimal or no permissions for the "Customer" role
         isDefault: true,
       });
@@ -100,8 +95,8 @@ export const newUser = asyncErrorHandler(
       profilePhoneNo: phoneNumber ?? "",
       profileGender: "",
       profileLocation: "",
-      profileAlternateMobileNo: ""
-    }
+      profileAlternateMobileNo: "",
+    };
 
     const userData = {
       name: name ? name : "",
@@ -109,37 +104,40 @@ export const newUser = asyncErrorHandler(
       email,
       phoneNumber,
       profile: profileData,
-      platform: platform ?? 'mnm',
+      platform: platform ?? "mnm",
       role: customerRole._id,
     };
-
 
     const user = await User.create(userData);
     if (!user._id) {
       // console.log("failed to store user data")
-      deleteUser(uid)
+      deleteUser(uid);
       return res.status(200).json({
         success: false,
         message: `error while signing up`,
-        user
+        user,
       });
-
     }
-    module.exports = Role; module.exports = Role;
+    module.exports = Role;
+    module.exports = Role;
     // userId: string, rewardType: string, orderId: string, coinsTobeAdded: number
 
-    await IncreaseCoins(user._id, "signupBonus", "signup", 200)
+    await IncreaseCoins(user._id, "signupBonus", "signup", 200);
 
     return res.status(200).json({
       success: true,
       message: `welcome ${name} to mnm`,
-      user
+      user,
     });
   }
 );
 
 export const checkIfUserExist = asyncErrorHandler(
-  async (req: Request<{}, {}, { phoneNumber: string }>, res: Response, next: NextFunction) => {
+  async (
+    req: Request<{}, {}, { phoneNumber: string }>,
+    res: Response,
+    next: NextFunction
+  ) => {
     const { phoneNumber } = req.body;
 
     // Validate phone number format (must be a 10-digit numeric string)
@@ -153,25 +151,30 @@ export const checkIfUserExist = asyncErrorHandler(
     // Check if the phone number exists in the database
     const user = await User.findOne({ phoneNumber });
 
-
     return res.status(200).json({
       success: true,
       userExist: !!user, // Returns true if user exists, false otherwise,
       step: user ? "login" : "signup",
-      mobileNumber: phoneNumber
+      mobileNumber: phoneNumber,
     });
   }
 );
 
 // -------------------------- find user--------------------------------------------------------------------
 export const findUser = asyncErrorHandler(
-  async (req: Request<{}, {}, { email?: string; phoneNumber?: string }>, res: Response, next: NextFunction) => {
+  async (
+    req: Request<{}, {}, { email?: string; phoneNumber?: string }>,
+    res: Response,
+    next: NextFunction
+  ) => {
     const { email, phoneNumber } = req.body;
-    console.log("find user called")
-    console.log(req.body)
+    console.log("find user called");
+    console.log(req.body);
 
     if (!email && !phoneNumber) {
-      return next(new ErrorHandler("Please provide either email or phone number", 400));
+      return next(
+        new ErrorHandler("Please provide either email or phone number", 400)
+      );
     }
 
     const query: { [key: string]: string } = {};
@@ -181,28 +184,36 @@ export const findUser = asyncErrorHandler(
     const user = await User.findOne(query);
 
     if (!user) {
-      return res.status(404).json({ success: false, message: "User not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
 
     return res.status(200).json({
       success: true,
       data: {
         email: user.email,
-        phoneNumber: user.phoneNumber
-      }
+        phoneNumber: user.phoneNumber,
+      },
     });
   }
 );
 
 // ----------------------------- Search User -----------------------------------------------
 export const SearchUser = asyncErrorHandler(
-  async (req: Request<{}, {}, { email?: string; phoneNumber?: string }>, res: Response, next: NextFunction) => {
+  async (
+    req: Request<{}, {}, { email?: string; phoneNumber?: string }>,
+    res: Response,
+    next: NextFunction
+  ) => {
     const { email, phoneNumber } = req.body;
-    console.log("find user called")
-    console.log(req.body)
+    console.log("find user called");
+    console.log(req.body);
 
     if (!email && !phoneNumber) {
-      return next(new ErrorHandler("Please provide either email or phone number", 400));
+      return next(
+        new ErrorHandler("Please provide either email or phone number", 400)
+      );
     }
 
     const query: { [key: string]: string } = {};
@@ -212,15 +223,17 @@ export const SearchUser = asyncErrorHandler(
     const user = await User.findOne(query);
 
     if (!user) {
-      return res.status(404).json({ success: false, message: "User not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
 
     return res.status(200).json({
       success: true,
       data: {
         email: user.email,
-        phoneNumber: user.phoneNumber
-      }
+        phoneNumber: user.phoneNumber,
+      },
     });
   }
 );
@@ -228,32 +241,31 @@ export const SearchUser = asyncErrorHandler(
 export const getUser = asyncErrorHandler(async (req: Request, res, next) => {
   const uid = req.params.uid;
 
-  const user = await User.findOne({ uid }).populate('role').populate("coupon")
+  const user = await User.findOne({ uid }).populate("role").populate("coupon");
 
   if (!user) {
     return next(new ErrorHandler("user doesnt exist", 400));
   }
-  console.log("user==>", user)
+  console.log("user==>", user);
 
   return res.status(200).json({
     success: true,
     message: "successfully fetched user details",
-    user
+    user,
   });
 });
 
 export const updateRole = asyncErrorHandler(async (req, res, next) => {
   const { userId, roleId } = req.body;
 
-  const user = await User.findById(userId)
+  const user = await User.findById(userId);
   if (!user) {
-    return res.json({ success: false, message: "no user " })
+    return res.json({ success: false, message: "no user " });
   }
 
-
-  const role = await Role.findById(roleId)
+  const role = await Role.findById(roleId);
   if (!role) {
-    return res.json({ success: false, message: "no role found" })
+    return res.json({ success: false, message: "no role found" });
   }
 
   user.role = role._id;
@@ -263,14 +275,14 @@ export const updateRole = asyncErrorHandler(async (req, res, next) => {
   return res.status(200).json({
     success: true,
     message: "Successfully updated profile",
-    userData: user
+    userData: user,
   });
 });
 
 export const updateProfile = asyncErrorHandler(async (req, res, next) => {
   const { profile } = req.body;
 
-  console.log("req body", profile)
+  console.log("req body", profile);
 
   if (!profile) {
     return next(new ErrorHandler("please provide all fields", 400));
@@ -280,16 +292,15 @@ export const updateProfile = asyncErrorHandler(async (req, res, next) => {
     return next(new ErrorHandler("No user found by this id", 404));
   }
 
-
   // Parse profile only if it is provided
   const profileData = profile ? JSON.parse(profile) : {};
   // if(profileData =)
-  user.phoneNumber = profileData.profilePhoneNo
+  user.phoneNumber = profileData.profilePhoneNo;
 
   // Retain previous values and update only the provided fields
   if (profileData.profileName) {
     user.profile.profileName = profileData.profileName;
-    user.name = profileData.profileName
+    user.name = profileData.profileName;
   }
   if (profileData.profilePhoneNo) {
     user.profile.profilePhoneNo = profileData.profilePhoneNo;
@@ -304,14 +315,20 @@ export const updateProfile = asyncErrorHandler(async (req, res, next) => {
     user.profile.profileLocation = profileData.profileLocation;
   }
   if (profileData.profileAlternateMobileNo) {
-    user.profile.profileAlternateMobileNo = profileData.profileAlternateMobileNo;
+    user.profile.profileAlternateMobileNo =
+      profileData.profileAlternateMobileNo;
   }
   // The email is retained as it is
   user.profile.profileEmailId = user.profile.profileEmailId;
 
   // Optionally update Firebase if profileName or profileImageUrl is changed
-  if (profileData.profileName || profileData.profileImageUrl || profileData.profilePhoneNo) {
-    await updateFirebaseProfile(req.user.uid,
+  if (
+    profileData.profileName ||
+    profileData.profileImageUrl ||
+    profileData.profilePhoneNo
+  ) {
+    await updateFirebaseProfile(
+      req.user.uid,
       profileData.profileName || user.profile.profileName,
       profileData.profileImageUrl || user.profile.profileImageUrl,
       profileData.profilePhoneNo || user.profile.profilePhoneNo
@@ -323,13 +340,13 @@ export const updateProfile = asyncErrorHandler(async (req, res, next) => {
   return res.status(200).json({
     success: true,
     message: "Successfully updated profile",
-    userData: user
+    userData: user,
   });
 });
 
 //---------------------api to update profile image-------------------------------------------
 export const updateProfileImage = asyncErrorHandler(async (req, res, next) => {
-  const { profileImageUrl } = req.body
+  const { profileImageUrl } = req.body;
   if (!profileImageUrl) {
     return next(new ErrorHandler("enter profile image url", 404));
   }
@@ -337,24 +354,22 @@ export const updateProfileImage = asyncErrorHandler(async (req, res, next) => {
   if (!user) {
     return next(new ErrorHandler("No user found by this id", 404));
   }
-  user.profile.profileImageUrl = profileImageUrl
+  user.profile.profileImageUrl = profileImageUrl;
   await user.save();
 
   // console.log(user.profile)
   return res.status(200).json({
     success: true,
     message: "Successfully changed user profile image url",
-    profileImageUrl
+    profileImageUrl,
   });
 });
 
-
 // =============================== admin panel======================================
 
-
 export const listAllUsers = asyncErrorHandler(async (req, res, next) => {
-  const { name, platform, page = '1', export: exportFlag } = req.query;
-  const isExport = exportFlag === 'true';
+  const { name, platform, page = "1", export: exportFlag } = req.query;
+  const isExport = exportFlag === "true";
 
   let limit = 10;
   const pageNumber = Number(page);
@@ -367,11 +382,11 @@ export const listAllUsers = asyncErrorHandler(async (req, res, next) => {
     query.platform = platform;
   }
   if (name) {
-    query.name = { $regex: name, $options: 'i' };
+    query.name = { $regex: name, $options: "i" };
   }
 
   // Exclude users with role "admin"
-  const adminRole = await Role.findOne({ roleName: 'admin' });
+  const adminRole = await Role.findOne({ roleName: "admin" });
   if (adminRole) {
     query.role = { $ne: adminRole._id };
   }
@@ -381,20 +396,20 @@ export const listAllUsers = asyncErrorHandler(async (req, res, next) => {
     { $match: query } as PipelineStage,
     {
       $lookup: {
-        from: 'roles',
-        localField: 'role',
-        foreignField: '_id',
-        as: 'roleInfo',
+        from: "roles",
+        localField: "role",
+        foreignField: "_id",
+        as: "roleInfo",
       },
     } as PipelineStage,
-    { $unwind: '$roleInfo' } as PipelineStage,
+    { $unwind: "$roleInfo" } as PipelineStage,
     {
       $addFields: {
         sortOrder: {
           $switch: {
             branches: [
-              { case: { $eq: ['$roleInfo.roleName', 'editor'] }, then: 1 },
-              { case: { $eq: ['$roleInfo.roleName', 'customer'] }, then: 2 },
+              { case: { $eq: ["$roleInfo.roleName", "editor"] }, then: 1 },
+              { case: { $eq: ["$roleInfo.roleName", "customer"] }, then: 2 },
             ],
             default: 3,
           },
@@ -411,14 +426,17 @@ export const listAllUsers = asyncErrorHandler(async (req, res, next) => {
         profile: 1,
         email: 1,
         phoneNumber: 1,
-        role: '$roleInfo.roleName',
+        role: "$roleInfo.roleName",
       },
     } as PipelineStage,
   ];
 
   // Apply pagination if export is false
   if (!isExport) {
-    aggregationPipeline.push({ $skip: skip } as PipelineStage, { $limit: limit } as PipelineStage);
+    aggregationPipeline.push(
+      { $skip: skip } as PipelineStage,
+      { $limit: limit } as PipelineStage
+    );
   }
 
   // Fetch users using the aggregation pipeline
@@ -427,7 +445,7 @@ export const listAllUsers = asyncErrorHandler(async (req, res, next) => {
   if (!users || users.length === 0) {
     return res.status(200).json({
       success: false,
-      message: 'No user found',
+      message: "No user found",
       users: [],
     });
   }
@@ -436,7 +454,7 @@ export const listAllUsers = asyncErrorHandler(async (req, res, next) => {
   if (isExport) {
     return res.status(200).json({
       success: true,
-      message: 'Successfully exported all users',
+      message: "Successfully exported all users",
       users,
     });
   }
@@ -444,13 +462,13 @@ export const listAllUsers = asyncErrorHandler(async (req, res, next) => {
   // Get the total count of users for pagination
   // const totalUsers = await User.countDocuments(query);
   // Count only users with platform "mnm" for pagination
-  const totalUsers = await User.countDocuments({ ...query, platform: 'mnm' });
+  const totalUsers = await User.countDocuments({ ...query, platform: "mnm" });
   const totalPages = Math.ceil(totalUsers / limit);
 
   // Respond with users and pagination info
   return res.status(200).json({
     success: true,
-    message: 'Successfully fetched users',
+    message: "Successfully fetched users",
     users,
     pagination: {
       totalUsers,
@@ -461,20 +479,19 @@ export const listAllUsers = asyncErrorHandler(async (req, res, next) => {
   });
 });
 
-
 export const changeUserRole = asyncErrorHandler(async (req, res, next) => {
   const { userId, newRoleId } = req.body;
 
-  const user = await User.findOne({ uid: userId })
-  console.log("user", user)
+  const user = await User.findOne({ uid: userId });
+  console.log("user", user);
   if (!user) {
-    return next(new ErrorHandler("No User found", 400))
+    return next(new ErrorHandler("No User found", 400));
   }
 
-  const newRole = await Role.findById(newRoleId)
+  const newRole = await Role.findById(newRoleId);
 
   if (!newRole) {
-    return next(new ErrorHandler("Invalid role provided", 400))
+    return next(new ErrorHandler("Invalid role provided", 400));
   }
 
   user.role = newRole._id;
@@ -488,9 +505,7 @@ export const changeUserRole = asyncErrorHandler(async (req, res, next) => {
   });
 });
 
-
 // ________________________ coupon related controllers _________________________________
-
 
 export const updateCouponCode = asyncErrorHandler(async (req, res, next) => {
   const { couponId } = req.body;
@@ -504,7 +519,7 @@ export const updateCouponCode = asyncErrorHandler(async (req, res, next) => {
     _id: couponId,
     offerIsActive: true,
     offerStartDate: { $lte: currentDate },
-    offerEndDate: { $gte: currentDate }
+    offerEndDate: { $gte: currentDate },
   });
 
   if (!couponCode) {
@@ -528,7 +543,7 @@ export const updateCouponCode = asyncErrorHandler(async (req, res, next) => {
 
 //-------------------api to get applied coupon code for cart--------------------------------------------------
 export const getAppliedCoupon = asyncErrorHandler(async (req, res, next) => {
-  const user = await User.findById(req.user._id).populate("coupon")
+  const user = await User.findById(req.user._id).populate("coupon");
   if (!user) {
     return next(new ErrorHandler("No user found by this id", 404));
   }
@@ -538,20 +553,19 @@ export const getAppliedCoupon = asyncErrorHandler(async (req, res, next) => {
   return res.status(200).json({
     success: true,
     message: "Successfully fetched coupon",
-    coupon: user.coupon || []
+    coupon: user.coupon || [],
   });
 });
 
 //-------------------api remove coupon code for cart--------------------------------------------
 export const removeCouponCode = asyncErrorHandler(async (req, res, next) => {
-
   const user = await User.findById(req.user._id);
 
   if (!user) {
     return next(new ErrorHandler("No user found by this id", 404));
   }
 
-  user.coupon = null
+  user.coupon = null;
 
   await user.save();
 
@@ -561,18 +575,15 @@ export const removeCouponCode = asyncErrorHandler(async (req, res, next) => {
   });
 });
 
-
 // ############### Wishlist controllers ############################
 
 //---------------------api to update wislist----------------------------------------------------
 export const updateWishlist = asyncErrorHandler(async (req, res, next) => {
-
-  const { productId, selectedVarianceId } = req.body
+  const { productId, selectedVarianceId } = req.body;
 
   if (!productId || !selectedVarianceId) {
     return next(new ErrorHandler("please enter all fields", 404));
   }
-
 
   const product = await Product.findById(productId);
 
@@ -580,93 +591,112 @@ export const updateWishlist = asyncErrorHandler(async (req, res, next) => {
     return next(new ErrorHandler("No product found with this id", 404));
   }
 
-  const existingItem = await Wishlist.findOne({ user: req.user._id, productId, selectedVarianceId });
+  const existingItem = await Wishlist.findOne({
+    user: req.user._id,
+    productId,
+    selectedVarianceId,
+  });
   if (existingItem) {
-    return next(new ErrorHandler("This combination already exists in the wishlist.", 404));
+    return next(
+      new ErrorHandler("This combination already exists in the wishlist.", 404)
+    );
   }
 
   const wishlist = await Wishlist.create({
     user: req.user._id,
     productId,
-    selectedVarianceId
-  })
+    selectedVarianceId,
+  });
 
   return res.status(200).json({
     success: true,
     message: "Successfully added wishlist item",
-    wishlist
+    wishlist,
   });
-
 });
 
 //----------------- api to get wishlist items -----------------------------------------------------------
-export const getWishlistItems = asyncErrorHandler(async (req: Request, res, next) => {
-
-  if (!req.user._id) {
-    return next(new ErrorHandler("unauthenticated", 400));
-  }
-
-  const wishlistItems = await Wishlist.find({ user: req.user._id }).populate("productId");
-
-  // console.log("-------------wishlistitems--------------", wishlistItems)
-  const wishlistItemsData = wishlistItems.map((item) => {
-    if (item?.productId?.productVariance) {
-      const variantData = item?.productId?.productVariance?.find((variant: any) => {
-        if (variant.id.replace(/\s+/g, "") == item.selectedVarianceId) {
-          return variant
-        }
-      })
-      // console.log("variantData", variantData)
-      const productDiscount = calculateDiscount(variantData?.boxPrice, variantData?.sellingPrice)
-      return {
-        _id: item._id,
-        productId: item.productId._id,
-        selectedVarianceId: item.selectedVarianceId,
-        productTitle: item.productId.productTitle,
-        thumbnail: variantData?.thumbnail || '',
-        boxPrice: variantData?.boxPrice || '',
-        sellingPrice: variantData?.sellingPrice || '',
-        productRating: item.productId.productRating,
-        discount: productDiscount,
-      }
+export const getWishlistItems = asyncErrorHandler(
+  async (req: Request, res, next) => {
+    if (!req.user._id) {
+      return next(new ErrorHandler("unauthenticated", 400));
     }
-  })
-  // console.log(wishlistItemsData)s
-  return res.status(200).json({
-    success: true,
-    message: "successfully fetched wishlist items",
-    wishlistItemsData
-  });
 
-});
+    const wishlistItems = await Wishlist.find({ user: req.user._id }).populate(
+      "productId"
+    );
+
+    // console.log("-------------wishlistitems--------------", wishlistItems)
+    const wishlistItemsData = wishlistItems.map((item) => {
+      if (item?.productId?.productVariance) {
+        const variantData = item?.productId?.productVariance?.find(
+          (variant: any) => {
+            if (variant.id.replace(/\s+/g, "") == item.selectedVarianceId) {
+              return variant;
+            }
+          }
+        );
+        // console.log("variantData", variantData)
+        const productDiscount = calculateDiscount(
+          variantData?.boxPrice,
+          variantData?.sellingPrice
+        );
+        return {
+          _id: item._id,
+          productId: item.productId._id,
+          selectedVarianceId: item.selectedVarianceId,
+          productTitle: item.productId.productTitle,
+          thumbnail: variantData?.thumbnail || "",
+          boxPrice: variantData?.boxPrice || "",
+          sellingPrice: variantData?.sellingPrice || "",
+          productRating: item.productId.productRating,
+          discount: productDiscount,
+        };
+      }
+    });
+    // console.log(wishlistItemsData)s
+    return res.status(200).json({
+      success: true,
+      message: "successfully fetched wishlist items",
+      wishlistItemsData,
+    });
+  }
+);
 
 // ---------------api to remove wishlist item-------------------------------------------------------
-export const removeWishlistItem = asyncErrorHandler(async (req: Request, res, next) => {
-  if (!req.user._id) {
-    return next(new ErrorHandler("unauthenticated", 400));
+export const removeWishlistItem = asyncErrorHandler(
+  async (req: Request, res, next) => {
+    if (!req.user._id) {
+      return next(new ErrorHandler("unauthenticated", 400));
+    }
+
+    // if (!req.params.id) {
+    //   return next(new ErrorHandler("no id", 400));
+    // }
+
+    const { productId, selectedVarianceId } = req.body;
+
+    if (!productId || !selectedVarianceId) {
+      return next(new ErrorHandler("no product id", 400));
+    }
+
+    const wishlistItem = await Wishlist.findOne({
+      user: req.user._id,
+      productId: productId,
+      selectedVarianceId: selectedVarianceId,
+    });
+
+    if (!wishlistItem) {
+      return next(new ErrorHandler("wishlistitem not found", 400));
+    }
+
+    await Wishlist.findByIdAndDelete(wishlistItem._id);
+    return res.status(200).json({
+      success: true,
+      message: "successfully deleted item from wishlist",
+    });
   }
-
-  // if (!req.params.id) {
-  //   return next(new ErrorHandler("no id", 400));
-  // }
-
-  const { productId, selectedVarianceId } = req.body
-
-  if (!productId || !selectedVarianceId) {
-    return next(new ErrorHandler("no product id", 400));
-  }
-
-  const wishlistItem = await Wishlist.findOne({ user: req.user._id, productId: productId, selectedVarianceId: selectedVarianceId });
-
-  if (!wishlistItem) {
-    return next(new ErrorHandler("wishlistitem not found", 400));
-  }
-
-  await Wishlist.findByIdAndDelete(wishlistItem._id);
-  return res.status(200).json({ success: true, message: "successfully deleted item from wishlist" });
-
-});
-
+);
 
 // ############### cart related controllers ##########################
 
@@ -679,11 +709,18 @@ export const updateCart = asyncErrorHandler(async (req, res, next) => {
     isCombo,
     skinProductDetails,
     selectedFreeProducts,
-    deviceDetails
+    deviceDetails,
   } = req.body;
 
-  console.log("-------------------- update cart------------------------", req.user._id);
-  const cartItem = await cart.findOne({ productId, selectedVarianceId, user: req.user._id });
+  console.log(
+    "-------------------- update cart------------------------",
+    req.user._id
+  );
+  const cartItem = await cart.findOne({
+    productId,
+    selectedVarianceId,
+    user: req.user._id,
+  });
 
   if (!customSkin) {
     if (!productId || !selectedVarianceId) {
@@ -695,15 +732,24 @@ export const updateCart = asyncErrorHandler(async (req, res, next) => {
       return next(new ErrorHandler("No product found with this ID", 404));
     }
 
-    const selectedVariantData = product.productVariance.find((variant: { id: string; }) => {
-      return variant.id.replace(/\s+/g, "") === selectedVarianceId.replace(/\s+/g, "");
-    });
+    const selectedVariantData = product.productVariance.find(
+      (variant: { id: string }) => {
+        return (
+          variant.id.replace(/\s+/g, "") ===
+          selectedVarianceId.replace(/\s+/g, "")
+        );
+      }
+    );
 
     //check if user adding more than available qty of product like qty is 2 but user adding 10 of that product
 
-    const productInStock = Number(selectedVariantData?.quantity)
+    const productInStock = Number(selectedVariantData?.quantity);
 
-    if (selectedVariantData?.quantity == "0" || selectedVariantData?.quantity == 0 || (cartItem && cartItem.quantity + 1 > productInStock)) {
+    if (
+      selectedVariantData?.quantity == "0" ||
+      selectedVariantData?.quantity == 0 ||
+      (cartItem && cartItem.quantity + 1 > productInStock)
+    ) {
       return next(new ErrorHandler("Product is out of stock", 400));
     }
   }
@@ -721,82 +767,752 @@ export const updateCart = asyncErrorHandler(async (req, res, next) => {
       selectedVarianceId,
       customSkin,
       isCombo,
-      skinProductDetails: skinProductDetails ? JSON.parse(skinProductDetails) : null,
-      selectedFreeProducts: selectedFreeProducts ? JSON.parse(selectedFreeProducts) : null,
-      deviceDetails: (deviceDetails && deviceDetails.length > 0) ? JSON.parse(deviceDetails) : null, // ✅ Add device details
-      quantity
+      skinProductDetails: skinProductDetails
+        ? JSON.parse(skinProductDetails)
+        : null,
+      selectedFreeProducts: selectedFreeProducts
+        ? JSON.parse(selectedFreeProducts)
+        : null,
+      deviceDetails:
+        deviceDetails && deviceDetails.length > 0
+          ? JSON.parse(deviceDetails)
+          : null, // ✅ Add device details
+      quantity,
     });
   }
 
   return res.status(200).json({
     success: true,
     message: "Successfully updated cart",
-    cartItem
+    cartItem,
   });
 });
 
 //----------------api to decrease product quantity in cart------------------------------------------------
-export const decreaseCartProductQuantity = asyncErrorHandler(async (req, res, next) => {
+export const decreaseCartProductQuantity = asyncErrorHandler(
+  async (req, res, next) => {
+    const { productId, selectedVarianceId } = req.body;
 
-  const { productId, selectedVarianceId } = req.body
-
-  if (!productId || !selectedVarianceId) {
-    return next(new ErrorHandler("please enter all fields", 404));
-  }
-
-  const product = await Product.findById(productId);
-  if (!product) {
-    return next(new ErrorHandler("No product found with this id", 404));
-  }
-
-  const cartItem = await cart.findOne({ productId, selectedVarianceId, user: req.user._id });
-
-
-  if (!cartItem) {
-    return next(new ErrorHandler("cart item not found", 404));
-  }
-
-  if (cartItem && cartItem.quantity > 0) {
-    console.log("cart item ===>", cartItem)
-    if (cartItem.quantity - 1 <= 0) {
-      await cart.deleteOne({ _id: cartItem._id })
-    } else {
-      cartItem.quantity = cartItem.quantity - 1
-      await cartItem.save()
+    if (!productId || !selectedVarianceId) {
+      return next(new ErrorHandler("please enter all fields", 404));
     }
 
+    const product = await Product.findById(productId);
+    if (!product) {
+      return next(new ErrorHandler("No product found with this id", 404));
+    }
+
+    const cartItem = await cart.findOne({
+      productId,
+      selectedVarianceId,
+      user: req.user._id,
+    });
+
+    if (!cartItem) {
+      return next(new ErrorHandler("cart item not found", 404));
+    }
+
+    if (cartItem && cartItem.quantity > 0) {
+      console.log("cart item ===>", cartItem);
+      if (cartItem.quantity - 1 <= 0) {
+        await cart.deleteOne({ _id: cartItem._id });
+      } else {
+        cartItem.quantity = cartItem.quantity - 1;
+        await cartItem.save();
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Successfully decreased product quantity",
+      cartItem,
+    });
   }
-
-  return res.status(200).json({
-    success: true,
-    message: "Successfully decreased product quantity",
-    cartItem
-  });
-
-});
+);
 
 //---------------- api to get cart items -----------------------------------------------------------
-export const getCartItems = asyncErrorHandler(async (req: Request, res, next) => {
-  if (!req.user._id) {
-    return next(new ErrorHandler("unauthenticated", 400));
-  }
-  const wishlistItems = await cart.find({ user: req.user._id }).populate("productId");
-  const cartItemsData = wishlistItems.map((item) => {
+export const getCartItems = asyncErrorHandler(
+  async (req: Request, res, next) => {
+    if (!req.user._id) {
+      return next(new ErrorHandler("unauthenticated", 400));
+    }
+    const wishlistItems = await cart
+      .find({ user: req.user._id })
+      .populate("productId");
+    const cartItemsData = wishlistItems.map((item) => {
+      console.log(
+        "-------------------------------------------------------------------------cart item data-----------------------------------------",
+        item
+      );
 
-    console.log("-------------------------------------------------------------------------cart item data-----------------------------------------", item)
+      if (item.productId.productVariance) {
+        const variantData = item.productId.productVariance.find(
+          (variant: any) => {
+            if (variant.id == item.selectedVarianceId) {
+              return variant;
+            }
+          }
+        );
 
-    if (item.productId.productVariance) {
-      const variantData = item.productId.productVariance.find((variant: any) => {
-        if (variant.id == item.selectedVarianceId) {
-          return variant
+        // console.log("variantData", variantData)
+        const productDiscount = calculateDiscount(
+          variantData?.boxPrice,
+          variantData?.sellingPrice
+        );
+        if (variantData.quantity && Number(variantData.quantity) > 0) {
+          return {
+            _id: item._id,
+            productTitle: item.productId.productTitle,
+            thumbnail: variantData?.thumbnail,
+            boxPrice: variantData?.boxPrice,
+            sellingPrice: variantData?.sellingPrice,
+            color: variantData?.color,
+            ramAndStorage: variantData?.ramAndStorage[0],
+            productRating: item.productId.productRating,
+            quantity: item.quantity,
+            productId: item.productId._id,
+            selectedVarianceId: item.selectedVarianceId,
+            deviceDetails: item.deviceDetails,
+            discount: productDiscount,
+          };
         }
-      })
+      }
+    });
+    return res.status(200).json({
+      success: true,
+      message: "successfully fetched cartitems data",
+      cartItemsData,
+    });
+  }
+);
 
-      // console.log("variantData", variantData)
-      const productDiscount = calculateDiscount(variantData?.boxPrice, variantData?.sellingPrice)
-      if (variantData.quantity && Number(variantData.quantity) > 0) {
+//---------------- api to remove cart item-----------------------------------------------------------
+export const removeCartItem = asyncErrorHandler(
+  async (req: Request, res, next) => {
+    if (!req.user._id) {
+      return next(new ErrorHandler("unauthenticated", 400));
+    }
+    if (!req.params.id) {
+      return next(new ErrorHandler("no id", 400));
+    }
+    const cartItem = await cart.findOne({
+      user: req.user._id,
+      _id: req.params.id,
+    });
+    if (!cartItem) {
+      return next(new ErrorHandler("cart not found", 400));
+    }
+
+    await cart.findByIdAndDelete(req.params.id);
+    return res
+      .status(200)
+      .json({ success: true, message: "successfully deleted item from cart" });
+  }
+);
+
+// -------------------------- api to remove combo item --------------------------------------
+export const removeComboItem = asyncErrorHandler(
+  async (req: Request, res, next) => {
+    if (!req.user._id) {
+      return next(new ErrorHandler("unauthenticated", 400));
+    }
+
+    const { productId, selectedVarianceId } = req.body;
+    if (!productId || !selectedVarianceId) {
+      return next(new ErrorHandler("provide all the fields", 400));
+    }
+
+    const cartItem = await cart.findOne({
+      productId,
+      selectedVarianceId,
+      user: req.user._id,
+    });
+    if (!cartItem) {
+      return next(new ErrorHandler("cart not found", 400));
+    }
+
+    cartItem.isCombo = false;
+
+    await cartItem.save();
+    return res
+      .status(200)
+      .json({ success: true, message: "successfully removed combo from item" });
+  }
+);
+
+// ------------------------- remove free item--------------------------------------------------
+export const removeFreeItem = asyncErrorHandler(
+  async (req: Request, res, next) => {
+    // console.log("remove free item------------->", req.body)
+    if (!req.user._id) {
+      return next(new ErrorHandler("unauthenticated", 400));
+    }
+    const { productId, selectedVarianceId, freeProductId } = req.body;
+    if (!productId || !selectedVarianceId || !freeProductId) {
+      return next(new ErrorHandler("provide all the fields", 400));
+    }
+
+    const cartItem = await cart.findOne({
+      productId,
+      selectedVarianceId,
+      user: req.user._id,
+    });
+    if (!cartItem) {
+      return next(new ErrorHandler("cart not found", 400));
+    }
+    // console.log("remove ----- cart ---- item -=---->", cartItem)
+
+    const updatedFreeItems =
+      cartItem.selectedFreeProducts.length > 0 &&
+      cartItem.selectedFreeProducts.filter(
+        (item: { productid: any }) => item.productid !== freeProductId
+      );
+
+    cartItem.selectedFreeProducts = updatedFreeItems;
+    // console.log("after removing free product item ", cartItem)
+    await cartItem.save();
+    return res
+      .status(200)
+      .json({ success: true, message: "successfully removed free item" });
+  }
+);
+
+// ------------------ api to get cart details -------------------------------------------------------
+export const getCartDetails = asyncErrorHandler(
+  async (req: Request, res, next) => {
+    if (!req.user._id) {
+      return next(new ErrorHandler("unauthenticated", 400));
+    }
+
+    // const cartItems = await cart.find({ user: req.user._id }).populate("productId");
+    const cartItems = await cart.find({ user: req.user._id }).populate({
+      path: "productId",
+      populate: [
+        {
+          path: "productCategory",
+        },
+        {
+          path: "productSubCategory",
+        },
+        {
+          path: "productComboProducts",
+          populate: {
+            path: "productId",
+          },
+        },
+        {
+          path: "productFreeProducts",
+          populate: {
+            path: "productId",
+          },
+        },
+      ],
+    });
+
+    // console.log("categorynew----------------->", cartItemsnew)
+    const user = await User.findOne({ _id: req.user._id });
+    const appliedCoupon = await Offer.findOne({ _id: user?.coupon });
+    const coinAccountData = await CoinAccount.find({ userId: req.user._id });
+
+    //if combo
+    let ComboAccumulator = {
+      Total: 0,
+      DiscountedTotal: 0,
+      finalTotal: 0,
+      productTotal: 0,
+    };
+
+    console.log(cartItems);
+
+    //mapping through cartItems to structure the data
+    const cartItemsData = cartItems.map((item) => {
+      console.log(
+        "############## check if free product available ############"
+      );
+      console.log(item);
+      if (item.productId.productVariance) {
+        const variantData = item.productId.productVariance.find(
+          (variant: any) => {
+            if (
+              variant.id.replace(/\s+/g, "") ==
+              item.selectedVarianceId.replace(/\s+/g, "")
+            ) {
+              return variant;
+            }
+          }
+        );
+        const productDiscount = calculateDiscount(
+          variantData?.boxPrice,
+          variantData?.sellingPrice
+        );
+
+        let productComboProducts = [];
+        let productFreeProducts = [];
+
+        if (item.isCombo) {
+          productComboProducts = item?.productId?.productComboProducts.map(
+            (item: any) => {
+              if (item.productId.productVariance) {
+                const variantData = item.productId.productVariance[0];
+                const productDiscount = calculateDiscount(
+                  variantData?.boxPrice,
+                  variantData?.sellingPrice
+                );
+                // console.log("type of ------------->", variantData.quantity, variantData.boxPrice, variantData.sellingPrice)
+                return {
+                  _id: item._id,
+                  keyid: `${item._id}${variantData?.id.replace(/\s+/g, "")}`,
+                  categoryId: item.productId?.productCategory?._id,
+                  category: item.productId?.productCategory?.categoryName,
+                  subCategoryId: item.productId?.productSubCategory?._id,
+                  subCategory:
+                    item.productId?.productSubCategory?.subCategoryName,
+                  productTitle: item.productId.productTitle,
+                  thumbnail: variantData?.thumbnail,
+                  boxPrice: variantData?.boxPrice || 0, // Ensure a valid number
+                  sellingPrice: variantData?.sellingPrice || 0, // Ensure a valid number
+                  comboPrice: item.comboPrice || variantData.sellingPrice || 0, // Ensure a valid number
+                  // color: variantData?.color,
+                  // ramAndStorage: variantData?.ramAndStorage[0],
+                  productRating: item.productId.productRating,
+                  quantity: item.quantity,
+                  stock: variantData?.quantity,
+                  productId: item.productId._id,
+                  // selectedVarianceId: item.selectedVarianceId,
+                  discount: productDiscount,
+                  customSkin: item?.customSkin || false,
+                  // isCombo: item?.isCombo || false,
+                  // productComboProducts: item?.productId?.productComboProducts ? item?.productId?.productComboProducts : [],
+                  skinProductDetails: item?.skinProductDetails || [],
+                  deviceDetails: item?.deviceDetails,
+                };
+              }
+            }
+          );
+
+          // console.log("comboproducts ----------------------- > ", productComboProducts)
+          ComboAccumulator = productComboProducts?.reduce(
+            (accumulator: any, item: any) => {
+              const boxPrice = Number(item?.boxPrice) || 999; // Default to 0 if undefined or NaN
+              const comboPrice =
+                Number(item?.comboPrice) || item.sellingPrice || 999; // Default to 0 if undefined or NaN
+              console.log(
+                "boxprice ==>",
+                item.boxPrice,
+                "and ",
+                item.sellingPrice
+              );
+              const Total = accumulator.Total + boxPrice;
+              const DiscountedTotal = accumulator.DiscountedTotal + comboPrice;
+
+              return {
+                Total,
+                DiscountedTotal,
+              };
+            },
+            {
+              Total: 0,
+              DiscountedTotal: 0,
+            }
+          );
+          console.log(
+            "accucombodata-------------------------------->",
+            "data",
+            ComboAccumulator
+          );
+          // console.log("combo item -=====>", item.productId)
+          ComboAccumulator.productTotal =
+            Number(ComboAccumulator?.Total) + Number(variantData?.sellingPrice);
+          ComboAccumulator.finalTotal =
+            Number(ComboAccumulator?.DiscountedTotal) +
+            Number(variantData?.sellingPrice);
+        }
+
+        if (item.productId.productFreeProducts.length > 0) {
+          productFreeProducts = item?.productId?.productFreeProducts?.map(
+            (item: any) => {
+              if (item.productId.productVariance) {
+                const variantData = item.productId.productVariance[0];
+
+                return {
+                  _id: item._id,
+                  keyid: `${item._id}${variantData?.id.replace(/\s+/g, "")}`,
+                  categoryId: item.productId?.productCategory?._id,
+                  category: item.productId?.productCategory?.categoryName,
+                  subCategoryId: item.productId?.productSubCategory?._id,
+                  subCategory:
+                    item.productId?.productSubCategory?.subCategoryName,
+                  title: item.productId.productTitle,
+                  thumbnail: variantData?.thumbnail,
+                  boxPrice: variantData?.boxPrice || 0, // Ensure a valid number
+                  sellingPrice: variantData?.sellingPrice || 0, // Ensure a valid number
+                  comboPrice:
+                    variantData.comboPrice || variantData.sellingPrice || 0, // Ensure a valid number
+                  // color: variantData?.color,
+                  // ramAndStorage: variantData?.ramAndStorage[0],
+                  productRating: item.productId.productRating,
+                  quantity: item.quantity,
+                  stock: variantData?.quantity,
+                  productId: item.productId._id,
+                  // selectedVarianceId: item.selectedVarianceId,
+                  discount: productDiscount,
+                  customSkin: item?.customSkin || false,
+                  // isCombo: item?.isCombo || false,
+                  // productComboProducts: item?.productId?.productComboProducts ? item?.productId?.productComboProducts : [],
+                  skinProductDetails: item?.skinProductDetails || [],
+                  deviceDetails: item?.deviceDetails,
+                };
+              }
+            }
+          );
+        }
+
         return {
           _id: item._id,
+          keyid: `${item._id}${variantData?.id.replace(/\s+/g, "")}`,
+          categoryId: item.productId?.productCategory?._id,
+          category: item.productId?.productCategory?.categoryName,
+          subCategoryId: item.productId?.productSubCategory?._id,
+          subCategory: item.productId?.productSubCategory?.subCategoryName,
+          productTitle: item.productId.productTitle,
+          thumbnail: variantData?.thumbnail,
+          boxPrice: variantData?.boxPrice,
+          sellingPrice: variantData?.sellingPrice,
+          comboPrice: variantData?.comboPrice,
+          color: variantData?.color,
+          ramAndStorage: variantData?.ramAndStorage[0],
+          productRating: item.productId.productRating,
+          quantity: item.quantity,
+          stock: variantData?.quantity,
+          productId: item.productId._id,
+          selectedVarianceId: item.selectedVarianceId,
+          discount: productDiscount,
+          customSkin: item?.customSkin || false,
+          isCombo: item?.isCombo || false,
+          // productComboProducts: item?.productId?.productComboProducts ? item?.productId?.productComboProducts : [],
+          productComboProducts: productComboProducts
+            ? productComboProducts
+            : [],
+          productFreeProducts: item.selectedFreeProducts ?? productFreeProducts,
+          // selectedFreeProducts: item.selectedFreeProducts ? item.selectedFreeProducts : [],
+          skinProductDetails: item?.skinProductDetails || [],
+          deviceDetails: item?.deviceDetails,
+        };
+      }
+    });
+
+    let Total = 0;
+    let DiscountedTotal = 0;
+    // const cartDetails = cartItemsData.map((item) => {
+    //   return {
+    //     Total: Total + ((item?.quantity ?? 1) * item?.boxPrice),
+    //     DiscountedTotal: DiscountedTotal + ((item?.quantity ?? 1) * item?.sellingPrice)
+    //   }
+    // })
+
+    const totals = cartItemsData.reduce(
+      (accumulator, item) => {
+        // console.log("accumulator ==> ", accumulator, "==and==>", item)
+        const Total =
+          accumulator.Total + (item?.quantity ?? 1) * item?.boxPrice;
+        const DiscountedTotal =
+          accumulator.DiscountedTotal +
+          (item?.quantity ?? 1) * item?.sellingPrice;
+
+        return {
+          Total,
+          DiscountedTotal,
+        };
+      },
+      {
+        Total: 0,
+        DiscountedTotal: 0,
+      }
+    );
+
+    console.log("comboaccumulator=====>", ComboAccumulator);
+
+    //Add combo price
+    totals.Total += ComboAccumulator.Total ? ComboAccumulator.Total : 0;
+    totals.DiscountedTotal += ComboAccumulator.DiscountedTotal
+      ? ComboAccumulator.DiscountedTotal
+      : 0;
+
+    let couponDiscount = 0;
+    let deliveryCharges = 150;
+
+    // if (appliedCoupon && Number(appliedCoupon.offerDiscountValue) > 0) {
+    //   couponDiscount = Math.round((Number(appliedCoupon.offerDiscountValue) * totals.DiscountedTotal) / 100)
+    //   couponDiscount = couponDiscount > 500 ? 499 : couponDiscount
+    // }
+
+    // Step 4: Apply coupon discounts if offer limit conditions are met
+    if (appliedCoupon && Number(appliedCoupon.offerDiscountValue) > 0) {
+      const minLimit = Number(appliedCoupon.offerLimit.minLimit);
+      const maxLimit = Number(appliedCoupon.offerLimit.maxLimit);
+
+      // Use totals.Total instead of finalCartTotal
+      if (totals.Total >= minLimit && totals.Total <= maxLimit) {
+        switch (appliedCoupon.offerCouponType) {
+          case "freeshipping":
+            deliveryCharges = 0; // Assume 499 is the max discount allowed for shipping
+            break;
+
+          case "percentage":
+            couponDiscount = Math.round(
+              (Number(appliedCoupon.offerDiscountValue) *
+                totals.DiscountedTotal) /
+                100
+            );
+            // couponDiscount = Math.min(2400, couponDiscount); // Cap discount at 2000
+            break;
+
+          case "fixedamount":
+            couponDiscount = Math.min(
+              Number(appliedCoupon.offerDiscountValue),
+              totals.DiscountedTotal
+            );
+            break;
+
+          default:
+            // Handle unexpected coupon types if necessary
+            break;
+        }
+      }
+    }
+
+    const availableCoins =
+      (coinAccountData.length > 0 && coinAccountData[0]?.coinAccountBalance) ||
+      0;
+
+    const finalCartTotalBeforeCoins = totals.DiscountedTotal - couponDiscount;
+    const fiftyPercentOfFinalCartTotal = finalCartTotalBeforeCoins * 0.5;
+
+    // console.log(availableCoins, "available coin ............")
+    // console.log("hey som val")
+    // console.log("totals", totals)
+    // console.log(couponDiscount, "couponDiscount")
+    // console.log(finalCartTotalBeforeCoins, "final cart total before coins ................")
+    // console.log(fiftyPercentOfFinalCartTotal, "fifty percent of cart total ..................")
+    const usableCoins =
+      availableCoins > fiftyPercentOfFinalCartTotal
+        ? Math.floor(fiftyPercentOfFinalCartTotal)
+        : availableCoins;
+    // console.log(usableCoins, "usable coin ............")
+
+    let deductCoinsForCart = coinAccountData[0].useCoinForPayment
+      ? usableCoins
+      : 0;
+    let isCoinUseChecked = coinAccountData[0].useCoinForPayment || false;
+    let finalCartTotal =
+      totals.DiscountedTotal - couponDiscount - deductCoinsForCart;
+
+    if (finalCartTotal >= 500) {
+      deliveryCharges = 0;
+    }
+
+    console.log(
+      '"final cart total", finalCartTotal);',
+      finalCartTotal,
+      deliveryCharges
+    );
+
+    finalCartTotal = finalCartTotal + deliveryCharges;
+
+    return res.status(200).json({
+      success: true,
+      message: "Cart details fetched successfully",
+      cartItemsData,
+      cartDetails: {
+        ...totals,
+        finalCartTotal,
+        comboTotal: ComboAccumulator,
+        couponDiscount,
+        availableCoins,
+        usableCoins,
+        appliedCoupon,
+        deliveryCharges,
+        isCoinUseChecked,
+      },
+      offer: user?.coupon,
+    });
+  }
+);
+
+// ------------------ api to get cart details -------------------------------------------------------
+export const getUnAuthenticatedCartDetails = asyncErrorHandler(
+  async (req: Request, res, next) => {
+    // console.log("-------------------? unauthenticated cart details", req.body)
+    const { cart } = req.body;
+
+    const cartItems = await Promise.all(
+      cart.map(async (cartItem: { productId: any }) => {
+        const product = await Product.findById(cartItem.productId)
+          .populate("productCategory")
+          .populate("productSubCategory")
+          .populate({
+            path: "productComboProducts",
+            populate: {
+              path: "productId",
+            },
+          })
+          .populate({
+            path: "productFreeProducts",
+            populate: {
+              path: "productId",
+            },
+          });
+
+        console.log("------------product--------", product);
+        if (product) {
+          return {
+            ...cartItem,
+            productId: product,
+          };
+        }
+        return null; // or handle the case where product is not found
+      })
+    );
+
+    //if combo
+    let ComboAccumulator = {
+      Total: 0,
+      DiscountedTotal: 0,
+    };
+
+    // Remove null entries if there were any
+    const filteredCartItemsData = cartItems.filter((item) => item !== null);
+    // console.log("---------cart------------", filteredCartItemsData);
+    // //mapping through cartItems to structure the data
+    const cartItemsData = filteredCartItemsData.map((item) => {
+      // console.log("------------- item-------------------", item)
+      if (item.productId.productVariance) {
+        let productComboProducts = [];
+        let productFreeProducts = [];
+        if (item.isCombo) {
+          productComboProducts = item?.productId?.productComboProducts?.map(
+            (item: any) => {
+              if (item.productId.productVariance) {
+                const variantData = item?.productId.productVariance[0];
+                const productDiscount = calculateDiscount(
+                  variantData?.boxPrice,
+                  variantData?.sellingPrice
+                );
+
+                // console.log("type of ------------->", variantData.quantity, variantData.boxPrice, variantData.sellingPrice)
+
+                // ComboAccumulator.Total = Number(ComboAccumulator.Total + (Number(variantData?.quantity) * Number(variantData?.boxPrice)));
+
+                // ComboAccumulator.DiscountedTotal = Number(ComboAccumulator.DiscountedTotal + (Number(variantData?.quantity) * Number(variantData?.sellingPrice)));
+
+                return {
+                  _id: item._id,
+                  keyid: `${item._id}${variantData?.id.replace(/\s+/g, "")}`,
+                  categoryId: item.productId?.productCategory?._id,
+                  category: item.productId?.productCategory?.categoryName,
+                  subCategoryId: item.productId?.productSubCategory?._id,
+                  subCategory:
+                    item.productId?.productSubCategory?.subCategoryName,
+                  productTitle: item.productId.productTitle,
+                  thumbnail: variantData?.thumbnail,
+                  boxPrice: variantData?.boxPrice,
+                  sellingPrice: variantData?.sellingPrice,
+                  comboPrice: variantData?.comboPrice,
+                  // color: variantData?.color,
+                  // ramAndStorage: variantData?.ramAndStorage[0],
+                  productRating: item.productId.productRating,
+                  quantity: item.quantity,
+                  productId: item.productId._id,
+                  // selectedVarianceId: item.selectedVarianceId,
+                  discount: productDiscount,
+                  customSkin: item?.customSkin || false,
+                  // isCombo: item?.isCombo || false,
+                  // productComboProducts: item?.productId?.productComboProducts ? item?.productId?.productComboProducts : [],
+                  skinProductDetails: item?.skinProductDetails || [],
+                };
+              }
+            }
+          );
+
+          // console.log("comboproducts ----------------------- > ", productComboProducts)
+          ComboAccumulator = productComboProducts?.reduce(
+            (accumulator: any, item: any) => {
+              console.log("accumlateor------------------>", item);
+              const Total = accumulator.Total + Number(item?.boxPrice);
+              const DiscountedTotal =
+                accumulator.DiscountedTotal + Number(item?.sellingPrice);
+
+              return {
+                Total,
+                DiscountedTotal,
+              };
+            },
+            {
+              Total: 0,
+              DiscountedTotal: 0,
+            }
+          );
+        }
+        if (item.productId.productFreeProducts.length > 0) {
+          productFreeProducts = item?.productId?.productFreeProducts?.map(
+            (item: any) => {
+              if (item.productId.productVariance) {
+                const variantData = item.productId.productVariance[0];
+                const productDiscount = calculateDiscount(
+                  variantData?.boxPrice,
+                  variantData?.sellingPrice
+                );
+                return {
+                  _id: item._id,
+                  keyid: `${item._id}${variantData?.id.replace(/\s+/g, "")}`,
+                  categoryId: item.productId?.productCategory?._id,
+                  category: item.productId?.productCategory?.categoryName,
+                  subCategoryId: item.productId?.productSubCategory?._id,
+                  subCategory:
+                    item.productId?.productSubCategory?.subCategoryName,
+                  productTitle: item.productId.productTitle,
+                  thumbnail: variantData?.thumbnail,
+                  boxPrice: variantData?.boxPrice,
+                  sellingPrice: variantData?.sellingPrice,
+                  comboPrice: variantData?.comboPrice,
+                  // color: variantData?.color,
+                  // ramAndStorage: variantData?.ramAndStorage[0],
+                  productRating: item.productId.productRating,
+                  quantity: item.quantity,
+                  productId: item.productId._id,
+                  // selectedVarianceId: item.selectedVarianceId,
+                  discount: productDiscount,
+                  customSkin: item?.customSkin || false,
+                  // isCombo: item?.isCombo || false,
+                  // productComboProducts: item?.productId?.productComboProducts ? item?.productId?.productComboProducts : [],
+                  skinProductDetails: item?.skinProductDetails || [],
+                };
+              }
+            }
+          );
+        }
+
+        const variantData = item.productId.productVariance.find(
+          (variant: any) => {
+            if (
+              variant.id.replace(/\s+/g, "") ==
+              item.selectedVarianceId.replace(/\s+/g, "")
+            ) {
+              return variant;
+            }
+          }
+        );
+        const productDiscount = calculateDiscount(
+          variantData?.boxPrice,
+          variantData?.sellingPrice
+        );
+        return {
+          _id: item.productId._id,
+          keyid: `${item.productId._id}${variantData?.id.replace(/\s+/g, "")}`,
+          categoryId: item.productId?.productCategory?._id,
+          category: item.productId?.productCategory?.categoryName,
+          subCategoryId: item.productId?.productSubCategory?._id,
+          subCategory: item.productId?.productSubCategory?.subCategoryName,
           productTitle: item.productId.productTitle,
           thumbnail: variantData?.thumbnail,
           boxPrice: variantData?.boxPrice,
@@ -807,625 +1523,97 @@ export const getCartItems = asyncErrorHandler(async (req: Request, res, next) =>
           quantity: item.quantity,
           productId: item.productId._id,
           selectedVarianceId: item.selectedVarianceId,
-          deviceDetails: item.deviceDetails,
           discount: productDiscount,
-        }
+          customSkin: item?.customSkin || false,
+          skinProductDetails: item?.skinProductDetails || [],
+          isCombo: item?.isCombo || false,
+        };
       }
-
-    }
-  })
-  return res.status(200).json({
-    success: true,
-    message: "successfully fetched cartitems data",
-    cartItemsData
-  });
-});
-
-//---------------- api to remove cart item-----------------------------------------------------------
-export const removeCartItem = asyncErrorHandler(async (req: Request, res, next) => {
-  if (!req.user._id) {
-    return next(new ErrorHandler("unauthenticated", 400));
-  }
-  if (!req.params.id) {
-    return next(new ErrorHandler("no id", 400));
-  }
-  const cartItem = await cart.findOne({ user: req.user._id, _id: req.params.id });
-  if (!cartItem) {
-    return next(new ErrorHandler("cart not found", 400));
-  }
-
-  await cart.findByIdAndDelete(req.params.id);
-  return res.status(200).json({ success: true, message: "successfully deleted item from cart" });
-
-});
-
-// -------------------------- api to remove combo item --------------------------------------
-export const removeComboItem = asyncErrorHandler(async (req: Request, res, next) => {
-  if (!req.user._id) {
-    return next(new ErrorHandler("unauthenticated", 400));
-  }
-
-  const { productId, selectedVarianceId } = req.body
-  if (!productId || !selectedVarianceId) {
-    return next(new ErrorHandler("provide all the fields", 400))
-  }
-
-  const cartItem = await cart.findOne({ productId, selectedVarianceId, user: req.user._id });
-  if (!cartItem) {
-    return next(new ErrorHandler("cart not found", 400));
-  }
-
-  cartItem.isCombo = false
-
-  await cartItem.save()
-  return res.status(200).json({ success: true, message: "successfully removed combo from item" });
-
-});
-
-
-// ------------------------- remove free item--------------------------------------------------
-export const removeFreeItem = asyncErrorHandler(async (req: Request, res, next) => {
-  // console.log("remove free item------------->", req.body)
-  if (!req.user._id) {
-    return next(new ErrorHandler("unauthenticated", 400));
-  }
-  const { productId, selectedVarianceId, freeProductId } = req.body
-  if (!productId || !selectedVarianceId || !freeProductId) {
-    return next(new ErrorHandler("provide all the fields", 400))
-  }
-
-  const cartItem = await cart.findOne({ productId, selectedVarianceId, user: req.user._id });
-  if (!cartItem) {
-    return next(new ErrorHandler("cart not found", 400));
-  }
-  // console.log("remove ----- cart ---- item -=---->", cartItem)
-
-  const updatedFreeItems = cartItem.selectedFreeProducts.length > 0 && cartItem.selectedFreeProducts.filter((item: {
-    productid: any
-  }) => item.productid !== freeProductId)
-
-  cartItem.selectedFreeProducts = updatedFreeItems
-  // console.log("after removing free product item ", cartItem)
-  await cartItem.save()
-  return res.status(200).json({ success: true, message: "successfully removed free item" });
-
-});
-
-// ------------------ api to get cart details -------------------------------------------------------
-export const getCartDetails = asyncErrorHandler(async (req: Request, res, next) => {
-
-  if (!req.user._id) {
-    return next(new ErrorHandler("unauthenticated", 400));
-  }
-
-  // const cartItems = await cart.find({ user: req.user._id }).populate("productId");
-  const cartItems = await cart.find({ user: req.user._id }).populate({
-    path: 'productId',
-    populate: [
-      {
-
-        path: 'productCategory',
-      },
-      {
-        path: 'productSubCategory',
-      },
-      {
-        path: 'productComboProducts',
-        populate: {
-          path: 'productId'
-        }
-      },
-      {
-        path: 'productFreeProducts',
-        populate: {
-          path: 'productId'
-        }
-      }
-    ],
-  });
-
-  // console.log("categorynew----------------->", cartItemsnew)
-  const user = await User.findOne({ _id: req.user._id })
-  const appliedCoupon = await Offer.findOne({ _id: user?.coupon })
-  const coinAccountData = await CoinAccount.find({ userId: req.user._id })
-
-  //if combo 
-  let ComboAccumulator = {
-    Total: 0,
-    DiscountedTotal: 0,
-    finalTotal: 0,
-    productTotal: 0,
-  }
-
-  console.log(cartItems)
-
-  //mapping through cartItems to structure the data
-  const cartItemsData = cartItems.map((item) => {
-    console.log("############## check if free product available ############")
-    console.log(item)
-    if (item.productId.productVariance) {
-      const variantData = item.productId.productVariance.find((variant: any) => {
-        if ((variant.id.replace(/\s+/g, "")) == (item.selectedVarianceId.replace(/\s+/g, ""))) {
-          return variant
-        }
-      })
-      const productDiscount = calculateDiscount(variantData?.boxPrice, variantData?.sellingPrice)
-
-      let productComboProducts = [];
-      let productFreeProducts = []
-
-      if (item.isCombo) {
-        productComboProducts = item?.productId?.productComboProducts.map((item: any) => {
-          if (item.productId.productVariance) {
-            const variantData = item.productId.productVariance[0]
-            const productDiscount = calculateDiscount(variantData?.boxPrice, variantData?.sellingPrice)
-            // console.log("type of ------------->", variantData.quantity, variantData.boxPrice, variantData.sellingPrice)
-            return {
-              _id: item._id,
-              keyid: `${item._id}${variantData?.id.replace(/\s+/g, "")}`,
-              categoryId: item.productId?.productCategory?._id,
-              category: item.productId?.productCategory?.categoryName,
-              subCategoryId: item.productId?.productSubCategory?._id,
-              subCategory: item.productId?.productSubCategory?.subCategoryName,
-              productTitle: item.productId.productTitle,
-              thumbnail: variantData?.thumbnail,
-              boxPrice: variantData?.boxPrice || 0,  // Ensure a valid number
-              sellingPrice: variantData?.sellingPrice || 0,  // Ensure a valid number
-              comboPrice: item.comboPrice || variantData.sellingPrice || 0,  // Ensure a valid number
-              // color: variantData?.color,
-              // ramAndStorage: variantData?.ramAndStorage[0],
-              productRating: item.productId.productRating,
-              quantity: item.quantity,
-              stock: variantData?.quantity,
-              productId: item.productId._id,
-              // selectedVarianceId: item.selectedVarianceId,
-              discount: productDiscount,
-              customSkin: item?.customSkin || false,
-              // isCombo: item?.isCombo || false,
-              // productComboProducts: item?.productId?.productComboProducts ? item?.productId?.productComboProducts : [],
-              skinProductDetails: item?.skinProductDetails || [],
-              deviceDetails: item?.deviceDetails
-            }
-          }
-        })
-
-        // console.log("comboproducts ----------------------- > ", productComboProducts)
-        ComboAccumulator = productComboProducts?.reduce((accumulator: any, item: any) => {
-          const boxPrice = Number(item?.boxPrice) || 999;  // Default to 0 if undefined or NaN
-          const comboPrice = Number(item?.comboPrice) || item.sellingPrice || 999;  // Default to 0 if undefined or NaN
-          console.log("boxprice ==>", item.boxPrice, "and ", item.sellingPrice)
-          const Total = accumulator.Total + boxPrice;
-          const DiscountedTotal = accumulator.DiscountedTotal + comboPrice;
-
-          return {
-            Total,
-            DiscountedTotal,
-          };
-        }, {
-          Total: 0,
-          DiscountedTotal: 0,
-        });
-        console.log("accucombodata-------------------------------->", "data", ComboAccumulator)
-        // console.log("combo item -=====>", item.productId)
-        ComboAccumulator.productTotal = Number(ComboAccumulator?.Total) + Number(variantData?.sellingPrice)
-        ComboAccumulator.finalTotal = Number(ComboAccumulator?.DiscountedTotal) + Number(variantData?.sellingPrice)
-
-      }
-
-      if (item.productId.productFreeProducts.length > 0) {
-        productFreeProducts = item?.productId?.productFreeProducts?.map((item: any) => {
-          if (item.productId.productVariance) {
-
-            const variantData = item.productId.productVariance[0]
-
-            return {
-              _id: item._id,
-              keyid: `${item._id}${variantData?.id.replace(/\s+/g, "")}`,
-              categoryId: item.productId?.productCategory?._id,
-              category: item.productId?.productCategory?.categoryName,
-              subCategoryId: item.productId?.productSubCategory?._id,
-              subCategory: item.productId?.productSubCategory?.subCategoryName,
-              title: item.productId.productTitle,
-              thumbnail: variantData?.thumbnail,
-              boxPrice: variantData?.boxPrice || 0,  // Ensure a valid number
-              sellingPrice: variantData?.sellingPrice || 0,  // Ensure a valid number
-              comboPrice: variantData.comboPrice || variantData.sellingPrice || 0,  // Ensure a valid number
-              // color: variantData?.color,
-              // ramAndStorage: variantData?.ramAndStorage[0],
-              productRating: item.productId.productRating,
-              quantity: item.quantity,
-              stock: variantData?.quantity,
-              productId: item.productId._id,
-              // selectedVarianceId: item.selectedVarianceId,
-              discount: productDiscount,
-              customSkin: item?.customSkin || false,
-              // isCombo: item?.isCombo || false,
-              // productComboProducts: item?.productId?.productComboProducts ? item?.productId?.productComboProducts : [],
-              skinProductDetails: item?.skinProductDetails || [],
-              deviceDetails: item?.deviceDetails
-            }
-          }
-        })
-      }
-
-      return {
-        _id: item._id,
-        keyid: `${item._id}${variantData?.id.replace(/\s+/g, "")}`,
-        categoryId: item.productId?.productCategory?._id,
-        category: item.productId?.productCategory?.categoryName,
-        subCategoryId: item.productId?.productSubCategory?._id,
-        subCategory: item.productId?.productSubCategory?.subCategoryName,
-        productTitle: item.productId.productTitle,
-        thumbnail: variantData?.thumbnail,
-        boxPrice: variantData?.boxPrice,
-        sellingPrice: variantData?.sellingPrice,
-        comboPrice: variantData?.comboPrice,
-        color: variantData?.color,
-        ramAndStorage: variantData?.ramAndStorage[0],
-        productRating: item.productId.productRating,
-        quantity: item.quantity,
-        stock: variantData?.quantity,
-        productId: item.productId._id,
-        selectedVarianceId: item.selectedVarianceId,
-        discount: productDiscount,
-        customSkin: item?.customSkin || false,
-        isCombo: item?.isCombo || false,
-        // productComboProducts: item?.productId?.productComboProducts ? item?.productId?.productComboProducts : [],
-        productComboProducts: productComboProducts ? productComboProducts : [],
-        productFreeProducts: item.selectedFreeProducts ?? productFreeProducts,
-        // selectedFreeProducts: item.selectedFreeProducts ? item.selectedFreeProducts : [],
-        skinProductDetails: item?.skinProductDetails || [],
-        deviceDetails: item?.deviceDetails
-      }
-    }
-  })
-
-  let Total = 0
-  let DiscountedTotal = 0
-  // const cartDetails = cartItemsData.map((item) => {
-  //   return {
-  //     Total: Total + ((item?.quantity ?? 1) * item?.boxPrice),
-  //     DiscountedTotal: DiscountedTotal + ((item?.quantity ?? 1) * item?.sellingPrice)
-  //   }
-  // })
-
-  const totals = cartItemsData.reduce((accumulator, item) => {
-    // console.log("accumulator ==> ", accumulator, "==and==>", item)
-    const Total = accumulator.Total + ((item?.quantity ?? 1) * item?.boxPrice);
-    const DiscountedTotal = accumulator.DiscountedTotal + ((item?.quantity ?? 1) * item?.sellingPrice);
-
-    return {
-      Total,
-      DiscountedTotal
-    };
-  }, {
-    Total: 0,
-    DiscountedTotal: 0,
-  })
-
-
-
-  console.log("comboaccumulator=====>", ComboAccumulator)
-
-
-  //Add combo price 
-  totals.Total += ComboAccumulator.Total ? ComboAccumulator.Total : 0
-  totals.DiscountedTotal += ComboAccumulator.DiscountedTotal ? ComboAccumulator.DiscountedTotal : 0
-
-  let couponDiscount = 0
-  let deliveryCharges = 150
-
-
-  // if (appliedCoupon && Number(appliedCoupon.offerDiscountValue) > 0) {
-  //   couponDiscount = Math.round((Number(appliedCoupon.offerDiscountValue) * totals.DiscountedTotal) / 100)
-  //   couponDiscount = couponDiscount > 500 ? 499 : couponDiscount
-  // }
-
-  // Step 4: Apply coupon discounts if offer limit conditions are met
-  if (appliedCoupon && Number(appliedCoupon.offerDiscountValue) > 0) {
-    const minLimit = Number(appliedCoupon.offerLimit.minLimit);
-    const maxLimit = Number(appliedCoupon.offerLimit.maxLimit);
-
-    // Use totals.Total instead of finalCartTotal
-    if (totals.Total >= minLimit && totals.Total <= maxLimit) {
-      switch (appliedCoupon.offerCouponType) {
-        case 'freeshipping':
-          deliveryCharges = 0 // Assume 499 is the max discount allowed for shipping
-          break;
-
-        case 'percentage':
-          couponDiscount = Math.round((Number(appliedCoupon.offerDiscountValue) * totals.DiscountedTotal) / 100);
-          // couponDiscount = Math.min(2400, couponDiscount); // Cap discount at 2000
-          break;
-
-        case 'fixedamount':
-          couponDiscount = Math.min(Number(appliedCoupon.offerDiscountValue), totals.DiscountedTotal);
-          break;
-
-        default:
-          // Handle unexpected coupon types if necessary
-          break;
-      }
-    }
-  }
-
-  const availableCoins = coinAccountData.length > 0 && coinAccountData[0]?.coinAccountBalance || 0
-
-  const finalCartTotalBeforeCoins = totals.DiscountedTotal - (couponDiscount)
-  const fiftyPercentOfFinalCartTotal = finalCartTotalBeforeCoins * 0.5;
-
-  // console.log(availableCoins, "available coin ............")
-  // console.log("hey som val")
-  // console.log("totals", totals)
-  // console.log(couponDiscount, "couponDiscount")
-  // console.log(finalCartTotalBeforeCoins, "final cart total before coins ................")
-  // console.log(fiftyPercentOfFinalCartTotal, "fifty percent of cart total ..................")
-  const usableCoins = availableCoins > fiftyPercentOfFinalCartTotal ? Math.floor(fiftyPercentOfFinalCartTotal) : availableCoins
-  // console.log(usableCoins, "usable coin ............")
-
-
-  let deductCoinsForCart = coinAccountData[0].useCoinForPayment ? usableCoins : 0
-  let isCoinUseChecked = coinAccountData[0].useCoinForPayment || false
-  let finalCartTotal = totals.DiscountedTotal - (couponDiscount) - deductCoinsForCart
-
-  // if (finalCartTotal < 500) {
-  //   deliveryCharges = 150
-  // }
-
-
-  finalCartTotal = finalCartTotal + deliveryCharges
-
-  return res.status(200).json({
-    success: true,
-    message: "Cart details fetched successfully",
-    cartItemsData,
-    cartDetails: { ...totals, finalCartTotal, comboTotal: ComboAccumulator, couponDiscount, availableCoins, usableCoins, appliedCoupon, deliveryCharges, isCoinUseChecked },
-    offer: user?.coupon,
-  });
-});
-
-// ------------------ api to get cart details -------------------------------------------------------
-export const getUnAuthenticatedCartDetails = asyncErrorHandler(async (req: Request, res, next) => {
-
-  // console.log("-------------------? unauthenticated cart details", req.body)
-  const { cart } = req.body
-
-
-  const cartItems = await Promise.all(cart.map(async (cartItem: { productId: any; }) => {
-    const product = await Product.findById(cartItem.productId).populate('productCategory').populate('productSubCategory').populate({
-      path: 'productComboProducts',
-      populate: {
-        path: 'productId'
-      }
-    }).populate({
-      path: 'productFreeProducts',
-      populate: {
-        path: 'productId'
-      }
-    })
-
-
-    console.log("------------product--------", product);
-    if (product) {
-      return {
-        ...cartItem,
-        productId: product,
-      };
-    }
-    return null; // or handle the case where product is not found
-  }));
-
-
-  //if combo 
-  let ComboAccumulator = {
-    Total: 0,
-    DiscountedTotal: 0
-  }
-
-  // Remove null entries if there were any
-  const filteredCartItemsData = cartItems.filter(item => item !== null);
-  // console.log("---------cart------------", filteredCartItemsData);
-  // //mapping through cartItems to structure the data
-  const cartItemsData = filteredCartItemsData.map((item) => {
-    // console.log("------------- item-------------------", item)
-    if (item.productId.productVariance) {
-      let productComboProducts = [];
-      let productFreeProducts = []
-      if (item.isCombo) {
-        productComboProducts = item?.productId?.productComboProducts?.map((item: any) => {
-          if (item.productId.productVariance) {
-
-            const variantData = item?.productId.productVariance[0]
-            const productDiscount = calculateDiscount(variantData?.boxPrice, variantData?.sellingPrice)
-
-            // console.log("type of ------------->", variantData.quantity, variantData.boxPrice, variantData.sellingPrice)
-
-            // ComboAccumulator.Total = Number(ComboAccumulator.Total + (Number(variantData?.quantity) * Number(variantData?.boxPrice)));
-
-            // ComboAccumulator.DiscountedTotal = Number(ComboAccumulator.DiscountedTotal + (Number(variantData?.quantity) * Number(variantData?.sellingPrice)));
-
-            return {
-              _id: item._id,
-              keyid: `${item._id}${variantData?.id.replace(/\s+/g, "")}`,
-              categoryId: item.productId?.productCategory?._id,
-              category: item.productId?.productCategory?.categoryName,
-              subCategoryId: item.productId?.productSubCategory?._id,
-              subCategory: item.productId?.productSubCategory?.subCategoryName,
-              productTitle: item.productId.productTitle,
-              thumbnail: variantData?.thumbnail,
-              boxPrice: variantData?.boxPrice,
-              sellingPrice: variantData?.sellingPrice,
-              comboPrice: variantData?.comboPrice,
-              // color: variantData?.color,
-              // ramAndStorage: variantData?.ramAndStorage[0],
-              productRating: item.productId.productRating,
-              quantity: item.quantity,
-              productId: item.productId._id,
-              // selectedVarianceId: item.selectedVarianceId,
-              discount: productDiscount,
-              customSkin: item?.customSkin || false,
-              // isCombo: item?.isCombo || false,
-              // productComboProducts: item?.productId?.productComboProducts ? item?.productId?.productComboProducts : [],
-              skinProductDetails: item?.skinProductDetails || [],
-            }
-          }
-        })
-
-        // console.log("comboproducts ----------------------- > ", productComboProducts)
-        ComboAccumulator = productComboProducts?.reduce((accumulator: any, item: any) => {
-          console.log("accumlateor------------------>", item)
-          const Total = accumulator.Total + (Number(item?.boxPrice));
-          const DiscountedTotal = accumulator.DiscountedTotal + (Number(item?.sellingPrice));
-
-          return {
-            Total,
-            DiscountedTotal
-          };
-        }, {
-          Total: 0,
-          DiscountedTotal: 0,
-        })
-
-      }
-      if (item.productId.productFreeProducts.length > 0) {
-        productFreeProducts = item?.productId?.productFreeProducts?.map((item: any) => {
-          if (item.productId.productVariance) {
-
-            const variantData = item.productId.productVariance[0]
-            const productDiscount = calculateDiscount(variantData?.boxPrice, variantData?.sellingPrice)
-            return {
-              _id: item._id,
-              keyid: `${item._id}${variantData?.id.replace(/\s+/g, "")}`,
-              categoryId: item.productId?.productCategory?._id,
-              category: item.productId?.productCategory?.categoryName,
-              subCategoryId: item.productId?.productSubCategory?._id,
-              subCategory: item.productId?.productSubCategory?.subCategoryName,
-              productTitle: item.productId.productTitle,
-              thumbnail: variantData?.thumbnail,
-              boxPrice: variantData?.boxPrice,
-              sellingPrice: variantData?.sellingPrice,
-              comboPrice: variantData?.comboPrice,
-              // color: variantData?.color,
-              // ramAndStorage: variantData?.ramAndStorage[0],
-              productRating: item.productId.productRating,
-              quantity: item.quantity,
-              productId: item.productId._id,
-              // selectedVarianceId: item.selectedVarianceId,
-              discount: productDiscount,
-              customSkin: item?.customSkin || false,
-              // isCombo: item?.isCombo || false,
-              // productComboProducts: item?.productId?.productComboProducts ? item?.productId?.productComboProducts : [],
-              skinProductDetails: item?.skinProductDetails || [],
-            }
-          }
-        })
-      }
-
-      const variantData = item.productId.productVariance.find((variant: any) => {
-        if ((variant.id.replace(/\s+/g, "")) == (item.selectedVarianceId.replace(/\s+/g, ""))) {
-          return variant
-        }
-      })
-      const productDiscount = calculateDiscount(variantData?.boxPrice, variantData?.sellingPrice)
-      return {
-        _id: item.productId._id,
-        keyid: `${item.productId._id}${variantData?.id.replace(/\s+/g, "")}`,
-        categoryId: item.productId?.productCategory?._id,
-        category: item.productId?.productCategory?.categoryName,
-        subCategoryId: item.productId?.productSubCategory?._id,
-        subCategory: item.productId?.productSubCategory?.subCategoryName,
-        productTitle: item.productId.productTitle,
-        thumbnail: variantData?.thumbnail,
-        boxPrice: variantData?.boxPrice,
-        sellingPrice: variantData?.sellingPrice,
-        color: variantData?.color,
-        ramAndStorage: variantData?.ramAndStorage[0],
-        productRating: item.productId.productRating,
-        quantity: item.quantity,
-        productId: item.productId._id,
-        selectedVarianceId: item.selectedVarianceId,
-        discount: productDiscount,
-        customSkin: item?.customSkin || false,
-        skinProductDetails: item?.skinProductDetails || [],
-        isCombo: item?.isCombo || false,
-      }
-    }
-  })
-
-  let Total = 0
-  let DiscountedTotal = 0
-
-
-
-  const cartDetails = cartItemsData.map((item) => {
-    return {
-      Total: Total + (item?.quantity * item?.boxPrice),
-      DiscountedTotal: DiscountedTotal + (item?.quantity * item?.sellingPrice)
-    }
-  })
-
-  const totals = cartItemsData.reduce((accumulator, item) => {
-    const Total = accumulator.Total + (item?.quantity * item?.boxPrice);
-    const DiscountedTotal = accumulator.DiscountedTotal + (item?.quantity * item?.sellingPrice);
-
-    return {
-      Total,
-      DiscountedTotal
-    };
-  }, {
-    Total: 0,
-    DiscountedTotal: 0,
-  })
-  let couponDiscount = 0
-
-  // console.log("comboaccumulator=====>", ComboAccumulator)
-  //Add combo price 
-  totals.Total += ComboAccumulator.Total
-  totals.DiscountedTotal += ComboAccumulator.DiscountedTotal
-
-
-  let finalCartTotal = totals.DiscountedTotal
-  let deliveryCharges = 150
-
-  if (finalCartTotal > 500) {
-    deliveryCharges = 0
-  }
-
-  finalCartTotal = finalCartTotal + deliveryCharges
-  return res.status(200).json({
-    success: true,
-    message: "Cart details fetched successfully",
-    cartItemsData,
-    cartDetails: { ...totals, finalCartTotal, deliveryCharges, comboTotals: ComboAccumulator }
-  });
-});
-
-// ------------------ api to get cart details -------------------------------------------------------
-export const storeCartItemsInDb = asyncErrorHandler(async (req: Request, res, next) => {
-
-  // console.log("-------------------? save cart item in db", req.body)
-  const { cartData } = req.body
-  console.log("check if array is valid cartdata", Array.isArray(cartData))
-
-  if (!cartData || !Array.isArray(cartData)) {
-    return next(new ErrorHandler("provide correct data", 204))
-  }
-
-
-  // console.log("-----cartData----", cartData)
-  for (const item of cartData) {
-    const cartItem = new cart({
-      ...item,
-      user: req.user._id,
-      skinProductDetails: item.skinProductDetails ? JSON.parse(item.skinProductDetails) : null,
     });
-    await cartItem.save();
+
+    let Total = 0;
+    let DiscountedTotal = 0;
+
+    const cartDetails = cartItemsData.map((item) => {
+      return {
+        Total: Total + item?.quantity * item?.boxPrice,
+        DiscountedTotal: DiscountedTotal + item?.quantity * item?.sellingPrice,
+      };
+    });
+
+    const totals = cartItemsData.reduce(
+      (accumulator, item) => {
+        const Total = accumulator.Total + item?.quantity * item?.boxPrice;
+        const DiscountedTotal =
+          accumulator.DiscountedTotal + item?.quantity * item?.sellingPrice;
+
+        return {
+          Total,
+          DiscountedTotal,
+        };
+      },
+      {
+        Total: 0,
+        DiscountedTotal: 0,
+      }
+    );
+    let couponDiscount = 0;
+
+    // console.log("comboaccumulator=====>", ComboAccumulator)
+    //Add combo price
+    totals.Total += ComboAccumulator.Total;
+    totals.DiscountedTotal += ComboAccumulator.DiscountedTotal;
+
+    let finalCartTotal = totals.DiscountedTotal;
+    let deliveryCharges = 150;
+
+    if (finalCartTotal >= 500) {
+      deliveryCharges = 0;
+    }
+
+    finalCartTotal = finalCartTotal + deliveryCharges;
+    return res.status(200).json({
+      success: true,
+      message: "Cart details fetched successfully",
+      cartItemsData,
+      cartDetails: {
+        ...totals,
+        finalCartTotal,
+        deliveryCharges,
+        comboTotals: ComboAccumulator,
+      },
+    });
   }
-  return res.status(200).json({
-    success: true,
-    message: "Cart items stored in db",
-  });
-});
+);
+
+// ------------------ api to get cart details -------------------------------------------------------
+export const storeCartItemsInDb = asyncErrorHandler(
+  async (req: Request, res, next) => {
+    // console.log("-------------------? save cart item in db", req.body)
+    const { cartData } = req.body;
+    console.log("check if array is valid cartdata", Array.isArray(cartData));
+
+    if (!cartData || !Array.isArray(cartData)) {
+      return next(new ErrorHandler("provide correct data", 204));
+    }
+
+    // console.log("-----cartData----", cartData)
+    for (const item of cartData) {
+      const cartItem = new cart({
+        ...item,
+        user: req.user._id,
+        skinProductDetails: item.skinProductDetails
+          ? JSON.parse(item.skinProductDetails)
+          : null,
+      });
+      await cartItem.save();
+    }
+    return res.status(200).json({
+      success: true,
+      message: "Cart items stored in db",
+    });
+  }
+);
 
 // ----------------  api to clear cart -----------------------------------------------------------------
 export const clearCart = asyncErrorHandler(async (req: Request, res, next) => {
@@ -1440,126 +1628,157 @@ export const clearCart = asyncErrorHandler(async (req: Request, res, next) => {
   });
 });
 
-
-export const getBuyNowCartDetails = asyncErrorHandler(async (req: Request, res, next) => {
-
-  if (!req.user._id) {
-    return next(new ErrorHandler("unauthenticated", 400));
-  }
-
-  const { productId, selectedVarianceId, quantity, customSkin, skinProductDetails } = req.body
-
-  console.log(productId, "product id")
-  console.log(selectedVarianceId, "selectedVariance id")
-
-  if (!productId || !selectedVarianceId) {
-    return next(new ErrorHandler("please enter all fields", 404));
-
-  }
-  const product = await Product.findById(productId).populate('productCategory');
-  if (!product) {
-    return next(new ErrorHandler("No product found with this id", 404));
-  }
-  const selectedVariantData = product.productVariance.find((variant: { id: string; }) => {
-    return variant.id.replace(/\s+/g, "") == selectedVarianceId.replace(/\s+/g, "")
-  })
-
-  if (selectedVariantData?.quantity == '0' || selectedVariantData?.quantity == 0) {
-    return next(new ErrorHandler("product is out of stock", 404));
-  }
-
-
-  const user = await User.findOne({ _id: req.user._id })
-  const appliedCoupon = await Offer.findOne({ _id: user?.coupon })
-  const coinAccountData = await CoinAccount.find({ userId: req.user._id })
-
-  //mapping through cartItems to structure the data
-
-  const productDiscount = calculateDiscount(selectedVariantData?.boxPrice, selectedVariantData?.sellingPrice)
-  // console.log("buy now---------->", product)
-  const cartItemsData = [{
-    _id: product._id,
-    keyid: `${product._id}${selectedVariantData?.id.replace(/\s+/g, "")}`,
-    categoryId: product?.productCategory?._id,
-    category: product?.productCategory?.categoryName,
-    productTitle: product?.productTitle,
-    thumbnail: selectedVariantData?.thumbnail,
-    boxPrice: selectedVariantData?.boxPrice,
-    sellingPrice: selectedVariantData?.sellingPrice,
-    color: selectedVariantData?.color,
-    ramAndStorage: selectedVariantData?.ramAndStorage[0],
-    productRating: product.productRating,
-    quantity: quantity,
-    productId: product._id,
-    selectedVarianceId: selectedVarianceId,
-    discount: productDiscount,
-    customSkin: customSkin || false,
-    skinProductDetails: skinProductDetails || []
-  }]
-
-
-  let Total = 0
-  let DiscountedTotal = 0
-  const cartDetails = cartItemsData.map((item) => {
-    return {
-      Total: Total + (item?.quantity * item?.boxPrice),
-      DiscountedTotal: DiscountedTotal + (item?.quantity * item?.sellingPrice)
+export const getBuyNowCartDetails = asyncErrorHandler(
+  async (req: Request, res, next) => {
+    if (!req.user._id) {
+      return next(new ErrorHandler("unauthenticated", 400));
     }
-  })
 
-  const totals = cartItemsData.reduce((accumulator, item) => {
-    const Total = accumulator.Total + (item?.quantity * item?.boxPrice);
-    const DiscountedTotal = accumulator.DiscountedTotal + (item?.quantity * item?.sellingPrice);
+    const {
+      productId,
+      selectedVarianceId,
+      quantity,
+      customSkin,
+      skinProductDetails,
+    } = req.body;
 
-    return {
-      Total,
-      DiscountedTotal
-    };
-  }, {
-    Total: 0,
-    DiscountedTotal: 0,
-  })
-  let couponDiscount = 0
-  if (appliedCoupon && appliedCoupon.offerCouponDiscount) {
-    couponDiscount = Math.round((Number(appliedCoupon.offerCouponDiscount) * totals.DiscountedTotal) / 100)
-    couponDiscount = couponDiscount > 500 ? 499 : couponDiscount
+    console.log(productId, "product id");
+    console.log(selectedVarianceId, "selectedVariance id");
+
+    if (!productId || !selectedVarianceId) {
+      return next(new ErrorHandler("please enter all fields", 404));
+    }
+    const product = await Product.findById(productId).populate(
+      "productCategory"
+    );
+    if (!product) {
+      return next(new ErrorHandler("No product found with this id", 404));
+    }
+    const selectedVariantData = product.productVariance.find(
+      (variant: { id: string }) => {
+        return (
+          variant.id.replace(/\s+/g, "") ==
+          selectedVarianceId.replace(/\s+/g, "")
+        );
+      }
+    );
+
+    if (
+      selectedVariantData?.quantity == "0" ||
+      selectedVariantData?.quantity == 0
+    ) {
+      return next(new ErrorHandler("product is out of stock", 404));
+    }
+
+    const user = await User.findOne({ _id: req.user._id });
+    const appliedCoupon = await Offer.findOne({ _id: user?.coupon });
+    const coinAccountData = await CoinAccount.find({ userId: req.user._id });
+
+    //mapping through cartItems to structure the data
+
+    const productDiscount = calculateDiscount(
+      selectedVariantData?.boxPrice,
+      selectedVariantData?.sellingPrice
+    );
+    // console.log("buy now---------->", product)
+    const cartItemsData = [
+      {
+        _id: product._id,
+        keyid: `${product._id}${selectedVariantData?.id.replace(/\s+/g, "")}`,
+        categoryId: product?.productCategory?._id,
+        category: product?.productCategory?.categoryName,
+        productTitle: product?.productTitle,
+        thumbnail: selectedVariantData?.thumbnail,
+        boxPrice: selectedVariantData?.boxPrice,
+        sellingPrice: selectedVariantData?.sellingPrice,
+        color: selectedVariantData?.color,
+        ramAndStorage: selectedVariantData?.ramAndStorage[0],
+        productRating: product.productRating,
+        quantity: quantity,
+        productId: product._id,
+        selectedVarianceId: selectedVarianceId,
+        discount: productDiscount,
+        customSkin: customSkin || false,
+        skinProductDetails: skinProductDetails || [],
+      },
+    ];
+
+    let Total = 0;
+    let DiscountedTotal = 0;
+    const cartDetails = cartItemsData.map((item) => {
+      return {
+        Total: Total + item?.quantity * item?.boxPrice,
+        DiscountedTotal: DiscountedTotal + item?.quantity * item?.sellingPrice,
+      };
+    });
+
+    const totals = cartItemsData.reduce(
+      (accumulator, item) => {
+        const Total = accumulator.Total + item?.quantity * item?.boxPrice;
+        const DiscountedTotal =
+          accumulator.DiscountedTotal + item?.quantity * item?.sellingPrice;
+
+        return {
+          Total,
+          DiscountedTotal,
+        };
+      },
+      {
+        Total: 0,
+        DiscountedTotal: 0,
+      }
+    );
+    let couponDiscount = 0;
+    if (appliedCoupon && appliedCoupon.offerCouponDiscount) {
+      couponDiscount = Math.round(
+        (Number(appliedCoupon.offerCouponDiscount) * totals.DiscountedTotal) /
+          100
+      );
+      couponDiscount = couponDiscount > 500 ? 499 : couponDiscount;
+    }
+
+    const availableCoins =
+      (coinAccountData.length > 0 && coinAccountData[0]?.coinAccountBalance) ||
+      0;
+    const finalCartTotalBeforeCoins = totals.DiscountedTotal - couponDiscount;
+    const fiftyPercentOfFinalCartTotal = finalCartTotalBeforeCoins * 0.5;
+
+    const usableCoins =
+      availableCoins > fiftyPercentOfFinalCartTotal
+        ? fiftyPercentOfFinalCartTotal
+        : availableCoins;
+
+    let deductCoinsForCart = coinAccountData[0].useCoinForPayment
+      ? usableCoins
+      : 0;
+    let isCoinUseChecked = coinAccountData[0].useCoinForPayment || false;
+    let finalCartTotal =
+      totals.DiscountedTotal - couponDiscount - deductCoinsForCart;
+
+    let deliveryCharges = 0;
+
+    if (finalCartTotal >= 500) {
+      deliveryCharges = 0;
+    }
+
+    finalCartTotal = finalCartTotal + deliveryCharges;
+    return res.status(200).json({
+      success: true,
+      message: "buy now cart details fetched successfully",
+      cartItemsData,
+      cartDetails: {
+        ...totals,
+        finalCartTotal,
+        couponDiscount,
+        availableCoins,
+        usableCoins,
+        deliveryCharges,
+        isCoinUseChecked,
+      },
+      offer: user?.coupon,
+    });
   }
-
-  const availableCoins = coinAccountData.length > 0 && coinAccountData[0]?.coinAccountBalance || 0
-  const finalCartTotalBeforeCoins = totals.DiscountedTotal - (couponDiscount)
-  const fiftyPercentOfFinalCartTotal = finalCartTotalBeforeCoins * 0.5;
-
-  const usableCoins = availableCoins > fiftyPercentOfFinalCartTotal ? fiftyPercentOfFinalCartTotal : availableCoins
-
-  let deductCoinsForCart = coinAccountData[0].useCoinForPayment ? usableCoins : 0
-  let isCoinUseChecked = coinAccountData[0].useCoinForPayment || false
-  let finalCartTotal = totals.DiscountedTotal - (couponDiscount) - deductCoinsForCart
-
-  let deliveryCharges = 0
-
-  if (finalCartTotal < 500) {
-    deliveryCharges = 150
-  }
-
-  finalCartTotal = finalCartTotal + deliveryCharges
-  return res.status(200).json({
-    success: true,
-    message: "buy now cart details fetched successfully",
-    cartItemsData,
-    cartDetails: { ...totals, finalCartTotal, couponDiscount, availableCoins, usableCoins, deliveryCharges, isCoinUseChecked },
-    offer: user?.coupon,
-  });
-});
-
-
-
-
-
-
-
-
-
-
+);
 
 // ------------------------ Archived controllers-----------------------------------------
 // //-----------------------api to update profile ----------------------------------------
@@ -1603,7 +1822,6 @@ export const getBuyNowCartDetails = asyncErrorHandler(async (req: Request, res, 
 //   });
 // });
 
-
 //---------------------api to update cart----------------------------------------------------------
 // export const updateCart = asyncErrorHandler(async (req, res, next) => {
 
@@ -1629,7 +1847,6 @@ export const getBuyNowCartDetails = asyncErrorHandler(async (req: Request, res, 
 //   }
 
 //   const cartItem = await cart.findOne({ productId, selectedVarianceId, user: req.user._id });
-
 
 //   if (cartItem && cartItem.quantity < 10) {
 //     cartItem.quantity = cartItem.quantity + 1
@@ -1660,11 +1877,7 @@ export const getBuyNowCartDetails = asyncErrorHandler(async (req: Request, res, 
 
 // });
 
-
-
 ///--------------------- buyNow Cart -----------------------------
-
-
 
 // export const getbuyNowCartItems = asyncErrorHandler(async (req: Request, res, next) => {
 //   if (!req.user._id) {
@@ -1674,7 +1887,6 @@ export const getBuyNowCartDetails = asyncErrorHandler(async (req: Request, res, 
 //   // console.log(item)
 
 //   const { productId, selectedVarianceId, quantity, customSkin, skinProductDetails } = req.body
-
 
 //   if (!productId || !selectedVarianceId) {
 //     return next(new ErrorHandler("please enter all fields", 404));
@@ -1707,14 +1919,12 @@ export const getBuyNowCartDetails = asyncErrorHandler(async (req: Request, res, 
 //     discount: productDiscount,
 //   }
 
-
 //   return res.status(200).json({
 //     success: true,
 //     message: "successfully fetched buyNow data",
 //     cartItemsData: [cartItemsData]
 //   });
 // })
-
 
 //------------------api to add coupon code for cart------------------------------------------
 // export const updateCouponCode = asyncErrorHandler(async (req, res, next) => {
